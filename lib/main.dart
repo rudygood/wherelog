@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'screens/storage_add_screen.dart';
-import 'screens/app_menu_shell.dart';
+import 'widgets/app_sheet.dart';
 import 'screens/location_options_maintenance_screen.dart';
 import 'screens/storage_edit_screen.dart';
 import 'screens/inventory_add_screen.dart';
@@ -375,14 +375,19 @@ class _HomeScreenState extends State<HomeScreen>
     return _buildStorageTab();
   }
 
-  void _openAppMenu() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AppMenuShell()).then((_) {
-      _loadTabOrder();
-    });
+  Future<void> _openAppMenu() async {
+    // NEW: uses showAppMenu right-sheet 78% instead of bottom sheet
+    final result = await showAppMenu(context);
+    // Preserve existing behavior - reload tab order after menu / settings
+    _loadTabOrder();
+    // If settings returned a new tab order, propagate it if needed
+    if (result is List<String> && result.length == 3) {
+      // Original shell returned result via Navigator.pop(context, result)
+      // showAppMenu now returns it directly
+      setState(() {
+        _tabOrder = result;
+      });
+    }
   }
 
 
