@@ -11,6 +11,8 @@ import 'screens/poi_add_screen.dart';
 import 'screens/poi_edit_screen.dart';
 import 'wherelog_repository.dart';
 import 'theme/app_theme.dart';
+import 'widgets/app_icons.dart';
+import 'utils/map_utils.dart';
 import 'settings_service.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -635,15 +637,30 @@ class _HomeScreenState extends State<HomeScreen>
                     },
                     leading: _isSelectMode('POI')
                         ? Checkbox(value: isSelected, onChanged: (v) => setState(() { if (v == true) _selectedIdsMap['POI']!.add(poiId); else _selectedIdsMap['POI']!.remove(poiId); }))
-                        : Container(width: 48, height: 48, decoration: BoxDecoration(color: Color(0xFFE0F2FF), borderRadius: BorderRadius.circular(AppRadius.tabIndicator)), child: Icon(Icons.location_on, color: Colors.blue.shade700)),
-                    title: Text(name, style: AppText.cardTitle),
+                        : null,
+              title: Text(name, style: AppText.cardTitle),
                     subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       SizedBox(height: 4),
                       Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Color(0xFFF0EDE8), borderRadius: BorderRadius.circular(AppRadius.tabIndicator)), child: Text(coords, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace'))),
                       if (distStr.isNotEmpty) Padding(padding: EdgeInsets.only(top: 4), child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Color(0xFFE0F2FF), borderRadius: BorderRadius.circular(AppRadius.button)), child: Text(distStr, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade700)))),
                       if (address.isNotEmpty) Padding(padding: EdgeInsets.only(top: 4), child: Text(address, style: AppText.cardMeta, maxLines: 1, overflow: TextOverflow.ellipsis)),
                     ]),
-                    trailing: _isSelectMode('POI') ? null : Icon(Icons.chevron_right)));
+                    trailing: _isSelectMode('POI')
+                        ? null
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (MapUtils.hasCoordinates(lat, lng))
+                                IconButton(
+                                  icon: ImageIcon(AssetImage('assets/icon/directions_diamond.png'), size: 26, color: AppColors.buttonBg),
+                                  tooltip: 'Navigate',
+                                  onPressed: () {
+                                    MapUtils.openDirections(lat: lat!, lng: lng!, label: name);
+                                  },
+                                ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          )));
               })),
         ]));
   }
@@ -831,14 +848,7 @@ class _HomeScreenState extends State<HomeScreen>
                       if (v == true) _selectedIdsMap['Storage']!.add(item.id);
                       else _selectedIdsMap['Storage']!.remove(item.id);
                     }))
-                  : Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                          color: AppColors.scaffold,
-                          borderRadius: BorderRadius.circular(AppRadius.tabIndicator)),
-                                    child: Center(
-                          child: Text(item.emoji, style: TextStyle(fontSize: 24)))),
+                  : null,
               title: Text(item.qty == 1 ? item.name : '(${item.qty}) ${item.name}',
                   style: AppText.cardTitle),
               subtitle: Container(
@@ -895,11 +905,7 @@ class _HomeScreenState extends State<HomeScreen>
                       if (v == true) _selectedIdsMap['Inventory']!.add(item.id);
                       else _selectedIdsMap['Inventory']!.remove(item.id);
                     }))
-                  : Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(color: AppColors.scaffold, borderRadius: BorderRadius.circular(AppRadius.tabIndicator)),
-                                    child: Center(child: Text(item.emoji, style: TextStyle(fontSize: 24)))),
+                  : null,
               title: Text(item.qty == 1 ? item.name : '(${item.qty}) ${item.name}', style: AppText.cardTitle),
               subtitle: Container(
                   margin: EdgeInsets.only(top: 4),
@@ -911,115 +917,77 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _openFilterSheet() {
-    showGeneralDialog(
+    showModalTopSheet(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'filter',
-      barrierColor: Colors.black54,
-      transitionDuration: Duration(milliseconds: 250),
-      pageBuilder: (c, a1, a2) {
-        return Align(
-          alignment: Alignment.topCenter,
-                                    child: Material(
-            color: Colors.transparent,
-                                    child: Container(
-              margin: EdgeInsets.only(top: 60, left: 12, right: 12),
-              decoration: BoxDecoration(
-                color: Color(0xFFDCE7FF),
-                borderRadius: BorderRadius.circular(20)),
-                                    child: StatefulBuilder(builder: (c, setModal) {
-                return Padding(
-                  padding: EdgeInsets.all(20),
-                                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(children: [
-                          Text(AppText.upper('Filter & Sort'),
-                              style: AppText.dialogTitle),
-                          Spacer(),
-                          IconButton(
-                              icon: Icon(Icons.close),
-                              onPressed: () => Navigator.pop(c))
-                        ]),
-                        SizedBox(height: 16),
-                        Text('SORT BY',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary)),
-                        SizedBox(height: 8),
-                        Wrap(
-                            spacing: 8,
-                            children:
-                                ['Recent', 'Name A-Z', 'Location', 'Qty'].map((s) {
-                              final sel = _sortBy == s;
-                              return ChoiceChip(
-                                  label: Text(s),
-                                  selected: sel,
-                                  onSelected: (_) => setModal(() => _sortBy = s),
-                                  selectedColor: Color(0xFF0F1E3A),
-                                  labelStyle: TextStyle(
-                                      color: sel ? Colors.white : Colors.black));
-                            }).toList()),
-                        SizedBox(height: 16),
-                        Text('FILTER',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary)),
-                        SizedBox(height: 8),
-                        Wrap(
-                            spacing: 8,
-                            children: [
-                              'All',
-                              'Attic',
-                              'Garage',
-                              'Shed',
-                              'Kitchen',
-                              'Office',
-                              'Important'
-                            ].map((f) {
-                              final sel = _filterBy == f;
-                              return ChoiceChip(
-                                  label: Text(f),
-                                  selected: sel,
-                                  onSelected: (_) => setModal(() => _filterBy = f),
-                                  selectedColor: Color(0xFF0F1E3A),
-                                  labelStyle: TextStyle(
-                                      color: sel ? Colors.white : Colors.black));
-                            }).toList()),
-                        SizedBox(height: 20),
-                        Row(children: [
-                          Expanded(
-                              child: ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _filterBy = 'All';
-                                      _sortBy = 'Recent';
-                                    });
-                                    Navigator.pop(c);
-                                  },
-                                    child: Text('RESET'),
-                                  )),
-                          SizedBox(width: 12),
-                          Expanded(
-                              child: ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {});
-                                    Navigator.pop(c);
-                                  },
-                                    child: Text('APPLY'))),
-                        ]),
-                      ]));
-              }))));
+      maxWidth: 420,
+      builder: (c, setModal) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              Text(AppText.upper('Filter & Sort'), style: AppText.dialogTitle),
+              Spacer(),
+              IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(c))
+            ]),
+            SizedBox(height: 16),
+            Text('SORT BY',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+            SizedBox(height: 8),
+            Wrap(
+                spacing: 8,
+                children: ['Recent', 'Name A-Z', 'Location', 'Qty'].map((s) {
+                  final sel = _sortBy == s;
+                  return ChoiceChip(
+                      label: Text(s),
+                      selected: sel,
+                      onSelected: (_) => setModal(() => _sortBy = s),
+                      selectedColor: Color(0xFF0F1E3A),
+                      labelStyle: TextStyle(color: sel ? Colors.white : Colors.black));
+                }).toList()),
+            SizedBox(height: 16),
+            Text('FILTER',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+            SizedBox(height: 8),
+            Wrap(
+                spacing: 8,
+                children: ['All', 'Attic', 'Garage', 'Shed', 'Kitchen', 'Office', 'Important']
+                    .map((f) {
+                  final sel = _filterBy == f;
+                  return ChoiceChip(
+                      label: Text(f),
+                      selected: sel,
+                      onSelected: (_) => setModal(() => _filterBy = f),
+                      selectedColor: Color(0xFF0F1E3A),
+                      labelStyle: TextStyle(color: sel ? Colors.white : Colors.black));
+                }).toList()),
+            SizedBox(height: 20),
+            Row(children: [
+              Expanded(
+                  child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _filterBy = 'All';
+                          _sortBy = 'Recent';
+                        });
+                        Navigator.pop(c);
+                      },
+                      child: Text('RESET'))),
+              SizedBox(width: 12),
+              Expanded(
+                  child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {});
+                        Navigator.pop(c);
+                      },
+                      child: Text('APPLY'))),
+            ]),
+          ],
+        );
       },
-      transitionBuilder: (c, anim, secAnim, child) {
-        return SlideTransition(
-          position: Tween(begin: Offset(0, -1), end: Offset(0, 0)).animate(anim),
-                                    child: child);
-      });
+    );
   }
 
-  // NEW: Select actions - move & delete - all dialogs top of screen
   Future<void> _moveSelectedItems([String? tabName]) async {
     final String effectiveTab = tabName ?? _currentTabName;
     final Set<String> currentSelected = _selectedIdsMap[effectiveTab] ?? <String>{};
@@ -1027,48 +995,51 @@ class _HomeScreenState extends State<HomeScreen>
     final placesList = _placesFromRepo();
     String? selectedPlace;
     String? selectedBin;
-    await showGeneralDialog(
+    final confirmed = await showModalTopSheet<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'move',
-      barrierColor: Colors.black54,
-      pageBuilder: (c, a1, a2) {
-        return Align(
-          alignment: Alignment.topCenter,
-                                    child: Material(
-            color: Colors.transparent,
-                                    child: Container(
-              margin: EdgeInsets.only(top: 80, left: 16, right: 16),
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                                    child: StatefulBuilder(builder: (c2, setModal) {
-                final bins = selectedPlace == null ? <String>[] : placesList.firstWhere((p) => p.name == selectedPlace, orElse: () => Place(name: '', bins: [])).bins.map((b) => b.name).toList();
-                return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('MOVE ${ currentSelected.length } ITEMS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                  SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    decoration: InputDecoration(labelText: 'Place', border: OutlineInputBorder()),
-                    value: selectedPlace,
-                    items: placesList.map((p) => DropdownMenuItem(value: p.name, child: Text(p.name))).toList(),
-                    onChanged: (v) => setModal(() { selectedPlace = v; selectedBin = null; })),
-                  SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    decoration: InputDecoration(labelText: 'Bin (optional)', border: OutlineInputBorder()),
-                    value: selectedBin,
-                    items: bins.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                    onChanged: (v) => setModal(() => selectedBin = v)),
-                  SizedBox(height: 20),
-                  Row(children: [
-                    Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(c), child: Text('CANCEL'), )),
-                    SizedBox(width: 12),
-                    Expanded(child: ElevatedButton(
-                      onPressed: selectedPlace == null ? null : () => Navigator.pop(c, true),
-                                    child: Text('MOVE'))),
-                  ])
-                ]);
-              }))));
-      }).then((confirmed) async {
-      if (confirmed != true || selectedPlace == null) return;
+      maxWidth: 420,
+      builder: (c, setModal) {
+        final bins = selectedPlace == null
+            ? <String>[]
+            : placesList
+                .firstWhere((p) => p.name == selectedPlace, orElse: () => Place(name: '', bins: []))
+                .bins
+                .map((b) => b.name)
+                .toList();
+        return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('MOVE ${currentSelected.length} ITEMS',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                  decoration: InputDecoration(labelText: 'Place', border: OutlineInputBorder()),
+                  value: selectedPlace,
+                  items: placesList.map((p) => DropdownMenuItem(value: p.name, child: Text(p.name))).toList(),
+                  onChanged: (v) => setModal(() {
+                        selectedPlace = v;
+                        selectedBin = null;
+                      })),
+              SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                  decoration: InputDecoration(labelText: 'Bin (optional)', border: OutlineInputBorder()),
+                  value: selectedBin,
+                  items: bins.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                  onChanged: (v) => setModal(() => selectedBin = v)),
+              SizedBox(height: 20),
+              Row(children: [
+                Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(c, false), child: Text('CANCEL'))),
+                SizedBox(width: 12),
+                Expanded(
+                    child: ElevatedButton(
+                        onPressed: selectedPlace == null ? null : () => Navigator.pop(c, true),
+                        child: Text('MOVE'))),
+              ])
+            ]);
+      },
+    );
+    if (confirmed != true || selectedPlace == null) return;
       // Apply move for current tab items
       if (effectiveTab == 'Storage') {
         for (var id in currentSelected.toList()) {
@@ -1125,41 +1096,32 @@ class _HomeScreenState extends State<HomeScreen>
       } else if (effectiveTab == 'POI') {
         setState(() { _selectModes['POI'] = false; _selectedIdsMap['POI']!.clear(); });
       }
-    });
   }
 
   Future<void> _deleteSelectedItems([String? tabName]) async {
     final String effectiveTab = tabName ?? _currentTabName;
     final Set<String> currentSelected = _selectedIdsMap[effectiveTab] ?? <String>{};
     if (currentSelected.isEmpty) return;
-    final confirmed = await showGeneralDialog<bool>(
+    final confirmed = await showModalTopSheet<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'delete',
-      barrierColor: Colors.black54,
-      pageBuilder: (c, a1, a2) {
-        return Align(
-          alignment: Alignment.topCenter,
-                                    child: Material(
-            color: Colors.transparent,
-                                    child: Container(
-              margin: EdgeInsets.only(top: 80, left: 16, right: 16),
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.warning_amber_rounded, size: 48, color: Colors.red),
-                SizedBox(height: 12),
-                Text('Delete ${ currentSelected.length } items?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                SizedBox(height: 8),
-                Text('This cannot be undone.', style: AppText.cardMeta),
-                SizedBox(height: 20),
-                Row(children: [
-                  Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(c, false), child: Text('CANCEL'), )),
-                  SizedBox(width: 12),
-                  Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(c, true),  child: Text('DELETE'))),
-                ])
-              ]))));
-      });
+      maxWidth: 360,
+      builder: (c, _) {
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.warning_amber_rounded, size: 48, color: Colors.red),
+          SizedBox(height: 12),
+          Text('Delete ${currentSelected.length} items?',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          SizedBox(height: 8),
+          Text('This cannot be undone.', style: AppText.cardMeta),
+          SizedBox(height: 20),
+          Row(children: [
+            Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(c, false), child: Text('CANCEL'))),
+            SizedBox(width: 12),
+            Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(c, true), child: Text('DELETE'))),
+          ])
+        ]);
+      },
+    );
     if (confirmed != true) return;
     if (effectiveTab == 'Storage') {
       _repo.storageItems.removeWhere((m) => currentSelected.contains(m['id']?.toString()));

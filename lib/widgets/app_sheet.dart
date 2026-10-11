@@ -5,10 +5,12 @@ import '../screens/export_import_screen.dart';
 
 Future<T?> showModalTopSheet<T>({
   required BuildContext context,
-  required WidgetBuilder builder,
+  required Widget Function(BuildContext context, StateSetter setModal) builder,
   Color barrierColor = Colors.black54,
   Duration transitionDuration = const Duration(milliseconds: 220),
   double borderRadius = 16,
+  double? maxWidth,
+  Color? backgroundColor,
 }) {
   return showGeneralDialog<T>(
     context: context,
@@ -20,10 +22,33 @@ Future<T?> showModalTopSheet<T>({
       return Align(
         alignment: Alignment.topCenter,
         child: Material(
-          color: Theme.of(ctx).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(borderRadius)),
-          clipBehavior: Clip.antiAlias,
-          child: SafeArea(bottom: false, child: builder(ctx)),
+          color: Colors.transparent,
+          child: Container(
+            margin: EdgeInsets.only(
+              top: 60,
+              left: maxWidth != null ? 0 : 12,
+              right: maxWidth != null ? 0 : 12,
+            ),
+            constraints: BoxConstraints(
+              maxWidth: maxWidth ?? double.infinity,
+            ),
+            decoration: BoxDecoration(
+              color: backgroundColor ?? (maxWidth != null ? Colors.white : const Color(0xFFDCE7FF)),
+              borderRadius: BorderRadius.circular(borderRadius),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: SafeArea(
+              bottom: false,
+              child: StatefulBuilder(
+                builder: (ctx2, setModal) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: builder(ctx2, setModal),
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       );
     },
@@ -198,9 +223,11 @@ class _SwipeableRightSheetState extends State<_SwipeableRightSheet> {
 Future<bool?> showLogoutConfirm(BuildContext context) {
   return showModalTopSheet<bool>(
     context: context,
-    builder: (ctx) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    maxWidth: 360,
+    builder: (ctx, _) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         const Text("Logout?", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         const Text("Are you sure you want to logout?"),
@@ -210,7 +237,7 @@ Future<bool?> showLogoutConfirm(BuildContext context) {
           const SizedBox(width: 8),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Logout", style: TextStyle(color: Colors.red))),
         ]),
-      ]),
+      ],
     ),
   );
 }

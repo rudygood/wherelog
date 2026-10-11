@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_sheet.dart';
 
 class NotesSection extends StatefulWidget {
   final TextEditingController controller;
@@ -58,72 +59,57 @@ class _NotesSectionState extends State<NotesSection> {
     final tempCtrl = TextEditingController(text: widget.controller.text);
     final focusNode = FocusNode();
 
-    final result = await showDialog<String>(
+    final result = await showModalTopSheet<String>(
       context: context,
-      barrierColor: Colors.black54,
-      builder: (c) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(8, 40, 8, 8),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Material(
-              borderRadius: BorderRadius.circular(AppRadius.sheet),
-              child: Container(
-                width: double.infinity,
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * 0.75),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(AppRadius.sheet)),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('Edit Notes', style: AppText.dialogTitle),
-                        const Spacer(),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Flexible(
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
-                        child: TextField(
-                          controller: tempCtrl,
-                          focusNode: focusNode,
-                          minLines: 8,
-                          maxLines: 12,
-                          autofocus: true,
-                          style: const TextStyle(color: AppColors.textPrimary),
-                          decoration: InputDecoration(
-                            hintText: 'Additional details...',
-                            hintStyle: const TextStyle(color: AppColors.textDisabled),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-                            filled: true,
-                            fillColor: AppColors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel', style: AppText.buttonSmall))),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(c, tempCtrl.text),
-                            // themed — no black87
-                            child: const Text('Save', style: AppText.buttonPrimary),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+      maxWidth: 600,
+      backgroundColor: AppColors.white,
+      builder: (c, _) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Edit Notes', style: AppText.dialogTitle),
+                const Spacer(),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
+                child: TextField(
+                  controller: tempCtrl,
+                  focusNode: focusNode,
+                  minLines: 8,
+                  maxLines: 12,
+                  autofocus: true,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Additional details...',
+                    hintStyle: const TextStyle(color: AppColors.textDisabled),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                    filled: true,
+                    fillColor: AppColors.white,
+                  ),
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel', style: AppText.buttonSmall))),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(c, tempCtrl.text),
+                    child: const Text('Save', style: AppText.buttonPrimary),
+                  ),
+                ),
+              ],
+            ),
+          ],
         );
       },
     );

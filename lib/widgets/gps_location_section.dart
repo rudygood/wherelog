@@ -80,24 +80,32 @@ class GpsLocationSection extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 36,
+                      height: 50,
                       child: ElevatedButton(
                         onPressed: isGettingLocation ? null : onCurrentGps,
-                        // no inline backgroundColor — uses AppTheme buttonBg 6A6A6A + disabled B0B0B0
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonBg,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                        ),
                         child: isGettingLocation
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Device GPS', style: AppText.buttonSmall),
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Device GPS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: SizedBox(
-                      height: 36,
+                      height: 50,
                       child: ElevatedButton(
                         onPressed: onPickMap,
-                        // themed
-                        child: const Text('Map GPS', style: AppText.buttonSmall),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonBg,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                        ),
+                        child: const Text('Map GPS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ),
@@ -106,20 +114,17 @@ class GpsLocationSection extends StatelessWidget {
               const SizedBox(height: 12),
               const Text('PLACE NAME (required)', style: AppText.dialogSection),
               const SizedBox(height: 6),
-              SizedBox(
-                height: 36,
-                child: TextField(
-                  controller: nameController,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Great campsite',
-                    hintStyle: const TextStyle(color: AppColors.textDisabled),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-                    filled: true,
-                    fillColor: AppColors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    isDense: true,
-                  ),
+              TextField(
+                controller: nameController,
+                style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Great campsite',
+                  hintStyle: const TextStyle(color: AppColors.textDisabled),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                  filled: true,
+                  fillColor: AppColors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  isDense: false,
                 ),
               ),
             ],

@@ -4,9 +4,14 @@ import '../widgets/app_header.dart';
 import '../widgets/gps_location_section.dart';
 import '../widgets/photo_details_section.dart';
 import '../widgets/notes_section.dart';
+import '../widgets/app_sheet.dart';
 import '../wherelog_repository.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'map_picker_screen.dart';
+import '../utils/map_utils.dart';
 
 class PoiEditScreen extends StatefulWidget {
   final int itemIndex;
@@ -66,54 +71,104 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
     super.dispose();
   }
 
-  void showCenterNotice(String msg) {
-    showDialog(
+  Future<void> showCenterNotice(String msg) {
+    return showModalTopSheet<void>(
       context: context,
-      builder: (c) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sheet)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.place, size: 48, color: Colors.green),
-              const SizedBox(height: 12),
-              Text(msg, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(c),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white),
-                  child: const Text('OK'),
-                ),
-              ),
-            ],
+      maxWidth: 360,
+      backgroundColor: AppColors.white,
+      builder: (c, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.place, size: 48, color: Colors.green),
+          const SizedBox(height: 12),
+          Text(msg, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(c),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white),
+              child: const Text('OK'),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Future<void> captureCurrentGps() async {
+    if (_isGettingLocation) return;
     setState(() => _isGettingLocation = true);
     try {
-      await Future.delayed(const Duration(milliseconds: 400));
-      showCenterNotice('To enable live GPS, add to pubspec.yaml:\n  geolocator: ^10.1.0\n  geocoding: ^2.1.1\n\nThen uncomment capture code.');
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await showCenterNotice('Location services are disabled.\nEnable Location in quick settings.');
+        await Geolocator.openLocationSettings();
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          await showCenterNotice('Location permission denied.');
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        await showCenterNotice('Location permission permanently denied.\nOpen App Settings > Permissions > Allow.');
+        await Geolocator.openAppSettings();
+        return;
+      }
+
+      Position? pos = await Geolocator.getLastKnownPosition();
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 30),
+        );
+      } catch (e) {
+        if (pos == null) rethrow;
+      }
+
+      if (pos == null) {
+        await showCenterNotice('No GPS fix. Move outside / near window, wait 30s.');
+        return;
+      }
+
+      latController.text = pos.latitude.toStringAsFixed(6);
+      lngController.text = pos.longitude.toStringAsFixed(6);
+
+      try {
+        List<Placemark> marks = await Geocoding().placemarkFromCoordinates(pos.latitude, pos.longitude);
+        if (marks.isNotEmpty) {
+          final m = marks.first;
+          final parts = [
+            if (m.street != null && m.street!.isNotEmpty) m.street,
+            if (m.locality != null && m.locality!.isNotEmpty) m.locality,
+            if (m.administrativeArea != null && m.administrativeArea!.isNotEmpty) m.administrativeArea,
+            if (m.country != null && m.country!.isNotEmpty) m.country,
+          ];
+          if (parts.isNotEmpty) addressController.text = parts.join(', ');
+        }
+      } catch (_) {}
+    } catch (e) {
+      await showCenterNotice('GPS Error:\n$e');
     } finally {
       if (mounted) setState(() => _isGettingLocation = false);
     }
   }
 
   Future<void> pickFromMapProgram() async {
-    final result = await showModalBottomSheet<Map<String, String>>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (c) => _MapPickSheet(
-        initialLat: latController.text,
-        initialLng: lngController.text,
-        initialAddress: addressController.text,
+    final double? initLat = double.tryParse(latController.text.trim());
+    final double? initLng = double.tryParse(lngController.text.trim());
+    final result = await Navigator.push<Map<String, String>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapPickerScreen(
+          initialLat: initLat,
+          initialLng: initLng,
+          initialAddress: addressController.text,
+        ),
       ),
     );
     if (result != null) {
@@ -126,15 +181,15 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
   }
 
   Future<void> openPhotoSheet() async {
-    final src = await showModalBottomSheet<ImageSource>(
+    final src = await showModalTopSheet<ImageSource>(
       context: context,
-      builder: (c) => SafeArea(
-        child: Wrap(children: [
-          ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Take Photo'), onTap: () => Navigator.pop(c, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Choose from Gallery'), onTap: () => Navigator.pop(c, ImageSource.gallery)),
-          if (photoFile != null)
-            ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Remove Photo'), onTap: () => Navigator.pop(c, null)),
-        ]),
+      builder: (c, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Camera'), onTap: () => Navigator.pop(c, ImageSource.camera)),
+          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Gallery'), onTap: () => Navigator.pop(c, ImageSource.gallery)),
+          if (photoFile != null) ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Remove Photo'), onTap: () => Navigator.pop(c, null)),
+        ],
       ),
     );
     if (src == null && photoFile != null) {
@@ -174,7 +229,6 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
       return;
     }
     final nowIso = DateTime.now().toIso8601String();
-    // Preserve existing id/createdAt when editing
     final existing = (_repo.poiItems.length > widget.itemIndex) ? _repo.poiItems[widget.itemIndex] : <String, dynamic>{};
     final item = {
       'id': existing['id'] ?? 'poi_${DateTime.now().millisecondsSinceEpoch}',
@@ -218,6 +272,40 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
               onCurrentGps: captureCurrentGps,
               onPickMap: pickFromMapProgram,
             ),
+            const SizedBox(height: 12),
+            // Map Directions - using pure-code AppIcons.directions (no asset needed)
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: latController,
+              builder: (_, __, ___) => ValueListenableBuilder<TextEditingValue>(
+                valueListenable: lngController,
+                builder: (_, __, ___) {
+                  final hasCoords = MapUtils.hasCoordinates(latController.text, lngController.text);
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: hasCoords
+                          ? () {
+                              final lat = double.parse(latController.text.trim());
+                              final lng = double.parse(lngController.text.trim());
+                              MapUtils.openDirections(lat: lat, lng: lng, label: nameController.text.trim());
+                            }
+                          : null,
+                      // PNG with transparent interior - inverts via color tint
+                      icon: ImageIcon(AssetImage('assets/icon/directions_diamond.png'), size: 22, color: Colors.white),
+                      label: const Text('Map Directions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: hasCoords ? AppColors.buttonBg : Colors.grey.shade300,
+                        foregroundColor: AppColors.white,
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        disabledForegroundColor: Colors.grey.shade600,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
             const SizedBox(height: 16),
             PhotoDetailsSection(
               isExpanded: _photoExpanded,
@@ -251,66 +339,6 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
                 ),
                 child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MapPickSheet extends StatefulWidget {
-  final String initialLat;
-  final String initialLng;
-  final String initialAddress;
-  const _MapPickSheet({required this.initialLat, required this.initialLng, required this.initialAddress});
-  @override
-  State<_MapPickSheet> createState() => _MapPickSheetState();
-}
-
-class _MapPickSheetState extends State<_MapPickSheet> {
-  late TextEditingController latCtrl;
-  late TextEditingController lngCtrl;
-  late TextEditingController addrCtrl;
-  @override
-  void initState() {
-    super.initState();
-    latCtrl = TextEditingController(text: widget.initialLat);
-    lngCtrl = TextEditingController(text: widget.initialLng);
-    addrCtrl = TextEditingController(text: widget.initialAddress);
-  }
-
-  @override
-  void dispose() {
-    latCtrl.dispose();
-    lngCtrl.dispose();
-    addrCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Pick Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            TextField(controller: latCtrl, decoration: const InputDecoration(labelText: 'Latitude', border: OutlineInputBorder())),
-            const SizedBox(height: 8),
-            TextField(controller: lngCtrl, decoration: const InputDecoration(labelText: 'Longitude', border: OutlineInputBorder())),
-            const SizedBox(height: 8),
-            TextField(controller: addrCtrl, decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder())),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context, {'lat': latCtrl.text, 'lng': lngCtrl.text, 'address': addrCtrl.text}),
-                child: const Text('Use This Location'),
               ),
             ),
           ],

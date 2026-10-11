@@ -123,15 +123,15 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
       try {
         final dir = Directory(initialDir);
         if (!await dir.exists()) await dir.create(recursive: true);
-        result = await FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle, initialDirectory: dir.absolute.path);
+        result = await FilePicker.getDirectoryPath(dialogTitle: dialogTitle, initialDirectory: dir.absolute.path);
       } catch (e) {
-        try { result = await FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle); } catch (_) { result = null; }
+        try { result = await FilePicker.getDirectoryPath(dialogTitle: dialogTitle); } catch (_) { result = null; }
       }
       if (result == null) {
-        try { result = await FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle); } catch (_) {}
+        try { result = await FilePicker.getDirectoryPath(dialogTitle: dialogTitle); } catch (_) {}
       }
     } else {
-      try { result = await FilePicker.platform.getDirectoryPath(dialogTitle: dialogTitle); } catch (_) {}
+      try { result = await FilePicker.getDirectoryPath(dialogTitle: dialogTitle); } catch (_) {}
     }
     return result;
   }
@@ -295,12 +295,12 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
         if (initDir != null) {
           final d = Directory(initDir);
           if (!await d.exists()) await d.create(recursive: true);
-          result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true, initialDirectory: d.absolute.path);
+          result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true, initialDirectory: d.absolute.path);
         } else {
-          result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true);
+          result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true);
         }
       } catch (_) {
-        result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true);
+        result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true);
       }
 
       if (result == null || result.files.isEmpty) { setState(() => _status = 'Import cancelled'); return; }
