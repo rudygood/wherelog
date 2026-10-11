@@ -50,3 +50,6 @@ app.*.map.json
 test/ 
 build/ 
 .dart_tool/ 
+
+# Build reports - not for git
+android/build/
