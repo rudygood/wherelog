@@ -289,25 +289,13 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   Future<void> _doImportOverwrite() async {
     setState(() { _isImporting = true; _status = 'Picking ZIP/JSON file...'; });
     try {
-      String? initDir = _importDirPath.isNotEmpty ? _importDirPath : null;
-      FilePickerResult? result;
-      try {
-        if (initDir != null) {
-          final d = Directory(initDir);
-          if (!await d.exists()) await d.create(recursive: true);
-          result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true, initialDirectory: d.absolute.path);
-        } else {
-          result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true);
-        }
-      } catch (_) {
-        result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json'], withData: true);
-      }
+      // FIXED for file_picker 13.1.0 - no FilePickerResult, no withData, no initialDirectory, no bytes
+      final List<PlatformFile>? pickedFiles = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json']);
 
-      if (result == null || result.files.isEmpty) { setState(() => _status = 'Import cancelled'); return; }
-      final picked = result.files.first;
-      Uint8List? bytes = picked.bytes;
-      if (bytes == null && picked.path != null) bytes = await File(picked.path!).readAsBytes();
-      if (bytes == null) throw Exception('Could not read file');
+      if (pickedFiles == null || pickedFiles.isEmpty) { setState(() => _status = 'Import cancelled'); return; }
+      final picked = pickedFiles.first;
+      if (picked.path == null) throw Exception('Could not read file - no path');
+      Uint8List bytes = await File(picked.path!).readAsBytes();
       if (picked.path != null) { try { final dir = p.dirname(picked.path!); if (dir.isNotEmpty) await _saveImportDir(dir); } catch (_) {} }
 
       Map<String, dynamic> importedJson;

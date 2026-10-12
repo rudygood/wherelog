@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'screens/storage_add_screen.dart';
 import 'widgets/app_sheet.dart';
@@ -13,9 +14,12 @@ import 'wherelog_repository.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_icons.dart';
 import 'utils/map_utils.dart';
+import 'utils/poi_import_utils.dart';
 import 'settings_service.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 Future<void> migrateWherelogData() async {
   if (kIsWeb) return;
@@ -98,6 +102,10 @@ class _HomeScreenState extends State<HomeScreen>
   double? currentLat;
   double? currentLng;
   bool _isLoadingLocation = false;
+
+  // --- Import queue for Share-to-WhereLog ---
+  List<PoiImportData> _pendingImports = [];
+  StreamSubscription? _sharingSub;
 
   List<Place> places = [];
   List<Item> items = [];
@@ -278,6 +286,141 @@ class _HomeScreenState extends State<HomeScreen>
     finally { if (mounted) setState(() => _isLoadingLocation = false); }
   }
 
+  // ---- Import POI methods - selectable list, keep until Save ----
+  Future<void> _openImportSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Import Places', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 12),
+                      if (_pendingImports.isNotEmpty) ...[
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: Color(0xFFE8F0FF), borderRadius: BorderRadius.circular(12)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Text('Ready to Import (${_pendingImports.length})', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Spacer(),
+                                TextButton(onPressed: () { setState(() => _pendingImports.clear()); setSheetState((){}); Navigator.pop(ctx); }, child: Text('Clear All')),
+                              ]),
+                              SizedBox(height: 8),
+                              Text('Tap to import - stays until saved', style: TextStyle(fontSize: 11, color: Colors.black54, fontStyle: FontStyle.italic)),
+                              SizedBox(height: 8),
+                              ..._pendingImports.asMap().entries.map((entry) {
+                                final idx = entry.key;
+                                final p = entry.value;
+                                return Card(
+                                  margin: EdgeInsets.only(bottom: 6),
+                                  child: ListTile(
+                                    dense: true,
+                                    leading: Icon(Icons.place, color: Colors.blue),
+                                    title: Text(p.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                                    subtitle: Text('${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)} • ${p.source}', style: TextStyle(fontSize: 11)),
+                                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                                      IconButton(icon: Icon(Icons.check_circle, color: Colors.green), tooltip: 'Import this', onPressed: () { Navigator.pop(ctx); _processImportAt(idx); }),
+                                      IconButton(icon: Icon(Icons.close, size: 18), tooltip: 'Remove', onPressed: () { setState(() => _pendingImports.removeAt(idx)); setSheetState((){}); if (_pendingImports.isEmpty) Navigator.pop(ctx); }),
+                                    ]),
+                                    onTap: () { Navigator.pop(ctx); _processImportAt(idx); },
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        Divider(),
+                        SizedBox(height: 8),
+                      ],
+                      ListTile(leading: Icon(Icons.content_paste), title: Text('Paste from Clipboard'), subtitle: Text('Apple Maps, Google Maps, geo:, lat,lng'), onTap: () async { Navigator.pop(ctx); await _importFromClipboard(); }),
+                      ListTile(leading: Icon(Icons.file_open), title: Text('Import GPX File'), subtitle: Text('Waypoints from GPX'), onTap: () async { Navigator.pop(ctx); await _importFromGpx(); }),
+                      SizedBox(height: 8),
+                      OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text('Close')),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _processImportAt(int index) async {
+    if (index < 0 || index >= _pendingImports.length) return;
+    final data = _pendingImports[index];
+    final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiAddScreen(initialName: data.name, initialLat: data.lat, initialLng: data.lng, initialAddress: data.address)));
+    if (mounted) {
+      await _repo.load();
+      setState(() {});
+      if (result == true) {
+        setState(() => _pendingImports.removeAt(index));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved. ${_pendingImports.length} remaining to import'), action: _pendingImports.isNotEmpty ? SnackBarAction(label: 'View', onPressed: _openImportSheet) : null));
+        }
+      } else {
+        if (mounted && _pendingImports.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import cancelled - still in list (${_pendingImports.length})'), action: SnackBarAction(label: 'View', onPressed: _openImportSheet)));
+        }
+      }
+    }
+  }
+
+  Future<void> _processPendingImports() async {
+    if (_pendingImports.isEmpty) return;
+    await _openImportSheet();
+  }
+
+  Future<void> _processImportData(PoiImportData data) async {
+    final idx = _pendingImports.indexOf(data);
+    if (idx >= 0) {
+      await _processImportAt(idx);
+    } else {
+      final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiAddScreen(initialName: data.name, initialLat: data.lat, initialLng: data.lng, initialAddress: data.address)));
+      if (mounted) {
+        await _repo.load();
+        setState(() {});
+      }
+    }
+  }
+
+  Future<void> _importFromClipboard() async {
+    final list = await PoiImportUtils.importFromClipboard();
+    if (list.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No location found in clipboard')));
+      return;
+    }
+    setState(() => _pendingImports.addAll(list));
+    if (mounted) await _openImportSheet();
+  }
+
+  Future<void> _importFromGpx() async {
+    final list = await PoiImportUtils.importFromGpxFile();
+    if (list.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No waypoints found in GPX')));
+      return;
+    }
+    setState(() => _pendingImports.addAll(list));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${list.length} waypoints ready to import'), action: SnackBarAction(label: 'View', onPressed: _openImportSheet)));
+      setState(() {});
+      await _openImportSheet();
+    }
+  }
+
   double? calcDistanceMeters(double? lat, double? lng) {
     if (currentLat == null || currentLng == null || lat == null || lng == null) return null;
     return null;
@@ -331,6 +474,67 @@ class _HomeScreenState extends State<HomeScreen>
         });
     });
     _loadTabOrder();
+    _initSharing();
+  }
+
+  @override
+  void dispose() {
+    _sharingSub?.cancel();
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // --- Share-to-WhereLog implementation ---
+  Future<void> _initSharing() async {
+    try {
+      final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
+      if (initialMedia.isNotEmpty) {
+        final initialText = initialMedia.first.message ?? initialMedia.first.path;
+        if (initialText != null && initialText.isNotEmpty) {
+          _handleIncomingShare(initialText);
+        }
+      }
+      _sharingSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> sharedFiles) {
+        if (sharedFiles.isEmpty) return;
+        final text = sharedFiles.first.message ?? sharedFiles.first.path ?? '';
+        if (text.isNotEmpty) _handleIncomingShare(text);
+      }, onError: (err) {
+        debugPrint('Sharing stream error: $err');
+      });
+    } catch (e) {
+      debugPrint('Sharing init error: $e');
+    }
+  }
+
+  void _handleIncomingShare(String text) async {
+    var parsed = PoiImportUtils.parseSharedText(text);
+    if (parsed.isEmpty && text.toLowerCase().contains('goo.gl')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Resolving dropped pin link...')));
+      }
+      final expanded = await PoiImportUtils.tryExpandShortLink(text);
+      parsed = PoiImportUtils.parseSharedText(expanded);
+      if (parsed.isEmpty) {
+        parsed = PoiImportUtils.parseSharedText(expanded + ' ' + text);
+      }
+    }
+    if (parsed.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No location found. Dropped pin links need internet to resolve.'), duration: Duration(seconds: 4))
+        );
+      }
+      return;
+    }
+    setState(() {
+      _pendingImports.addAll(parsed);
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${parsed.length} location(s) ready to import'), action: SnackBarAction(label: 'View', onPressed: _openImportSheet))
+      );
+    }
   }
 
   Future<void> _loadTabOrder() async {
@@ -596,7 +800,14 @@ class _HomeScreenState extends State<HomeScreen>
               Expanded(
                 child: ElevatedButton(
                   onPressed: _isLoadingLocation ? null : fetchCurrentForDistance,
-                                    child: Text('Calc Distance from Current', style: TextStyle(fontSize: 11)),
+                                    child: Text('Calc Distance', style: TextStyle(fontSize: 11)),
+                  style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 8)))),
+              SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.input, size: 16),
+                  label: Text(_pendingImports.isEmpty ? 'Import' : 'Import •${_pendingImports.length}', style: TextStyle(fontSize: 11)),
+                  onPressed: _openImportSheet,
                   style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 8)))),
             ])),
           Expanded(

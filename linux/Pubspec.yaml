@@ -1,0 +1,54 @@
+name: wherelog
+description: WhereLog - track storage and inventory with 2-tier locations
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^2.0.0
+  geolocator: ^10.1.1
+  geocoding: 5.0.0
+  permission_handler: ^11.3.0
+  path_provider: ^2.1.2
+  image_picker: ^1.0.7
+  url_launcher: ^6.2.2
+  shared_preferences: ^2.2.2
+  file_picker: ^11.0.2
+  archive: ^4.3.0
+  path: ^1.9.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  receive_sharing_intent: ^1.8.0
+  xml: ^6.5.0
+  share_plus: ^8.0.0
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/wherelog_data.json
+    - assets/icon/app_icon.png
+    - assets/icon/wingback_line.png
+    - assets/icon/wherelog_launcher.png
+    - assets/icon/directions_diamond.png
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/wherelog_launcher.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icon/wherelog_launcher.png"
+    background_color: "#ffffff"
+    theme_color: "#0A7DFF"

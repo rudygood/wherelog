@@ -13,7 +13,11 @@ import 'package:geocoding/geocoding.dart';
 import 'map_picker_screen.dart';
 
 class PoiAddScreen extends StatefulWidget {
-  const PoiAddScreen({super.key});
+  const PoiAddScreen({super.key, this.initialName, this.initialLat, this.initialLng, this.initialAddress});
+  final String? initialName;
+  final double? initialLat;
+  final double? initialLng;
+  final String? initialAddress;
   @override
   State<PoiAddScreen> createState() => _PoiAddScreenState();
 }
@@ -36,6 +40,11 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
   void initState() {
     super.initState();
     _repo.load();
+    // Precise alteration for POI Import - prefill from shared data, preserve all existing features
+    if (widget.initialName != null) nameController.text = widget.initialName!;
+    if (widget.initialAddress != null) addressController.text = widget.initialAddress!;
+    if (widget.initialLat != null) latController.text = widget.initialLat!.toStringAsFixed(6);
+    if (widget.initialLng != null) lngController.text = widget.initialLng!.toStringAsFixed(6);
   }
 
   @override
