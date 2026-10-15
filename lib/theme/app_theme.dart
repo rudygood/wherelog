@@ -25,8 +25,8 @@ class AppRadius {
 
 class AppText {
   static String upper(String s) => s.toUpperCase();
-  static const tabSelected = TextStyle(fontWeight: FontWeight.w800, fontSize: 12, height: 1.1, color: AppColors.textPrimary);
-  static const tabUnselected = TextStyle(fontWeight: FontWeight.w600, fontSize: 12, height: 1.1, color: AppColors.textSecondary);
+  static const tabSelected = TextStyle(fontWeight: FontWeight.w800, fontSize: 14, height: 1.1, color: AppColors.textPrimary);
+  static const tabUnselected = TextStyle(fontWeight: FontWeight.w600, fontSize: 14, height: 1.1, color: AppColors.textSecondary);
   static const countBar = TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary);
   static const cardTitle = TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.textPrimary);
   static const cardLocation = TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary);

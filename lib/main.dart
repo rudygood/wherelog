@@ -20,6 +20,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'package:geolocator/geolocator.dart';
+import 'screens/poi_map_screen.dart';
 
 Future<void> migrateWherelogData() async {
   if (kIsWeb) return;
@@ -102,9 +104,29 @@ class _HomeScreenState extends State<HomeScreen>
   double? currentLat;
   double? currentLng;
   bool _isLoadingLocation = false;
+  String _lastShareDebug = '';
 
   // --- Import queue for Share-to-WhereLog ---
   List<PoiImportData> _pendingImports = [];
+
+  Future<void> _savePendingImports() async {
+    try {
+      final list = _pendingImports.map((e) => e.toJson()).toList();
+      await SettingsService().setPendingImports(list);
+    } catch (_) {}
+  }
+
+  Future<void> _loadPendingImports() async {
+    try {
+      final raw = await SettingsService().getPendingImports();
+      if (raw.isNotEmpty) {
+        setState(() {
+          _pendingImports = raw.map((j) => PoiImportData.fromJson(j)).toList();
+        });
+      }
+    } catch (_) {}
+  }
+
   StreamSubscription? _sharingSub;
 
   List<Place> places = [];
@@ -282,8 +304,30 @@ class _HomeScreenState extends State<HomeScreen>
 
     Future<void> fetchCurrentForDistance() async {
     setState(() => _isLoadingLocation = true);
-    try { await Future.delayed(const Duration(milliseconds: 300)); }
-    finally { if (mounted) setState(() => _isLoadingLocation = false); }
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services disabled')));
+        return;
+      }
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission denied')));
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high).timeout(const Duration(seconds: 12));
+      if (!mounted) return;
+      const double kMoveThresh = 402.0; // 0.25 mi
+      if (currentLat != null && currentLng != null) { final moved = Geolocator.distanceBetween(currentLat!, currentLng!, pos.latitude, pos.longitude); if (moved < kMoveThresh) { if (mounted) setState(() => _isLoadingLocation = false); return; } }
+      setState(() { currentLat = pos.latitude; currentLng = pos.longitude; });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Location error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoadingLocation = false);
+    }
   }
 
   // ---- Import POI methods - selectable list, keep until Save ----
@@ -314,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen>
                               Row(children: [
                                 Text('Ready to Import (${_pendingImports.length})', style: TextStyle(fontWeight: FontWeight.bold)),
                                 Spacer(),
-                                TextButton(onPressed: () { setState(() => _pendingImports.clear()); setSheetState((){}); Navigator.pop(ctx); }, child: Text('Clear All')),
+                                TextButton(onPressed: () async { setState(() => _pendingImports.clear()); await _savePendingImports(); setSheetState((){}); Navigator.pop(ctx); }, child: Text('Clear All')),
                               ]),
                               SizedBox(height: 8),
                               Text('Tap to import - stays until saved', style: TextStyle(fontSize: 11, color: Colors.black54, fontStyle: FontStyle.italic)),
@@ -328,10 +372,16 @@ class _HomeScreenState extends State<HomeScreen>
                                     dense: true,
                                     leading: Icon(Icons.place, color: Colors.blue),
                                     title: Text(p.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                                    subtitle: Text('${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)} • ${p.source}', style: TextStyle(fontSize: 11)),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (p.address.isNotEmpty) Text(p.address, style: TextStyle(fontSize: 11, color: Colors.black87), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                        Text('${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)} • ${p.source}', style: TextStyle(fontSize: 10, color: Colors.black54)),
+                                      ],
+                                    ),
                                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                                       IconButton(icon: Icon(Icons.check_circle, color: Colors.green), tooltip: 'Import this', onPressed: () { Navigator.pop(ctx); _processImportAt(idx); }),
-                                      IconButton(icon: Icon(Icons.close, size: 18), tooltip: 'Remove', onPressed: () { setState(() => _pendingImports.removeAt(idx)); setSheetState((){}); if (_pendingImports.isEmpty) Navigator.pop(ctx); }),
+                                      IconButton(icon: Icon(Icons.close, size: 18), tooltip: 'Remove', onPressed: () async { setState(() => _pendingImports.removeAt(idx)); await _savePendingImports(); setSheetState((){}); if (_pendingImports.isEmpty) Navigator.pop(ctx); }),
                                     ]),
                                     onTap: () { Navigator.pop(ctx); _processImportAt(idx); },
                                   ),
@@ -369,11 +419,12 @@ class _HomeScreenState extends State<HomeScreen>
       if (result == true) {
         setState(() => _pendingImports.removeAt(index));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved. ${_pendingImports.length} remaining to import'), action: _pendingImports.isNotEmpty ? SnackBarAction(label: 'View', onPressed: _openImportSheet) : null));
+          await _savePendingImports();
+          // No snackbar - auto-switch shows result
         }
       } else {
         if (mounted && _pendingImports.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import cancelled - still in list (${_pendingImports.length})'), action: SnackBarAction(label: 'View', onPressed: _openImportSheet)));
+          // Import cancelled - keep in queue, no snackbar
         }
       }
     }
@@ -404,6 +455,7 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
     setState(() => _pendingImports.addAll(list));
+    await _savePendingImports();
     if (mounted) await _openImportSheet();
   }
 
@@ -415,15 +467,19 @@ class _HomeScreenState extends State<HomeScreen>
     }
     setState(() => _pendingImports.addAll(list));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${list.length} waypoints ready to import'), action: SnackBarAction(label: 'View', onPressed: _openImportSheet)));
       setState(() {});
+      await _savePendingImports();
       await _openImportSheet();
     }
   }
 
   double? calcDistanceMeters(double? lat, double? lng) {
     if (currentLat == null || currentLng == null || lat == null || lng == null) return null;
-    return null;
+    try {
+      return Geolocator.distanceBetween(currentLat!, currentLng!, lat, lng);
+    } catch (_) {
+      return null;
+    }
   }
 
   String formatDistance(double? meters) {
@@ -474,6 +530,7 @@ class _HomeScreenState extends State<HomeScreen>
         });
     });
     _loadTabOrder();
+    _loadPendingImports();
     _initSharing();
   }
 
@@ -490,52 +547,38 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
       if (initialMedia.isNotEmpty) {
-        final initialText = initialMedia.first.message ?? initialMedia.first.path;
-        if (initialText != null && initialText.isNotEmpty) {
-          _handleIncomingShare(initialText);
-        }
+        final initialText = initialMedia.first.message ?? initialMedia.first.path ?? '';
+        if (initialText.isNotEmpty) _handleIncomingShare(initialText);
       }
       _sharingSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> sharedFiles) {
         if (sharedFiles.isEmpty) return;
         final text = sharedFiles.first.message ?? sharedFiles.first.path ?? '';
         if (text.isNotEmpty) _handleIncomingShare(text);
       }, onError: (err) {
-        debugPrint('Sharing stream error: $err');
+        debugPrint('Sharing stream error: ' + err.toString());
       });
     } catch (e) {
-      debugPrint('Sharing init error: $e');
+      debugPrint('Sharing init error: ' + e.toString());
     }
   }
 
   void _handleIncomingShare(String text) async {
     var parsed = PoiImportUtils.parseSharedText(text);
-    if (parsed.isEmpty && text.toLowerCase().contains('goo.gl')) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Resolving dropped pin link...')));
-      }
-      final expanded = await PoiImportUtils.tryExpandShortLink(text);
-      parsed = PoiImportUtils.parseSharedText(expanded);
-      if (parsed.isEmpty) {
-        parsed = PoiImportUtils.parseSharedText(expanded + ' ' + text);
-      }
-    }
     if (parsed.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No location found. Dropped pin links need internet to resolve.'), duration: Duration(seconds: 4))
-        );
+      final lower = text.toLowerCase();
+      if (lower.contains('goo.gl') || lower.contains('maps.app.goo.gl')) {
+        final expanded = await PoiImportUtils.tryExpandShortLink(text);
+        parsed = PoiImportUtils.parseSharedText(expanded);
+        if (parsed.isEmpty) {
+          parsed = PoiImportUtils.parseSharedText(expanded + ' ' + text);
+        }
       }
-      return;
     }
-    setState(() {
-      _pendingImports.addAll(parsed);
-    });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${parsed.length} location(s) ready to import'), action: SnackBarAction(label: 'View', onPressed: _openImportSheet))
-      );
-    }
+    if (parsed.isEmpty) return;
+    setState(() { _pendingImports.addAll(parsed); });
+    await _savePendingImports();
   }
+
 
   Future<void> _loadTabOrder() async {
     try {
@@ -664,6 +707,36 @@ class _HomeScreenState extends State<HomeScreen>
           ])),
         ]),
         actions: [
+          if (_pendingImports.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: InkWell(
+                onTap: _openImportSheet,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.black12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset('assets/icon/poi_import_icon.png', width: 18, height: 18, errorBuilder: (c,e,s) => const Icon(Icons.file_download, size: 18, color: Colors.black)),
+                      const SizedBox(width: 5),
+                      const Text('POI import', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                        child: Text('${_pendingImports.length}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           IconButton(
               icon: Icon(Icons.menu, color: Colors.black),
               onPressed: () => _openAppMenu())
@@ -741,7 +814,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
         ],
         Spacer(),
-        IconButton(icon: Icon(Icons.tune), onPressed: () => _openFilterSheet()),
+        IconButton(icon: Icon(Icons.tune, size: 29, color: Colors.black), onPressed: () => _openFilterSheet()),
         IconButton(
             icon: Icon(Icons.search),
             onPressed: () => setState(() => _searchMode = true)),
@@ -769,6 +842,98 @@ class _HomeScreenState extends State<HomeScreen>
       ]));
   }
 
+  Widget _buildPoiTopBar() {
+    final count = filteredPoiItems.length;
+    final pending = _pendingImports.length;
+    if (_searchMode) {
+      return Container(
+        color: AppColors.scaffold,
+        padding: const EdgeInsets.all(12),
+        child: Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'SEARCH PLACES...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+              ),
+              onChanged: (v) => setState(() => _searchQuery = v),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () => setState(() {
+              _searchMode = false;
+              _searchQuery = '';
+              _searchController.clear();
+            }),
+            child: const Text('DONE'),
+          ),
+        ]),
+      );
+    }
+    final text = '$count places';
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(children: [
+        Expanded(child: Text(text, style: AppText.countBar, overflow: TextOverflow.ellipsis)),
+        if (currentLat != null) ...[
+          InkWell(
+            onTap: () => setState(() { currentLat = null; currentLng = null; }),
+            child: const Padding(padding: EdgeInsets.only(right: 8), child: Text('Clear loc', style: TextStyle(fontSize: 11, color: Colors.blue))),
+          ),
+        ],
+        IconButton(
+          icon: ImageIcon(AssetImage('assets/icon/calc_distance_icon.png'), size: 29, color: Colors.black),
+          tooltip: currentLat == null ? 'Calc distance' : 'Clear location',
+          onPressed: () {
+            if (currentLat != null) {
+              setState(() { currentLat = null; currentLng = null; });
+            } else {
+              fetchCurrentForDistance();
+            }
+          },
+        ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: ImageIcon(AssetImage('assets/icon/poi_import_icon.png'), size: 29, color: Colors.black),
+              tooltip: 'Import',
+              onPressed: _openImportSheet,
+            ),
+            if (pending > 0)
+              Positioned(
+                right: 2,
+                top: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                  decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white, width: 1)),
+                  constraints: const BoxConstraints(minWidth: 14, minHeight: 12),
+                  child: Text('$pending', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                ),
+              ),
+          ],
+        ),
+        IconButton(
+          icon: ImageIcon(AssetImage('assets/icon/poi_map_icon.png'), size: 29, color: Colors.black),
+          tooltip: 'Map view - 25 mi default radius',
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiMapScreen()));
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.search, size: 29, color: Colors.black),
+              tooltip: 'Search places',
+          onPressed: () => setState(() => _searchMode = true),
+        ),
+      ]),
+    );
+  }
+
   Widget _buildPoiTab() {
     final isSel = _isSelectMode('POI');
     return Container(
@@ -794,22 +959,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Spacer(),
                 InkWell(onTap: () => setState(() { currentLat = null; currentLng = null; }), child: Text('Clear', style: TextStyle(fontSize: 10, color: Colors.blue))),
               ])),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    child: Row(children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isLoadingLocation ? null : fetchCurrentForDistance,
-                                    child: Text('Calc Distance', style: TextStyle(fontSize: 11)),
-                  style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 8)))),
-              SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  icon: Icon(Icons.input, size: 16),
-                  label: Text(_pendingImports.isEmpty ? 'Import' : 'Import •${_pendingImports.length}', style: TextStyle(fontSize: 11)),
-                  onPressed: _openImportSheet,
-                  style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 8)))),
-            ])),
+          _buildPoiTopBar(),
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.fromLTRB(12, 0, 12, 12),

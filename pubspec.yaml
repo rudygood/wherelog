@@ -35,9 +35,13 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/icon/poi_import_icon.png
+    - assets/icon/poi_map_icon.png
+    - assets/icon/calc_distance_icon.png
     - assets/data/wherelog_data.json
     - assets/icon/app_icon.png
     - assets/icon/wingback_line.png
+    - assets/icon/distance_dots.png
     - assets/icon/wherelog_launcher.png
     - assets/icon/directions_diamond.png
 
