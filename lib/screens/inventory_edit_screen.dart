@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../wherelog_repository.dart';
+import '../data/inventory_records.dart';
+import '../data/location_data.dart';
+import '../data/photo_store.dart';
+import '../data/sqlite_inventory_repository.dart';
+import '../data/sqlite_location_repository.dart';
 import '../widgets/notes_section.dart';
 import '../widgets/photo_details_section.dart';
 import '../widgets/app_header.dart';
@@ -9,8 +13,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class InventoryEditScreen extends StatefulWidget {
-  final int itemIndex;
-  const InventoryEditScreen({super.key, required this.itemIndex});
+  final int itemId;
+  const InventoryEditScreen({super.key, required this.itemId});
   @override
   State<InventoryEditScreen> createState() => _InventoryEditScreenState();
 }
@@ -21,15 +25,22 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
   final itemNameController = TextEditingController();
   final notesController = TextEditingController();
   final serialController = TextEditingController();
+  final brandController = TextEditingController();
+  final modelController = TextEditingController();
+  final purchasePriceController = TextEditingController();
+  final qtyController = TextEditingController(text: '1');
   DateTime? acquiredDate;
   final valueController = TextEditingController();
   final generalFocus = FocusNode();
   final specificFocus = FocusNode();
   File? photoFile;
   String? existingPhotoPath;
-  Map<String, dynamic>? _originalItem;
+  InventoryItem? _loadedItem;
+  String? _originalPhotoFilename;
   final _picker = ImagePicker();
-  final _repo = WhereLogRepository();
+  final _locRepo = SqliteLocationRepository.instance;
+  final _invRepo = SqliteInventoryRepository.instance;
+  final _locationData = SqliteLocationData();
   bool _notesExpanded = false;
   bool _photoDetailsExpanded = true;
   bool _isLoading = true;
@@ -44,15 +55,15 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check_circle, size: 48, color: Colors.green.shade600),
+              Icon(Icons.check_circle, size: 48, color: AppColors.success),
               const SizedBox(height: 12),
-              Text(msg, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), textAlign: TextAlign.center),
+              Text(msg, style: AppText.dialogNotice, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(c),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button))),
+                  style: AppButton.primary,
                   child: const Text('OK'),
                 ),
               ),
@@ -82,13 +93,18 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
   Map<String, dynamic> _initialSnapshot = {};
 
   bool _hasUnsavedChanges() {
-    if (_originalItem == null) return false;
+    if (_loadedItem == null) return false;
     final current = {
       'name': itemNameController.text.trim(),
       'genName': generalController.text.trim(),
       'specName': specificController.text.trim(),
       'notes': notesController.text.trim(),
       'serial': serialController.text.trim(),
+      'brand': brandController.text.trim(),
+      'model': modelController.text.trim(),
+      'qty': qtyController.text.trim(),
+      'purchase': purchasePriceController.text.trim(),
+      'acquiredDate': acquiredDate == null ? '' : _dateOnly(acquiredDate!),
       'value': valueController.text.trim(),
       'photo': photoFile?.path ?? existingPhotoPath ?? '',
     };
@@ -98,9 +114,19 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
         current['specName'] != orig['specName'] ||
         current['notes'] != orig['notes'] ||
         current['serial'] != orig['serial'] ||
+        current['brand'] != orig['brand'] ||
+        current['model'] != orig['model'] ||
+        current['qty'] != orig['qty'] ||
+        current['purchase'] != orig['purchase'] ||
+        current['acquiredDate'] != orig['acquiredDate'] ||
         current['value'] != orig['value'] ||
         current['photo'] != orig['photo'];
   }
+
+  /// Acquisition dates are stored date-only (YYYY-MM-DD): no time, no
+  /// timezone, so the date can never drift a day either way.
+  String _dateOnly(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> pickAcquiredDate() async {
     final now = DateTime.now();
@@ -131,51 +157,74 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
     specificController.addListener(() => setState(() {}));
     generalFocus.addListener(() => setState(() {}));
     specificFocus.addListener(() => setState(() {}));
-    _repo.load().then((_) {
-      if (_repo.inventoryItems.length > widget.itemIndex) {
-        final item = _repo.inventoryItems[widget.itemIndex];
-        _originalItem = Map<String, dynamic>.from(item);
+    _load();
+  }
 
-        String gName = '';
-        String sName = '';
-        final genId = (item['generalId'] ?? '').toString();
-        final specId = (item['specificId'] ?? '').toString();
+  Future<void> _load() async {
+    await _locationData.load();
+    final item = await _invRepo.getById(widget.itemId);
+    if (item != null) {
+      _loadedItem = item;
 
-        if (genId.isNotEmpty) {
-          gName = _repo.generalNameForId(genId);
-        }
-        if (specId.isNotEmpty) {
-          try {
-            final spec = _repo.inventorySpecifics.firstWhere((s) => (s['id']?.toString() ?? '') == specId, orElse: () => {});
-            sName = (spec['name'] ?? '').toString();
-          } catch (_) {}
-        }
-
-        generalController.text = gName;
-        specificController.text = sName;
-        itemNameController.text = (item['name'] ?? '').toString();
-        notesController.text = (item['notes'] ?? '').toString();
-        serialController.text = (item['serial_number'] ?? item['serial'] ?? '').toString();
-        final dateStr = item['acquisition_date'] ?? item['acquiredDate'];
-        if (dateStr != null) {
-          try { acquiredDate = DateTime.parse(dateStr.toString()); } catch (_) {}
-        }
-        final vAmt = item['valueAmount'] ?? (item['value'] != null ? item['value'].toString() : '');
-        valueController.text = vAmt.toString();
-        existingPhotoPath = (item['photoPath'] ?? item['photo'])?.toString();
-        _initialSnapshot = {
-          'name': itemNameController.text.trim(),
-          'genName': generalController.text.trim(),
-          'specName': specificController.text.trim(),
-          'notes': notesController.text.trim(),
-          'serial': serialController.text.trim(),
-          'acquiredDate': acquiredDate?.toIso8601String() ?? '',
-          'value': valueController.text.trim(),
-          'photo': existingPhotoPath ?? '',
-        };
+      // Resolve display names from the SQLite location tables by id.
+      String gName = '';
+      String sName = '';
+      final generals = await _locRepo.getGenerals();
+      for (final g in generals) {
+        if (g.id == item.generalId) { gName = g.name; break; }
       }
-      setState(() => _isLoading = false);
-    });
+      if (item.specificId != null) {
+        for (final s in await _locRepo.getInventorySpecifics()) {
+          if (s.id == item.specificId) {
+            sName = s.name;
+            if (gName.isEmpty) {
+              for (final g in generals) {
+                if (g.id == s.generalId) { gName = g.name; break; }
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      generalController.text = gName;
+      specificController.text = sName;
+      itemNameController.text = item.name;
+      notesController.text = item.notes;
+      serialController.text = item.serialNumber ?? '';
+      brandController.text = item.brand ?? '';
+      modelController.text = item.model ?? '';
+      qtyController.text = item.quantity.toString();
+      if (item.acquisitionDate != null) {
+        try { acquiredDate = DateTime.parse(item.acquisitionDate!); } catch (_) {}
+      }
+      // Money fields show dollars again; the record holds cents.
+      purchasePriceController.text = item.purchasePriceCents == null ? '' : (item.purchasePriceCents! / 100).toStringAsFixed(2);
+      valueController.text = item.valueCents == null ? '' : (item.valueCents! / 100).toStringAsFixed(2);
+      _originalPhotoFilename = item.photoFilename;
+      if (item.photoFilename != null) {
+        existingPhotoPath = await PhotoStore.pathFor(item.photoFilename!);
+        try {
+          final f = File(existingPhotoPath!);
+          if (await f.exists()) photoFile = f;
+        } catch (_) {}
+      }
+      _initialSnapshot = {
+        'name': itemNameController.text.trim(),
+        'genName': generalController.text.trim(),
+        'specName': specificController.text.trim(),
+        'notes': notesController.text.trim(),
+        'serial': serialController.text.trim(),
+        'brand': brandController.text.trim(),
+        'model': modelController.text.trim(),
+        'qty': qtyController.text.trim(),
+        'purchase': purchasePriceController.text.trim(),
+        'acquiredDate': item.acquisitionDate ?? '',
+        'value': valueController.text.trim(),
+        'photo': existingPhotoPath ?? '',
+      };
+    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
@@ -187,6 +236,10 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
     itemNameController.dispose();
     notesController.dispose();
     serialController.dispose();
+    brandController.dispose();
+    modelController.dispose();
+    purchasePriceController.dispose();
+    qtyController.dispose();
     valueController.dispose();
     super.dispose();
   }
@@ -200,64 +253,66 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
       showCenterNotice('Pick General');
       return;
     }
+    final loaded = _loadedItem;
+    if (loaded == null) return;
     final savedName = itemNameController.text.trim();
-    final serialText = serialController.text.trim();
-    final valueText = valueController.text.trim();
-    final valueAmt = double.tryParse(valueText.replaceAll('\$', '').trim());
 
-    // resolve IDs for stable JSON using v9 API
-    String generalId = '';
-    String specificId = '';
-    try {
-      final gName = generalController.text.trim();
-      final sName = specificController.text.trim();
-      generalId = _repo.generalIdForName(gName);
-      if (generalId.isNotEmpty) {
-        if (sName.isNotEmpty) {
-          final spec = _repo.inventorySpecifics.firstWhere(
-            (s) => (s['generalId']?.toString() ?? '') == generalId && (s['name']?.toString() ?? '') == sName,
-            orElse: () => {},
-          );
-          specificId = spec['id']?.toString() ?? '';
-          if (specificId.isEmpty) {
-            await _repo.addInventorySpecific(generalId, sName);
-            final spec2 = _repo.inventorySpecifics.firstWhere(
-              (s) => (s['generalId']?.toString() ?? '') == generalId && (s['name']?.toString() ?? '') == sName,
-              orElse: () => {},
-            );
-            specificId = spec2['id']?.toString() ?? '';
-          }
-        } else {
-          // blank sentinel for optional specific
-          final sentinel = _repo.inventorySpecifics.firstWhere(
-            (s) => (s['generalId']?.toString() ?? '') == generalId && (s['name']?.toString() ?? '').isEmpty,
-            orElse: () => {},
-          );
-          specificId = sentinel['id']?.toString() ?? '';
-        }
+    // Resolve names to ids against the SQLite location tables. A
+    // Specific typed but not yet existing is created, as on the add
+    // screen; no Specific typed means specificId stays null
+    // ("General only", schema D1).
+    final gName = generalController.text.trim();
+    final sName = specificController.text.trim();
+    int? generalId;
+    for (final g in await _locRepo.getGenerals()) {
+      if (g.name.toLowerCase() == gName.toLowerCase()) { generalId = g.id; break; }
+    }
+    if (generalId == null) {
+      showCenterNotice('General not found');
+      return;
+    }
+    int? specificId;
+    if (sName.isNotEmpty) {
+      for (final s in await _locRepo.getInventorySpecifics()) {
+        if (s.generalId == generalId && s.name.toLowerCase() == sName.toLowerCase()) { specificId = s.id; break; }
       }
-    } catch (_) {}
+      if (specificId == null) {
+        specificId = await _locRepo.addInventorySpecific(generalId, sName);
+      }
+    }
 
-    final orig = _originalItem ?? {};
-    final nowIso = DateTime.now().toIso8601String();
-    final updated = {
-      'id': orig['id'],
-      'name': savedName,
-      'generalId': generalId,
-      'specificId': specificId,
-      'serial_number': serialText,
-      'acquisition_date': acquiredDate?.toIso8601String(),
-      'value': valueAmt,
-      'valueAmount': valueText,
-      'notes': notesController.text.trim(),
-      'photo': photoFile?.path ?? existingPhotoPath,
-      'photoPath': photoFile?.path ?? existingPhotoPath,
-      'createdAt': orig['createdAt'] ?? nowIso,
-      'modifyDate': nowIso,
-      'updatedAt': nowIso,
-    };
+    int? centsOf(String text) {
+      final amt = double.tryParse(text.replaceAll('\$', '').trim());
+      return amt == null ? null : (amt * 100).round();
+    }
 
-    await _repo.updateInventoryItem(widget.itemIndex, updated);
+    String? orNull(String text) => text.trim().isEmpty ? null : text.trim();
+
+    final newPhotoFilename = PhotoStore.filenameOf(photoFile?.path);
+    final updated = InventoryItem(
+      id: loaded.id,
+      name: savedName,
+      generalId: generalId,
+      specificId: specificId,
+      brand: orNull(brandController.text),
+      model: orNull(modelController.text),
+      serialNumber: orNull(serialController.text),
+      acquisitionDate: acquiredDate == null ? null : _dateOnly(acquiredDate!),
+      quantity: int.tryParse(qtyController.text.trim()) ?? 1,
+      purchasePriceCents: centsOf(purchasePriceController.text),
+      valueCents: centsOf(valueController.text),
+      notes: notesController.text.trim(),
+      photoFilename: newPhotoFilename,
+      createdAt: loaded.createdAt,
+      modifiedAt: loaded.modifiedAt,
+    );
+
+    await _invRepo.update(updated);
+    // Photo removed or replaced: the old file goes with the save (the
+    // picker already removes it on replace; this is tolerant).
+    if (_originalPhotoFilename != null && _originalPhotoFilename != newPhotoFilename) {
+      await PhotoStore.deletePhoto(_originalPhotoFilename);
+    }
     if (!mounted) return;
     showCenterNotice('Saved: $savedName');
     Future.delayed(const Duration(milliseconds: 800), () {
@@ -275,14 +330,15 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(c, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: AppColors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: AppColors.white),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
     if (ok == true) {
-      await _repo.deleteInventoryItem(widget.itemIndex);
+      await _invRepo.delete(widget.itemId);
+      await PhotoStore.deletePhoto(_originalPhotoFilename);
       if (mounted) Navigator.pop(context, true);
     }
   }
@@ -303,31 +359,7 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
     if (result != null) setState(() => notesController.text = result);
   }
 
-  Future<void> openPhotoSheet() async {
-    final hasAnyPhoto = photoFile != null || (existingPhotoPath != null && existingPhotoPath!.isNotEmpty);
-    final src = await showModalBottomSheet<dynamic>(
-      context: context,
-      builder: (c) => SafeArea(
-        child: Wrap(children: [
-          ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Take Photo'), onTap: () => Navigator.pop(c, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Choose from Gallery'), onTap: () => Navigator.pop(c, ImageSource.gallery)),
-          if (hasAnyPhoto) ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Remove Photo'), onTap: () => Navigator.pop(c, 'remove')),
-        ]),
-      ),
-    );
-    if (src == 'remove') {
-      setState(() {
-        photoFile = null;
-        existingPhotoPath = null;
-      });
-      return;
-    }
-    if (src == null) return;
-    if (src is ImageSource) {
-      final XFile? img = await _picker.pickImage(source: src, imageQuality: 80, maxWidth: 1024);
-      if (img != null) setState(() => photoFile = File(img.path));
-    }
-  }
+  
 
   Future<void> openFullPhotoViewer(File file) async {
     await showDialog(
@@ -352,7 +384,7 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
                     tooltip: 'Replace',
                     onPressed: () {
                       Navigator.pop(c);
-                      openPhotoSheet();
+                      
                     },
                   ),
                   IconButton(
@@ -369,7 +401,7 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
               child: Center(
                 child: Text(
                   'Pinch to zoom — tap \u2715 to close',
-                  style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: AppText.photoCaption,
                 ),
               ),
             ),
@@ -388,7 +420,7 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
           children: [
             Opacity(opacity: 0.68, child: Image.asset('assets/icon/app_icon.png', width: 64, height: 64, fit: BoxFit.contain)),
             const SizedBox(height: 6),
-            const Text('No Photo', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800, fontSize: 11)),
+            const Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 11)),
             const Text('Tap to add', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
           ],
         ),
@@ -406,14 +438,14 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
         if (hasPhoto) {
           openFullPhotoViewer(displayFile!);
         } else {
-          openPhotoSheet();
+          
         }
       },
       borderRadius: BorderRadius.circular(AppRadius.button),
       child: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.textDisabled), borderRadius: BorderRadius.circular(AppRadius.button)),
+        decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(9),
           child: hasPhoto
@@ -443,10 +475,10 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
                       right: 5,
                       top: 5,
                       child: InkWell(
-                        onTap: openPhotoSheet,
+                        onTap: () {},
                         child: Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border)),
+                          decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border, width: AppBorder.width)),
                           child: const Icon(Icons.edit, size: 12, color: AppColors.textSecondary),
                         ),
                       ),
@@ -490,7 +522,7 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
               itemNameController: itemNameController,
               generalFocus: generalFocus,
               specificFocus: specificFocus,
-              repo: _repo,
+              data: _locationData,
               itemHint: 'Inventory Item',
             ),
             const SizedBox(height: 14),
@@ -500,11 +532,15 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
               onToggle: () => setState(() => _photoDetailsExpanded = !_photoDetailsExpanded),
               variant: PhotoDetailsVariant.inventory,
               photoFile: photoFile,
-              onPhotoAdd: openPhotoSheet,
+              onPhotoChanged: (f) => setState(() => photoFile = f),
               onPhotoView: () => openFullPhotoViewer(photoFile!),
-              onPhotoEdit: openPhotoSheet,
+              
               valueController: valueController,
               serialController: serialController,
+              brandController: brandController,
+              modelController: modelController,
+              purchasePriceController: purchasePriceController,
+              qtyController: qtyController,
               acquiredDate: acquiredDate,
               onPickAcquiredDate: () async {
                 final now = DateTime.now();
@@ -527,9 +563,9 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
             ),
             const SizedBox(height: 20),
             Row(children: [
-              Expanded(child: SizedBox(height: 44, child: OutlinedButton(onPressed: () async { final ok = await _confirmDiscard(); if (ok && mounted) Navigator.pop(context); }, child: const Text('Cancel')))),
+              Expanded(child: SizedBox(height: AppSize.buttonHeight, child: OutlinedButton(onPressed: () async { final ok = await _confirmDiscard(); if (ok && mounted) Navigator.pop(context); }, child: const Text('Cancel')))),
               const SizedBox(width: 12),
-              Expanded(child: SizedBox(height: 44, child: ElevatedButton(onPressed: handleSave, style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white), child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold))))),
+              Expanded(child: SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: handleSave, style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white), child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold))))),
             ]),
           ]),
         ),

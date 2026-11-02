@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 // Single source for Wherelog icons - no assets needed
 class AppIcons {
@@ -24,8 +25,8 @@ class DirectionsIcon extends StatelessWidget {
       height: size,
       child: CustomPaint(
         painter: DirectionsIconPainter(
-          color: color ?? Colors.black,
-          backgroundColor: backgroundColor ?? Colors.white,
+          color: color ?? AppColors.textPrimary,
+          backgroundColor: backgroundColor ?? AppColors.white,
         ),
       ),
     );

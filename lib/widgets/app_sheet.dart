@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import '../screens/location_options_maintenance_screen.dart';
+import '../theme/app_theme.dart';
+import '../screens/location_options_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/export_import_screen.dart';
+import '../screens/about_screen.dart';
 
 Future<T?> showModalTopSheet<T>({
   required BuildContext context,
   required Widget Function(BuildContext context, StateSetter setModal) builder,
-  Color barrierColor = Colors.black54,
+  Color barrierColor = AppColors.barrier,
   Duration transitionDuration = const Duration(milliseconds: 220),
   double borderRadius = 16,
   double? maxWidth,
@@ -33,8 +35,8 @@ Future<T?> showModalTopSheet<T>({
               maxWidth: maxWidth ?? double.infinity,
             ),
             decoration: BoxDecoration(
-              color: backgroundColor ?? (maxWidth != null ? Colors.white : const Color(0xFFDCE7FF)),
-              borderRadius: BorderRadius.circular(borderRadius),
+              color: backgroundColor ?? (maxWidth != null ? AppColors.white : AppColors.cardSelected),
+              borderRadius: BorderRadius.circular(AppRadius.sheet),
             ),
             clipBehavior: Clip.antiAlias,
             child: SafeArea(
@@ -67,14 +69,14 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
     context: outerContext,
     barrierDismissible: true,
     barrierLabel: "AppMenu",
-    barrierColor: Colors.black54,
+    barrierColor: AppColors.barrier,
     transitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (ctx, a1, a2) {
       return _SwipeableRightSheet(
         child: Builder(builder: (innerCtx) {
-          const textPrimary = Color(0xFF1A1A1A);
-          const textSecondary = Color(0xFF444444);
-          const textDisabled = Color(0xFF6B6B6B);
+          const textPrimary = AppColors.textPrimary;
+          const textSecondary = AppColors.textSecondary;
+          const textDisabled = AppColors.textDisabled;
 
           Widget menuTile({
             required IconData icon,
@@ -84,16 +86,16 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
             bool enabled = true,
             bool isDestructive = false,
           }) {
-            final color = isDestructive ? Colors.red : (enabled ? textPrimary : textDisabled);
-            final subColor = isDestructive ? Colors.red.shade400 : (enabled ? textSecondary : textDisabled);
+            final color = isDestructive ? AppColors.alert : (enabled ? textPrimary : textDisabled);
+            final subColor = isDestructive ? AppColors.alert : (enabled ? textSecondary : textDisabled);
             return ListTile(
               enabled: enabled,
               dense: true,
               visualDensity: const VisualDensity(horizontal: 0, vertical: -3),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               leading: Icon(icon, size: 20, color: color),
-              title: Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: color)),
-              subtitle: Text(subtitle, style: TextStyle(fontSize: 10.5, color: subColor, height: 1.2)),
+              title: Text(title, style: isDestructive ? AppText.menuTileTitleAlert : AppText.menuTileTitle.copyWith(color: color)),
+              subtitle: Text(subtitle, style: isDestructive ? AppText.dialogAlert : AppText.dialog.copyWith(color: subColor)),
               trailing: enabled && !isDestructive ? const Icon(Icons.chevron_right, size: 16, color: textSecondary) : null,
               onTap: enabled ? () => Navigator.pop(innerCtx, popValue) : null,
             );
@@ -106,7 +108,7 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Menu', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF1A1A1A))),
+                    const Text('Menu', style: AppText.cardTitle),
                     IconButton(
                       icon: const Icon(Icons.close, size: 20),
                       onPressed: () => Navigator.pop(innerCtx),
@@ -129,7 +131,7 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                     menuTile(icon: Icons.contact_support_outlined, title: 'Contact / Support', subtitle: 'Feedback, report issue', enabled: false),
                     menuTile(icon: Icons.help_outline, title: 'Help', subtitle: 'How to use WhereLog', enabled: false),
                     const Divider(height: 12, thickness: 0.5),
-                    menuTile(icon: Icons.info_outline, title: 'About', subtitle: 'Version, data paths', enabled: false),
+                    menuTile(icon: Icons.info_outline, title: 'About', subtitle: 'Version, data paths', popValue: 'about'),
                   ],
                 ),
               ),
@@ -154,13 +156,16 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
   if (action == null || !outerContext.mounted) return null;
   switch (action) {
     case 'location':
-      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const LocationMaintenanceScreen()));
+      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const LocationOptionsScreen()));
       return null;
     case 'settings':
       final result = await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
       return result;
     case 'export_import':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const ExportImportScreen()));
+      return null;
+    case 'about':
+      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const AboutScreen()));
       return null;
     case 'logout':
       final confirmed = await showLogoutConfirm(outerContext);
@@ -205,8 +210,8 @@ class _SwipeableRightSheetState extends State<_SwipeableRightSheet> {
         child: Transform.translate(
           offset: Offset(_dragDx, 0),
           child: Material(
-            color: Colors.white,
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+            color: AppColors.white,
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(AppRadius.sheet)),
             clipBehavior: Clip.antiAlias,
             child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.78,
@@ -228,16 +233,17 @@ Future<bool?> showLogoutConfirm(BuildContext context) {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text("Logout?", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        const Text("Logout?", style: AppText.dialogTitleAlert),
         const SizedBox(height: 8),
         const Text("Are you sure you want to logout?"),
         const SizedBox(height: 20),
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
           const SizedBox(width: 8),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Logout", style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Logout", style: AppText.buttonSmallAlert)),
         ]),
       ],
     ),
   );
 }
+

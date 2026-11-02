@@ -267,7 +267,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                       point: _picked!,
                       width: 50,
                       height: 50,
-                      child: const Icon(Icons.location_pin, size: 48, color: Colors.red),
+                      child: const Icon(Icons.location_pin, size: 48, color: AppColors.alert),
                     ),
                   ],
                 ),
@@ -292,10 +292,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   heroTag: 'my_location',
                   onPressed: _isGettingLocation ? null : _goToCurrentLocation,
                   backgroundColor: AppColors.buttonBg,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.white,
                   tooltip: 'Go to my current location',
                   child: _isGettingLocation
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
                       : const Icon(Icons.my_location),
                 ),
               ],
@@ -308,9 +308,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.location_pin, size: 48, color: Colors.redAccent),
+                    Icon(Icons.location_pin, size: 48, color: AppColors.alert),
                     SizedBox(height: 4),
-                    Text('Tap to drop pin or search below', style: TextStyle(fontWeight: FontWeight.bold, backgroundColor: Colors.white70)),
+                    Text('Tap to drop pin or search below', style: TextStyle(fontWeight: FontWeight.bold, backgroundColor: AppColors.whiteDim)),
                   ],
                 ),
               ),
@@ -345,8 +345,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                               suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(icon: const Icon(Icons.clear, size: 20), onPressed: _clearSearch)
                                   : null,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
+                              contentPadding: AppSize.fieldPadding,
                             ),
                           ),
                         ),
@@ -358,11 +358,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.buttonBg,
                               foregroundColor: AppColors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                               padding: const EdgeInsets.symmetric(horizontal: 14),
                             ),
                             child: _isSearching
-                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
                                 : const Text('Find'),
                           ),
                         ),
@@ -372,7 +372,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                     // Search status
                     if (_searchError.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(_searchError, style: const TextStyle(fontSize: 12, color: Colors.red)),
+                      Text(_searchError, style: AppText.dialogAlert),
                     ],
 
                     // Search results list
@@ -381,13 +381,13 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                       Container(
                         constraints: const BoxConstraints(maxHeight: 180),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border, width: AppBorder.width),
+                          borderRadius: BorderRadius.circular(AppBorder.radius),
                         ),
                         child: ListView.separated(
                           shrinkWrap: true,
                           itemCount: _searchResults.length,
-                          separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+                          separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.disabledSurface),
                           itemBuilder: (context, idx) {
                             final r = _searchResults[idx];
                             return ListTile(
@@ -399,8 +399,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                                 size: 20,
                                 color: AppColors.buttonBg,
                               ),
-                              title: Text(r.displayName, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-                              subtitle: Text('${r.type} • ${r.lat.toStringAsFixed(5)}, ${r.lng.toStringAsFixed(5)}', style: const TextStyle(fontSize: 11)),
+                              title: Text(r.displayName, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.cardTitle),
+                              subtitle: Text('${r.type} • ${r.lat.toStringAsFixed(5)}, ${r.lng.toStringAsFixed(5)}', style: AppText.dialog),
                               onTap: () => _selectSearchResult(r),
                             );
                           },

@@ -13,6 +13,7 @@ import 'screens/poi_edit_screen.dart';
 import 'wherelog_repository.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_icons.dart';
+import 'widgets/location_filter_section.dart';
 import 'utils/map_utils.dart';
 import 'utils/poi_import_utils.dart';
 import 'settings_service.dart';
@@ -72,7 +73,14 @@ class _HomeScreenState extends State<HomeScreen>
   String _searchQuery = '';
   bool _searchMode = false;
   String _sortBy = 'Recent';
-  String _filterBy = 'All';
+  Map<String, String> _filterGeneralMap = {'Storage': 'All', 'Inventory': 'All', 'POI': 'All'};
+  Map<String, String?> _filterSpecificMap = {'Storage': null, 'Inventory': null, 'POI': null};
+
+  bool _matchesLocationFilterForTab(Item item, String tabName) {
+    final g = _filterGeneralMap[tabName] ?? 'All';
+    final s = _filterSpecificMap[tabName];
+    return LocationFilterSection.matchesFilter(place: item.place, bin: item.bin, filterGeneral: g, filterSpecific: s);
+  }
   // INDEPENDENT SELECT MODE PER TAB - each tab owns its own state
   Map<String, bool> _selectModes = {'Storage': false, 'Inventory': false, 'POI': false};
   Map<String, Set<String>> _selectedIdsMap = {'Storage': <String>{}, 'Inventory': <String>{}, 'POI': <String>{}};
@@ -211,6 +219,16 @@ class _HomeScreenState extends State<HomeScreen>
       debugPrint('specLookup build failed: $e');
     }
 
+    DateTime? tryParseDate(dynamic v) {
+      if (v == null) return null;
+      try {
+        if (v is DateTime) return v;
+        final s = v.toString();
+        if (s.isEmpty) return null;
+        return DateTime.tryParse(s);
+      } catch (_) { return null; }
+    }
+
     return _repo.storageItems.map((m) {
       final id = m['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
       String place = '';
@@ -222,23 +240,26 @@ class _HomeScreenState extends State<HomeScreen>
         final b = specLookup[specId]!['bin'] ?? '';
         bin = b.isEmpty ? null : b;
       } else if (genId != null) {
-        // fallback resolve via generalId
         place = _repo.generalNameForId(genId);
-        // try to find specific name directly
         final spec = _repo.storageSpecifics.firstWhere((s) => s['id'] == specId, orElse: () => {});
         final bn = spec['name']?.toString() ?? '';
         bin = bn.isEmpty ? null : bn;
       }
+      final createdAt = tryParseDate(m['createdAt'] ?? m['createDate']);
+      final modifiedAt = tryParseDate(m['modifyDate'] ?? m['modifiedAt'] ?? m['updatedAt'] ?? m['lastModified']);
       return Item(
         id: id,
         name: m['name'] ?? 'Unnamed',
         qty: (m['qty'] is int) ? m['qty'] : int.tryParse(m['qty']?.toString() ?? '1') ?? 1,
         place: place.isEmpty ? 'Garage' : place,
         bin: bin,
-        emoji: '📦');
+        emoji: '📦',
+        createdAt: createdAt,
+        modifiedAt: modifiedAt,
+        generalId: genId,
+        specificId: specId);
     }).toList();
   }
-
 
     int _findRepoIndexForItem(Item item) {
     // Find by id first, then by name+place+bin
@@ -275,6 +296,17 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       debugPrint('inventory specLookup failed: $e');
     }
+
+    DateTime? tryParseDate(dynamic v) {
+      if (v == null) return null;
+      try {
+        if (v is DateTime) return v;
+        final s = v.toString();
+        if (s.isEmpty) return null;
+        return DateTime.tryParse(s);
+      } catch (_) { return null; }
+    }
+
     return _repo.inventoryItems.map((m) {
       final id = m['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
       String place = '';
@@ -291,16 +323,21 @@ class _HomeScreenState extends State<HomeScreen>
         final bn = spec['name']?.toString() ?? '';
         bin = bn.isEmpty ? null : bn;
       }
+      final createdAt = tryParseDate(m['createdAt'] ?? m['createDate']);
+      final modifiedAt = tryParseDate(m['modifyDate'] ?? m['modifiedAt'] ?? m['updatedAt'] ?? m['lastModified']);
       return Item(
         id: id,
         name: m['name'] ?? 'Unnamed',
         qty: (m['qty'] is int) ? m['qty'] : int.tryParse(m['qty']?.toString() ?? '1') ?? 1,
         place: place.isEmpty ? 'Garage' : place,
         bin: bin,
-        emoji: '🪑');
+        emoji: '🪑',
+        createdAt: createdAt,
+        modifiedAt: modifiedAt,
+        generalId: genId,
+        specificId: specId);
     }).toList();
   }
-
 
     Future<void> fetchCurrentForDistance() async {
     setState(() => _isLoadingLocation = true);
@@ -642,9 +679,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   List<Item> get filteredItems {
     var list = items.where((i) {
-      if (_filterBy != 'All' &&
-          _filterBy != 'Important' &&
-          i.place != _filterBy) return false;
+      if (!_matchesLocationFilterForTab(i, 'Storage')) return false;
       if (_searchQuery.isNotEmpty &&
           !i.name.toLowerCase().contains(_searchQuery.toLowerCase()))
         return false;
@@ -655,6 +690,13 @@ class _HomeScreenState extends State<HomeScreen>
       list.sort(
           (a, b) => '${a.place}/${a.bin}'.compareTo('${b.place}/${b.bin}'));
     if (_sortBy == 'Qty') list.sort((a, b) => b.qty.compareTo(a.qty));
+    if (_sortBy == 'Recent') {
+      list.sort((a, b) {
+        final aDt = a.modifiedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDt = b.modifiedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDt.compareTo(aDt);
+      });
+    }
     return list;
   }
 
@@ -669,18 +711,39 @@ class _HomeScreenState extends State<HomeScreen>
       return name.contains(q) || addr.contains(q) || notes.contains(q);
     }).toList();
     if (_sortBy == 'Name A-Z') list.sort((a,b) => (a['name']??'').toString().compareTo((b['name']??'').toString()));
+    if (_sortBy == 'Recent') {
+      DateTime tryParseDate(dynamic v) {
+        if (v == null) return DateTime.fromMillisecondsSinceEpoch(0);
+        try {
+          if (v is DateTime) return v;
+          return DateTime.tryParse(v.toString()) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        } catch (_) { return DateTime.fromMillisecondsSinceEpoch(0); }
+      }
+      list.sort((a,b) {
+        final aDt = tryParseDate(a['modifyDate'] ?? a['modifiedAt'] ?? a['createdAt']);
+        final bDt = tryParseDate(b['modifyDate'] ?? b['modifiedAt'] ?? b['createdAt']);
+        return bDt.compareTo(aDt);
+      });
+    }
     return list;
   }
 
   List<Item> get filteredInventoryItems {
     var list = inventoryItemsList.where((i) {
-      if (_filterBy != 'All' && _filterBy != 'Important' && i.place != _filterBy) return false;
+      if (!_matchesLocationFilterForTab(i, 'Inventory')) return false;
       if (_searchQuery.isNotEmpty && !i.name.toLowerCase().contains(_searchQuery.toLowerCase())) return false;
       return true;
     }).toList();
     if (_sortBy == 'Name A-Z') list.sort((a, b) => a.name.compareTo(b.name));
     if (_sortBy == 'Location') list.sort((a, b) => '${a.place}/${a.bin}'.compareTo('${b.place}/${b.bin}'));
     if (_sortBy == 'Qty') list.sort((a, b) => b.qty.compareTo(a.qty));
+    if (_sortBy == 'Recent') {
+      list.sort((a, b) {
+        final aDt = a.modifiedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDt = b.modifiedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDt.compareTo(aDt);
+      });
+    }
     return list;
   }
 
@@ -723,7 +786,7 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.file_download, size: 18, color: Colors.black),
+                      Image.asset('assets/icon/poi_import_icon.png', width: 18, height: 18, errorBuilder: (c,e,s) => const Icon(Icons.file_download, size: 18, color: Colors.black)),
                       const SizedBox(width: 5),
                       const Text('POI import', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 6),
@@ -797,28 +860,55 @@ class _HomeScreenState extends State<HomeScreen>
                                     child: Text('DONE')),
         ]));
     }
-    final isFilterActive = _filterBy != 'All';
+    final isFilterActive = (_filterGeneralMap[_currentTabName] ?? 'All') != 'All' || (_filterSpecificMap[_currentTabName] != null);
+    final fg = _filterGeneralMap[_currentTabName] ?? 'All';
+    final fs = _filterSpecificMap[_currentTabName];
+    final filterDisplay = (fs == null || fs.isEmpty) ? fg : '$fg/$fs';
     return Container(
       color: Colors.white,
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    child: Row(children: [
-        Text('$count ${isStorage ? 'storage' : 'inventory'} items',
-            style: AppText.countBar),
-        if (isFilterActive) ...[
-          SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () => setState(() {
-              _filterBy = 'All';
-            }),
-                                    child: Text('Clear filter'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Text('$count ${isStorage ? 'storage' : 'inventory'} items',
+                style: AppText.countBar),
+            Spacer(),
+            IconButton(icon: Icon(Icons.tune, size: 29, color: Colors.black), onPressed: () => _openFilterSheet()),
+            IconButton(
+                icon: Icon(Icons.search),
+                onPressed: () => setState(() => _searchMode = true)),
+          ]),
+          if (isFilterActive)
+            Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Text('Filter: $filterDisplay', style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
+                  SizedBox(width: 8),
+                  // Pill very tightly surrounding Clear Filter
+                  ElevatedButton(
+                    onPressed: () => setState(() {
+                      _filterGeneralMap[_currentTabName] = 'All';
+                      _filterSpecificMap[_currentTabName] = null;
+                    }),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.white,
+                      foregroundColor: Colors.black87,
+                      side: BorderSide(color: AppColors.border, width: 1),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                      padding: EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+                      elevation: 0,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: Size(0, 22),
+                    ),
+                    child: Text('Clear Filter', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
             ),
         ],
-        Spacer(),
-        IconButton(icon: Icon(Icons.tune, size: 29, color: Colors.black), onPressed: () => _openFilterSheet()),
-        IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () => setState(() => _searchMode = true)),
-      ]));
+      ));
   }
 
   // === MULTIPLE SETS OF BUTTONS RESIDING ON TABS - each tab owns its own set ===
@@ -874,7 +964,7 @@ class _HomeScreenState extends State<HomeScreen>
         ]),
       );
     }
-    final text = pending > 0 ? '$count places / $pending POI imports pending' : '$count places';
+    final text = '$count places';
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -887,7 +977,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
         IconButton(
-          icon: ImageIcon(AssetImage('assets/icon/distance_dots.png'), size: 29, color: Colors.black),
+          icon: ImageIcon(AssetImage('assets/icon/calc_distance_icon.png'), size: 29, color: Colors.black),
           tooltip: currentLat == null ? 'Calc distance' : 'Clear location',
           onPressed: () {
             if (currentLat != null) {
@@ -901,7 +991,7 @@ class _HomeScreenState extends State<HomeScreen>
           clipBehavior: Clip.none,
           children: [
             IconButton(
-              icon: Icon(Icons.file_download, size: 29, color: Colors.black),
+              icon: ImageIcon(AssetImage('assets/icon/poi_import_icon.png'), size: 29, color: Colors.black),
               tooltip: 'Import',
               onPressed: _openImportSheet,
             ),
@@ -919,7 +1009,7 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
         IconButton(
-          icon: const Icon(Icons.map, size: 29, color: Colors.black),
+          icon: ImageIcon(AssetImage('assets/icon/poi_map_icon.png'), size: 29, color: Colors.black),
           tooltip: 'Map view - 25 mi default radius',
           onPressed: () {
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiMapScreen()));
@@ -1278,6 +1368,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _openFilterSheet() {
+    final bool isStorageTab = _currentTabName == 'Storage';
+    String modalGeneral = _filterGeneralMap[_currentTabName] ?? 'All';
+    String? modalSpecific = _filterSpecificMap[_currentTabName];
+
     showModalTopSheet(
       context: context,
       maxWidth: 420,
@@ -1292,35 +1386,46 @@ class _HomeScreenState extends State<HomeScreen>
               IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(c))
             ]),
             SizedBox(height: 16),
+            LocationFilterSection(
+              repo: _repo,
+              isStorage: isStorageTab,
+              selectedGeneral: modalGeneral,
+              selectedSpecific: modalSpecific,
+              onGeneralChanged: (v) => setModal(() {
+                modalGeneral = v;
+                modalSpecific = null;
+              }),
+              onSpecificChanged: (v) => setModal(() => modalSpecific = v),
+            ),
+            SizedBox(height: 16),
             Text('SORT BY',
                 style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
             SizedBox(height: 8),
             Wrap(
-                spacing: 8,
-                children: ['Recent', 'Name A-Z', 'Location', 'Qty'].map((s) {
-                  final sel = _sortBy == s;
-                  return ChoiceChip(
-                      label: Text(s),
-                      selected: sel,
-                      onSelected: (_) => setModal(() => _sortBy = s),
-                      selectedColor: Color(0xFF0F1E3A),
-                      labelStyle: TextStyle(color: sel ? Colors.white : Colors.black));
-                }).toList()),
-            SizedBox(height: 16),
-            Text('FILTER',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-            SizedBox(height: 8),
-            Wrap(
-                spacing: 8,
-                children: ['All', 'Attic', 'Garage', 'Shed', 'Kitchen', 'Office', 'Important']
-                    .map((f) {
-                  final sel = _filterBy == f;
-                  return ChoiceChip(
-                      label: Text(f),
-                      selected: sel,
-                      onSelected: (_) => setModal(() => _filterBy = f),
-                      selectedColor: Color(0xFF0F1E3A),
-                      labelStyle: TextStyle(color: sel ? Colors.white : Colors.black));
+                spacing: 6,
+                runSpacing: 4,
+                children: ['Recent', 'Name A-Z', 'Location A-Z'].map((s) {
+                  final sel = _sortBy == s || (s == 'Location A-Z' && _sortBy == 'Location');
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 0, bottom: 2),
+                    child: ElevatedButton(
+                      onPressed: () => setModal(() {
+                        // Map Location A-Z to Location for backward compat
+                        _sortBy = (s == 'Location A-Z') ? 'Location' : s;
+                      }),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: sel ? AppColors.buttonBg : AppColors.white,
+                        foregroundColor: sel ? AppColors.white : Colors.black87,
+                        side: BorderSide(color: sel ? AppColors.buttonBg : AppColors.border, width: sel ? 1.5 : 1),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                        elevation: sel ? 1 : 0,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        minimumSize: Size(0, 26),
+                      ),
+                      child: Text(s, style: TextStyle(fontWeight: sel ? FontWeight.w800 : FontWeight.w600, fontSize: 11, letterSpacing: 0.1)),
+                    ),
+                  );
                 }).toList()),
             SizedBox(height: 20),
             Row(children: [
@@ -1328,7 +1433,8 @@ class _HomeScreenState extends State<HomeScreen>
                   child: ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          _filterBy = 'All';
+                          _filterGeneralMap[_currentTabName] = 'All';
+                          _filterSpecificMap[_currentTabName] = null;
                           _sortBy = 'Recent';
                         });
                         Navigator.pop(c);
@@ -1338,7 +1444,10 @@ class _HomeScreenState extends State<HomeScreen>
               Expanded(
                   child: ElevatedButton(
                       onPressed: () {
-                        setState(() {});
+                        setState(() {
+                          _filterGeneralMap[_currentTabName] = modalGeneral;
+                          _filterSpecificMap[_currentTabName] = modalSpecific;
+                        });
                         Navigator.pop(c);
                       },
                       child: Text('APPLY'))),
@@ -1521,13 +1630,21 @@ class Item {
   String place;
   String? bin;
   String emoji;
+  DateTime? createdAt;
+  DateTime? modifiedAt;
+  String? generalId;
+  String? specificId;
   Item(
       {required this.id,
       required this.name,
       required this.qty,
       required this.place,
       this.bin,
-      required this.emoji});
+      required this.emoji,
+      this.createdAt,
+      this.modifiedAt,
+      this.generalId,
+      this.specificId});
 }
 
 class LocationsSheet extends StatefulWidget {

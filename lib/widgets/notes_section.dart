@@ -83,13 +83,16 @@ class _NotesSectionState extends State<NotesSection> {
                   controller: tempCtrl,
                   focusNode: focusNode,
                   minLines: 8,
-                  maxLines: 12,
+                  maxLines: 20,
+                  scrollPhysics: const AlwaysScrollableScrollPhysics(),
                   autofocus: true,
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: AppText.inputMulti,
                   decoration: InputDecoration(
                     hintText: 'Additional details...',
-                    hintStyle: const TextStyle(color: AppColors.textDisabled),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                    hintStyle: AppText.inputHint,
+                    contentPadding: AppSize.fieldPaddingMulti,
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                     filled: true,
                     fillColor: AppColors.white,
                   ),
@@ -136,10 +139,10 @@ class _NotesSectionState extends State<NotesSection> {
             ),
             const SizedBox(width: 12),
             SizedBox(
-              height: 28,
+              height: AppSize.buttonHeight,
               child: ElevatedButton(
                 onPressed: () => _showNotesDialog(context),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: const Size(0, 28)),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: AppSize.buttonMinSize),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -154,18 +157,25 @@ class _NotesSectionState extends State<NotesSection> {
         ),
         if (_expanded) ...[
           const SizedBox(height: 6),
-          TextField(
-            controller: widget.controller,
-            minLines: 3,
-            maxLines: 3,
-            style: const TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Additional details (optional)',
-              hintStyle: const TextStyle(color: AppColors.textDisabled),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-              filled: true,
-              fillColor: AppColors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          SizedBox(
+            height: AppSize.fieldHeightMulti,
+            child: TextField(
+              controller: widget.controller,
+              minLines: 3,
+              maxLines: 3,
+              scrollPhysics: const AlwaysScrollableScrollPhysics(),
+              style: AppText.inputMulti,
+              decoration: InputDecoration(
+                hintText: 'Additional details (optional)',
+                hintStyle: AppText.inputHint,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: AppBorder.side),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: AppBorder.side),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: const BorderSide(color: AppColors.textPrimary, width: 1)),
+                filled: true,
+                fillColor: AppColors.white,
+                contentPadding: AppSize.fieldPaddingMulti,
+                isDense: true,
+              ),
             ),
           ),
         ],

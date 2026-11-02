@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:geolocator/geolocator.dart';
-import '../wherelog_repository.dart';
+import '../data/sqlite_poi_repository.dart';
 import 'poi_edit_screen.dart';
 import '../utils/map_utils.dart';
 
@@ -15,7 +16,7 @@ class PoiMapScreen extends StatefulWidget {
 }
 
 class _PoiMapScreenState extends State<PoiMapScreen> {
-  final _repo = WhereLogRepository();
+  final _poiRepo = SqlitePoiRepository.instance;
   final _mapController = MapController();
 
   // Default 25 miles per Rudy's request
@@ -37,13 +38,21 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
     _loadLocation();
   }
 
-  void _loadPois() {
-    // v9 repo: poiItems is List<Map>
-    _allPois = List<Map<String, dynamic>>.from(_repo.poiItems.where((m) {
-      final lat = (m['lat'] is num) ? (m['lat'] as num).toDouble() : double.tryParse(m['lat']?.toString() ?? '');
-      final lng = (m['lng'] is num) ? (m['lng'] as num).toDouble() : double.tryParse(m['lng']?.toString() ?? '');
-      return lat != null && lng != null && lat != 0 && lng != 0;
-    }));
+  Future<void> _loadPois() async {
+    // Places come from the SQLite poi_items table; the screen keeps
+    // working with map-shaped rows built from the records.
+    final records = await _poiRepo.getAll();
+    _allPois = records
+        .where((r) => r.latitude != 0 && r.longitude != 0)
+        .map((r) => <String, dynamic>{
+              'id': r.id?.toString(),
+              'name': r.name,
+              'lat': r.latitude,
+              'lng': r.longitude,
+              'address': r.address,
+              'notes': r.notes,
+            })
+        .toList();
     _applyFilter();
   }
 
@@ -168,9 +177,9 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
           if (_locError != null)
             Container(
               width: double.infinity,
-              color: Colors.orange.shade100,
+              color: AppColors.warningBackground,
               padding: const EdgeInsets.all(6),
-              child: Text(_locError!, style: TextStyle(color: Colors.orange.shade900, fontSize: 12), textAlign: TextAlign.center),
+              child: Text(_locError!, style: TextStyle(color: AppColors.warningText, fontSize: 12), textAlign: TextAlign.center),
             ),
           Expanded(
             child: FlutterMap(
@@ -194,8 +203,8 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                         point: ll.LatLng(_currentPos!.latitude, _currentPos!.longitude),
                         radius: _radiusMiles * 1609.34,
                         useRadiusInMeter: true,
-                        color: Colors.blue.withOpacity(0.1),
-                        borderColor: Colors.blue.withOpacity(0.4),
+                        color: AppColors.mapAccent.withOpacity(0.1),
+                        borderColor: AppColors.mapAccent.withOpacity(0.4),
                         borderStrokeWidth: 2,
                       ),
                     ],
@@ -208,13 +217,13 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                         width: 30,
                         height: 30,
                         point: ll.LatLng(_currentPos!.latitude, _currentPos!.longitude),
-                        child: const Icon(Icons.my_location, color: Colors.blue, size: 28),
+                        child: const Icon(Icons.my_location, color: AppColors.mapAccent, size: 28),
                       ),
                     // POI pins
                     for (final poi in _filteredPois)
                       Marker(
-                        width: 140,
-                        height: 50,
+                        width: 148,
+                        height: 58,
                         point: ll.LatLng((poi['lat'] as num).toDouble(), (poi['lng'] as num).toDouble()),
                         child: GestureDetector(
                           onTap: () => _showPoiSheet(poi),
@@ -223,20 +232,21 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                   borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.black54),
-                                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 2)],
+                                  border: Border.all(color: AppColors.border, width: AppBorder.width),
+                                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 2)],
                                 ),
                                 child: Text(
                                   (poi['name']?.toString() ?? 'POI').length > 22
                                       ? '${poi['name'].toString().substring(0, 20)}..'
                                       : poi['name']?.toString() ?? 'POI',
                                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const Icon(Icons.location_on, color: Colors.red, size: 28),
+                              const Icon(Icons.location_on, color: AppColors.alert, size: 28),
                             ],
                           ),
                         ),
@@ -252,7 +262,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
               height: 110,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                border: Border(top: BorderSide(color: AppColors.disabledSurface)),
               ),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
@@ -278,22 +288,22 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                       width: 180,
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.button),
+                        border: Border.all(color: AppColors.border, width: AppBorder.width),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(poi['name']?.toString() ?? 'POI', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           if (poi['address'] != null && poi['address'].toString().isNotEmpty)
-                            Text(poi['address'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black54)),
+                            Text(poi['address'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: AppColors.textDisabled)),
                           const Spacer(),
                           Row(
                             children: [
-                              if (distStr.isNotEmpty) Text(distStr, style: const TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.w600)),
+                              if (distStr.isNotEmpty) Text(distStr, style: const TextStyle(fontSize: 10, color: AppColors.mapAccent, fontWeight: FontWeight.w600)),
                               const Spacer(),
-                              const Icon(Icons.map, size: 14, color: Colors.grey),
+                              const Icon(Icons.map, size: 14, color: AppColors.textDisabled),
                             ],
                           ),
                         ],
@@ -327,22 +337,22 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
             Text(poi['name']?.toString() ?? 'POI', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             if (poi['address'] != null && poi['address'].toString().isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(poi['address'].toString(), style: const TextStyle(color: Colors.black54)),
+              Text(poi['address'].toString(), style: const TextStyle(color: AppColors.textDisabled)),
             ],
             if (distStr.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(distStr, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600)),
+              Text(distStr, style: const TextStyle(color: AppColors.mapAccent, fontWeight: FontWeight.w600)),
             ],
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(child: ElevatedButton.icon(icon: const Icon(Icons.navigation), label: const Text('Navigate'), onPressed: () { MapUtils.openDirections(lat: lat, lng: lng, label: poi['name']?.toString()); })),
                 const SizedBox(width: 8),
-                Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.edit), label: const Text('POI Edit'), onPressed: () { Navigator.pop(ctx); final idx = _repo.poiItems.indexWhere((m) => m['id']?.toString() == poi['id']?.toString()); if (idx >= 0) { Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiEditScreen(itemIndex: idx))).then((_) { _loadPois(); }); } })),
+                Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.edit), label: const Text('POI Edit'), onPressed: () { Navigator.pop(ctx); final pid = int.tryParse(poi['id']?.toString() ?? ''); if (pid != null) { Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiEditScreen(poiId: pid))).then((_) { _loadPois(); }); } })),
               ],
             ),
             const SizedBox(height: 8),
-            Text('${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Text('${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}', style: const TextStyle(fontSize: 11, color: AppColors.textDisabled)),
           ],
         ),
       ),

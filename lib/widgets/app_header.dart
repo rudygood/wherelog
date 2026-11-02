@@ -33,7 +33,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
           children: [
             const TextSpan(text: 'Where', style: AppText.logoWhere),
-            const TextSpan(text: 'Log', style: AppText.logoLog),
+            const TextSpan(text: 'Log', style: AppText.logoLogAlert),
             TextSpan(
               text: ' - $screenName',
               style: const TextStyle(

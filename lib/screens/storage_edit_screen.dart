@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../wherelog_repository.dart';
+import '../data/location_data.dart';
+import '../data/photo_store.dart';
+import '../data/sqlite_location_repository.dart';
+import '../data/sqlite_storage_repository.dart';
+import '../data/storage_records.dart';
 import '../widgets/notes_section.dart';
 import '../widgets/photo_details_section.dart';
 import '../widgets/app_header.dart';
@@ -9,8 +13,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class StorageEditScreen extends StatefulWidget {
-  final int itemIndex;
-  const StorageEditScreen({super.key, required this.itemIndex});
+  final int itemId;
+  const StorageEditScreen({super.key, required this.itemId});
   @override
   State<StorageEditScreen> createState() => _StorageEditScreenState();
 }
@@ -26,9 +30,12 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
   final specificFocus = FocusNode();
   File? photoFile;
   String? existingPhotoPath;
-  Map<String, dynamic>? _originalItem;
+  StorageItem? _loadedItem;
+  String? _originalPhotoFilename;
   final _picker = ImagePicker();
-  final _repo = WhereLogRepository();
+  final _locRepo = SqliteLocationRepository.instance;
+  final _storageRepo = SqliteStorageRepository.instance;
+  final _locationData = SqliteLocationData();
   bool _isLoading = true;
   bool _notesExpanded = false;
   bool _photoDetailsExpanded = true;
@@ -43,15 +50,15 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check_circle, size: 48, color: Colors.green.shade600),
+              Icon(Icons.check_circle, size: 48, color: AppColors.success),
               const SizedBox(height: 12),
-              Text(msg, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), textAlign: TextAlign.center),
+              Text(msg, style: AppText.dialogNotice, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(c),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button))),
+                  style: AppButton.primary,
                   child: const Text('OK'),
                 ),
               ),
@@ -81,7 +88,7 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
   Map<String, dynamic> _initialSnapshot = {};
 
   bool _hasUnsavedChanges() {
-    if (_originalItem == null) return false;
+    if (_loadedItem == null) return false;
     final current = {
       'name': itemNameController.text.trim(),
       'generalCtrl': generalController.text.trim(),
@@ -124,57 +131,62 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
     specificController.addListener(() => setState(() {}));
     generalFocus.addListener(() => setState(() {}));
     specificFocus.addListener(() => setState(() {}));
-    _repo.load().then((_) {
-      if (_repo.storageItems.length > widget.itemIndex) {
-        final item = _repo.storageItems[widget.itemIndex];
-        _originalItem = Map<String, dynamic>.from(item);
+    _load();
+  }
 
-        // v9 clean: resolve names from generalId / specificId only
-        String gName = '';
-        String sName = '';
-        final genId = (item['generalId'] ?? '').toString();
-        final specId = (item['specificId'] ?? '').toString();
+  Future<void> _load() async {
+    await _locationData.load();
+    final item = await _storageRepo.getById(widget.itemId);
+    if (item != null) {
+      _loadedItem = item;
 
-        if (genId.isNotEmpty) {
-          gName = _repo.generalNameForId(genId);
-        }
-        if (specId.isNotEmpty) {
-          try {
-            final spec = _repo.storageSpecifics.firstWhere(
-              (s) => s['id'] == specId,
-              orElse: () => <String, dynamic>{},
-            );
-            sName = (spec['name'] ?? '').toString();
+      // Resolve display names from the SQLite location tables by id.
+      String gName = '';
+      String sName = '';
+      final generals = await _locRepo.getGenerals();
+      for (final g in generals) {
+        if (g.id == item.generalId) { gName = g.name; break; }
+      }
+      if (item.specificId != null) {
+        for (final s in await _locRepo.getStorageSpecifics()) {
+          if (s.id == item.specificId) {
+            sName = s.name;
             if (gName.isEmpty) {
-              final gidFromSpec = spec['generalId']?.toString() ?? '';
-              if (gidFromSpec.isNotEmpty) {
-                gName = _repo.generalNameForId(gidFromSpec);
+              for (final g in generals) {
+                if (g.id == s.generalId) { gName = g.name; break; }
               }
             }
-          } catch (_) {}
+            break;
+          }
         }
-
-        generalController.text = gName;
-        specificController.text = sName;
-        itemNameController.text = (item['name'] ?? '').toString();
-        notesController.text = (item['notes'] ?? '').toString();
-        final q = item['qty'] ?? 1;
-        qtyController.text = q.toString();
-        final vAmt = item['valueAmount'] ?? (item['value'] != null ? item['value'].toString() : '');
-        valueController.text = vAmt.toString();
-        existingPhotoPath = (item['photoPath'] ?? item['photo'])?.toString();
-        _initialSnapshot = {
-          'name': itemNameController.text.trim(),
-          'generalCtrl': generalController.text.trim(),
-          'specificCtrl': specificController.text.trim(),
-          'notes': notesController.text.trim(),
-          'qty': qtyController.text.trim(),
-          'value': valueController.text.trim(),
-          'photo': existingPhotoPath ?? '',
-        };
       }
-      setState(() => _isLoading = false);
-    });
+
+      generalController.text = gName;
+      specificController.text = sName;
+      itemNameController.text = item.name;
+      notesController.text = item.notes;
+      qtyController.text = item.quantity.toString();
+      // The value field shows dollars again; the record holds cents.
+      valueController.text = item.valueCents == null ? '' : (item.valueCents! / 100).toStringAsFixed(2);
+      _originalPhotoFilename = item.photoFilename;
+      if (item.photoFilename != null) {
+        existingPhotoPath = await PhotoStore.pathFor(item.photoFilename!);
+        try {
+          final f = File(existingPhotoPath!);
+          if (await f.exists()) photoFile = f;
+        } catch (_) {}
+      }
+      _initialSnapshot = {
+        'name': itemNameController.text.trim(),
+        'generalCtrl': generalController.text.trim(),
+        'specificCtrl': specificController.text.trim(),
+        'notes': notesController.text.trim(),
+        'qty': qtyController.text.trim(),
+        'value': valueController.text.trim(),
+        'photo': existingPhotoPath ?? '',
+      };
+    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
@@ -199,64 +211,56 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
       showCenterNotice('Pick General');
       return;
     }
+    final loaded = _loadedItem;
+    if (loaded == null) return;
     final savedName = itemNameController.text.trim();
     final qty = int.tryParse(qtyController.text.trim()) ?? 1;
     final valueText = valueController.text.trim();
     final valueAmt = double.tryParse(valueText.replaceAll('\$', '').trim());
 
-    // v9: resolve IDs using clean helpers (no tier synonyms)
-    String generalId = '';
-    String specificId = '';
-    try {
-      final gName = generalController.text.trim();
-      final sName = specificController.text.trim();
-      generalId = _repo.generalIdForName(gName);
-
-      if (generalId.isNotEmpty && sName.isNotEmpty) {
-        final spec = _repo.storageSpecifics.firstWhere(
-          (s) => s['generalId'] == generalId && (s['name']?.toString() ?? '').toLowerCase() == sName.toLowerCase(),
-          orElse: () => <String, dynamic>{},
-        );
-        specificId = spec['id']?.toString() ?? '';
-        if (specificId.isEmpty) {
-          await _repo.addStorageSpecific(generalId, sName);
-          final spec2 = _repo.storageSpecifics.firstWhere(
-            (s) => s['generalId'] == generalId && (s['name']?.toString() ?? '').toLowerCase() == sName.toLowerCase(),
-            orElse: () => <String, dynamic>{},
-          );
-          specificId = spec2['id']?.toString() ?? '';
-        }
-      } else if (generalId.isNotEmpty) {
-        // optional specific blank: use empty-name sentinel if present
-        final sentinel = _repo.storageSpecifics.firstWhere(
-          (s) => s['generalId'] == generalId && (s['name']?.toString() ?? '').trim().isEmpty,
-          orElse: () => <String, dynamic>{},
-        );
-        specificId = sentinel['id']?.toString() ?? '';
-        // if still empty, keep as empty specific but ensure repo has at least list; v9 allows empty sentinel, create if missing handled by addGeneral
+    // Resolve names to ids against the SQLite location tables. A Specific
+    // typed but not yet existing is created, as before; no Specific typed
+    // means specificId stays null ("General only", schema D1).
+    final gName = generalController.text.trim();
+    final sName = specificController.text.trim();
+    int? generalId;
+    for (final g in await _locRepo.getGenerals()) {
+      if (g.name.toLowerCase() == gName.toLowerCase()) { generalId = g.id; break; }
+    }
+    if (generalId == null) {
+      showCenterNotice('General not found');
+      return;
+    }
+    int? specificId;
+    if (sName.isNotEmpty) {
+      for (final s in await _locRepo.getStorageSpecifics()) {
+        if (s.generalId == generalId && s.name.toLowerCase() == sName.toLowerCase()) { specificId = s.id; break; }
       }
-    } catch (_) {}
+      if (specificId == null) {
+        specificId = await _locRepo.addStorageSpecific(generalId, sName);
+      }
+    }
 
-    final orig = _originalItem ?? {};
-    final nowIso = DateTime.now().toIso8601String();
-    // Clean v9 payload: ONLY generalId/specificId, no legacy synonyms
-    final updated = {
-      'id': orig['id'],
-      'name': savedName,
-      'generalId': generalId,
-      'specificId': specificId,
-      'qty': qty,
-      'value': valueAmt,
-      'valueAmount': valueText,
-      'notes': notesController.text.trim(),
-      'photo': photoFile?.path ?? existingPhotoPath,
-      'photoPath': photoFile?.path ?? existingPhotoPath,
-      'createdAt': orig['createdAt'] ?? nowIso,
-      'modifyDate': nowIso,
-      'updatedAt': nowIso,
-    };
+    final newPhotoFilename = PhotoStore.filenameOf(photoFile?.path);
+    final updated = StorageItem(
+      id: loaded.id,
+      name: savedName,
+      generalId: generalId,
+      specificId: specificId,
+      quantity: qty,
+      valueCents: valueAmt == null ? null : (valueAmt * 100).round(),
+      notes: notesController.text.trim(),
+      photoFilename: newPhotoFilename,
+      createdAt: loaded.createdAt,
+      modifiedAt: loaded.modifiedAt,
+    );
 
-    await _repo.updateStorageItem(widget.itemIndex, updated);
+    await _storageRepo.update(updated);
+    // If the photo was removed or replaced, the old file goes with the
+    // save (the picker already removes it on replace; this is tolerant).
+    if (_originalPhotoFilename != null && _originalPhotoFilename != newPhotoFilename) {
+      await PhotoStore.deletePhoto(_originalPhotoFilename);
+    }
     if (!mounted) return;
     showCenterNotice('Saved: $savedName');
     Future.delayed(const Duration(milliseconds: 800), () {
@@ -274,14 +278,15 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(c, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: AppColors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: AppColors.white),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
     if (ok == true) {
-      await _repo.deleteStorageItem(widget.itemIndex);
+      await _storageRepo.delete(widget.itemId);
+      await PhotoStore.deletePhoto(_originalPhotoFilename);
       if (mounted) Navigator.pop(context, true);
     }
   }
@@ -302,31 +307,7 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
     if (result != null) setState(() => notesController.text = result);
   }
 
-  Future<void> openPhotoSheet() async {
-    final hasAnyPhoto = photoFile != null || (existingPhotoPath != null && existingPhotoPath!.isNotEmpty);
-    final src = await showModalBottomSheet<dynamic>(
-      context: context,
-      builder: (c) => SafeArea(
-        child: Wrap(children: [
-          ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Take Photo'), onTap: () => Navigator.pop(c, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Choose from Gallery'), onTap: () => Navigator.pop(c, ImageSource.gallery)),
-          if (hasAnyPhoto) ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Remove Photo'), onTap: () => Navigator.pop(c, 'remove')),
-        ]),
-      ),
-    );
-    if (src == 'remove') {
-      setState(() {
-        photoFile = null;
-        existingPhotoPath = null;
-      });
-      return;
-    }
-    if (src == null) return;
-    if (src is ImageSource) {
-      final XFile? img = await _picker.pickImage(source: src, imageQuality: 80, maxWidth: 1024);
-      if (img != null) setState(() => photoFile = File(img.path));
-    }
-  }
+  
 
   Future<void> openFullPhotoViewer(File file) async {
     await showDialog(
@@ -351,7 +332,7 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
                     tooltip: 'Replace',
                     onPressed: () {
                       Navigator.pop(c);
-                      openPhotoSheet();
+                      
                     },
                   ),
                   IconButton(
@@ -368,7 +349,7 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
               child: Center(
                 child: Text(
                   'Pinch to zoom — tap ✕ to close',
-                  style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                  style: AppText.photoCaption,
                 ),
               ),
             ),
@@ -387,7 +368,7 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
           children: [
             Opacity(opacity: 0.68, child: Image.asset('assets/icon/app_icon.png', width: 64, height: 64, fit: BoxFit.contain)),
             const SizedBox(height: 6),
-            const Text('No Photo', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w800, fontSize: 11)),
+            const Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 11)),
             const Text('Tap to add', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
           ],
         ),
@@ -405,14 +386,14 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
         if (hasPhoto) {
           openFullPhotoViewer(displayFile!);
         } else {
-          openPhotoSheet();
+          
         }
       },
       borderRadius: BorderRadius.circular(AppRadius.button),
       child: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.textDisabled), borderRadius: BorderRadius.circular(AppRadius.button)),
+        decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(9),
           child: hasPhoto
@@ -442,10 +423,10 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
                       right: 5,
                       top: 5,
                       child: InkWell(
-                        onTap: openPhotoSheet,
+                        onTap: () {},
                         child: Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border)),
+                          decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border, width: AppBorder.width)),
                           child: const Icon(Icons.edit, size: 12, color: AppColors.textSecondary),
                         ),
                       ),
@@ -489,7 +470,7 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
               itemNameController: itemNameController,
               generalFocus: generalFocus,
               specificFocus: specificFocus,
-              repo: _repo,
+              data: _locationData,
               itemHint: 'Stored Item',
             ),
             const SizedBox(height: 14),
@@ -499,9 +480,9 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
               onToggle: () => setState(() => _photoDetailsExpanded = !_photoDetailsExpanded),
               variant: PhotoDetailsVariant.storage,
               photoFile: photoFile,
-              onPhotoAdd: openPhotoSheet,
+              onPhotoChanged: (f) => setState(() => photoFile = f),
               onPhotoView: () => openFullPhotoViewer(photoFile!),
-              onPhotoEdit: openPhotoSheet,
+              
               valueController: valueController,
               qtyController: qtyController,
             ),
@@ -515,9 +496,9 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
             ),
             const SizedBox(height: 20),
             Row(children: [
-              Expanded(child: SizedBox(height: 44, child: OutlinedButton(onPressed: () async { final ok = await _confirmDiscard(); if (ok && mounted) Navigator.pop(context); }, child: const Text('Cancel')))),
+              Expanded(child: SizedBox(height: AppSize.buttonHeight, child: OutlinedButton(onPressed: () async { final ok = await _confirmDiscard(); if (ok && mounted) Navigator.pop(context); }, child: const Text('Cancel')))),
               const SizedBox(width: 12),
-              Expanded(child: SizedBox(height: 44, child: ElevatedButton(onPressed: handleSave, style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white), child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold))))),
+              Expanded(child: SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: handleSave, style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white), child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold))))),
             ]),
           ]),
         ),

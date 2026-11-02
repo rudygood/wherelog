@@ -9,7 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^2.0.0
   geolocator: ^10.1.1
   geocoding: 5.0.0
   permission_handler: ^11.3.0
@@ -17,8 +16,10 @@ dependencies:
   image_picker: ^1.0.7
   url_launcher: ^6.2.2
   shared_preferences: ^2.2.2
+  sqflite: ^2.3.0
   file_picker: ^13.1.0
   archive: ^4.3.0
+  crypto: ^3.0.3
   path: ^1.9.0
   flutter_map: ^8.3.2
   latlong2: ^0.10.1

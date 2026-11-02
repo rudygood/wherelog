@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/photo_details_section.dart';
 import '../widgets/app_header.dart';
-import '../wherelog_repository.dart';
+import '../data/location_data.dart';
+import '../data/location_records.dart';
+import '../data/photo_store.dart';
+import '../data/sqlite_location_repository.dart';
+import '../data/sqlite_storage_repository.dart';
+import '../data/storage_records.dart';
 import '../widgets/notes_section.dart';
 import '../widgets/required_section.dart';
 import 'dart:io';
@@ -29,10 +34,12 @@ class _StorageAddScreenState extends State<StorageAddScreen> {
   bool _photoDetailsExpanded = true;
   File? photoFile;
   final _picker = ImagePicker();
-  final _repo = WhereLogRepository();
+  final _locRepo = SqliteLocationRepository.instance;
+  final _storageRepo = SqliteStorageRepository.instance;
+  final _locationData = SqliteLocationData();
 
   void showCenterNotice(String msg) {
-    showDialog(context: context, builder: (c) => Dialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sheet)), child: Padding(padding: const EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.check_circle, size: 48, color: Colors.green.shade600), const SizedBox(height: 12), Text(msg, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), textAlign: TextAlign.center), const SizedBox(height: 16), SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => Navigator.pop(c), style: ElevatedButton.styleFrom(backgroundColor: AppColors.buttonBg, foregroundColor: AppColors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button))), child: const Text('OK')))]))));
+    showDialog(context: context, builder: (c) => Dialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sheet)), child: Padding(padding: const EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.check_circle, size: 48, color: AppColors.success), const SizedBox(height: 12), Text(msg, style: AppText.dialogNotice, textAlign: TextAlign.center), const SizedBox(height: 16), SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => Navigator.pop(c), style: AppButton.primary, child: const Text('OK')))]))));
     if (msg.startsWith('Added:')) {
       Future.delayed(const Duration(milliseconds: 1300), () { if (mounted) { try { if (Navigator.canPop(context)) Navigator.pop(context); } catch (_) {} } });
     }
@@ -48,7 +55,7 @@ class _StorageAddScreenState extends State<StorageAddScreen> {
   @override
   void initState() {
     super.initState();
-    _repo.load().then((_) => setState(() {}));
+    _locationData.load().then((_) => setState(() {}));
     generalController.addListener(() => setState(() {}));
     specificController.addListener(() => setState(() {}));
     generalFocus.addListener(() => setState(() {}));
@@ -68,49 +75,45 @@ class _StorageAddScreenState extends State<StorageAddScreen> {
     if (generalController.text.trim().isEmpty) { showCenterNotice('Pick General'); return; }
     final gName = generalController.text.trim();
     final sName = specificController.text.trim();
-    final generalId = _repo.generalIdForName(gName);
-    if (generalId.isEmpty) { showCenterNotice('General not found'); return; }
-    String specificId = '';
-    if (sName.isNotEmpty) {
-      final spec = _repo.storageSpecifics.firstWhere((s) => s['generalId']==generalId && (s['name']??'')==sName, orElse: ()=>{});
-      specificId = spec['id']?.toString() ?? '';
-      if (specificId.isEmpty) {
-        await _repo.addStorageSpecific(generalId, sName);
-        final spec2 = _repo.storageSpecifics.firstWhere((s) => s['generalId']==generalId && (s['name']??'')==sName, orElse: ()=>{});
-        specificId = spec2['id']?.toString() ?? '';
-      }
-    } else {
-      final sentinel = _repo.storageSpecifics.firstWhere((s) => s['generalId']==generalId && (s['name']?.toString()??'').isEmpty, orElse: ()=>{});
-      specificId = sentinel['id']?.toString() ?? '';
+    // Locations resolve against the SQLite location tables, by name
+    // (case-insensitive, as the old repository resolved them).
+    GeneralLocation? general;
+    for (final g in await _locRepo.getGenerals()) {
+      if (g.name.toLowerCase() == gName.toLowerCase()) { general = g; break; }
     }
-    if (specificId.isEmpty) { showCenterNotice('Specific not found'); return; }
+    if (general == null || general.id == null) { showCenterNotice('General not found'); return; }
+    final generalId = general.id!;
+    // No Specific typed means "General only": specificId stays null
+    // (schema D1 — there is no blank-name sentinel row any more).
+    int? specificId;
+    if (sName.isNotEmpty) {
+      for (final s in await _locRepo.getStorageSpecifics()) {
+        if (s.generalId == generalId && s.name.toLowerCase() == sName.toLowerCase()) { specificId = s.id; break; }
+      }
+      if (specificId == null) {
+        specificId = await _locRepo.addStorageSpecific(generalId, sName);
+      }
+      if (specificId == null) { showCenterNotice('Specific not found'); return; }
+    }
     final qty = int.tryParse(qtyController.text.trim()) ?? 1;
     final valueText = valueController.text.trim();
     final valueAmt = double.tryParse(valueText.replaceAll('\$', '').trim());
-    final item = {
-      'name': itemNameController.text.trim(),
-      'generalId': generalId,
-      'specificId': specificId,
-      'qty': qty,
-      'value': valueAmt,
-      'valueAmount': valueText,
-      'notes': notesController.text.trim(),
-      'photo': photoFile?.path,
-      'photoPath': photoFile?.path,
-    };
-    await _repo.addStorageItem(item);
-    setState(() { addedItemsLog.add('${item['name']} x$qty @ $fullLocationDisplay${photoFile!=null?' 📷':''}'); });
+    final item = StorageItem(
+      name: itemNameController.text.trim(),
+      generalId: generalId,
+      specificId: specificId,
+      quantity: qty,
+      valueCents: valueAmt == null ? null : (valueAmt * 100).round(),
+      notes: notesController.text.trim(),
+      photoFilename: PhotoStore.filenameOf(photoFile?.path),
+    );
+    await _storageRepo.add(item);
+    setState(() { addedItemsLog.add('${item.name} x$qty @ $fullLocationDisplay${photoFile!=null?' 📷':''}'); });
     itemNameController.clear();
-    showCenterNotice('Added: ${item['name']}');
+    showCenterNotice('Added: ${item.name}');
   }
 
-  Future<void> openPhotoSheet() async {
-    showModalBottomSheet(context: context, builder: (c) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      ListTile(leading: Icon(Icons.camera_alt), title: Text('Take Photo'), onTap: () async { Navigator.pop(c); final f = await _picker.pickImage(source: ImageSource.camera); if (f!=null) setState(()=>photoFile=File(f.path)); }),
-      ListTile(leading: Icon(Icons.photo_library), title: Text('Choose from Gallery'), onTap: () async { Navigator.pop(c); final f = await _picker.pickImage(source: ImageSource.gallery); if (f!=null) setState(()=>photoFile=File(f.path)); }),
-      if (photoFile!=null) ListTile(leading: Icon(Icons.delete, color: Colors.red), title: Text('Remove Photo', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(c); setState(()=>photoFile=null); }),
-    ])));
-  }
+  
   void openFullPhotoViewer(File f) { showDialog(context: context, builder: (c)=>Dialog(child: Image.file(f))); }
   Widget _buildDistinctPlaceholder() => Center(child: Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.textDisabled));
 
@@ -120,9 +123,9 @@ class _StorageAddScreenState extends State<StorageAddScreen> {
       backgroundColor: AppColors.scaffold,
       appBar: const AppHeader(screenName: 'Add Storage'),
       body: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(16,8,16,16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        RequiredSection(source: RequiredSectionSource.storage, generalController: generalController, specificController: specificController, itemNameController: itemNameController, generalFocus: generalFocus, specificFocus: specificFocus, repo: _repo, itemHint: 'Stored Item'),
+        RequiredSection(source: RequiredSectionSource.storage, generalController: generalController, specificController: specificController, itemNameController: itemNameController, generalFocus: generalFocus, specificFocus: specificFocus, data: _locationData, itemHint: 'Stored Item'),
         const SizedBox(height:14),
-        PhotoDetailsSection(isExpanded: _photoDetailsExpanded, onToggle: ()=>setState(()=>_photoDetailsExpanded=!_photoDetailsExpanded), variant: PhotoDetailsVariant.storage, storageKey: 'photoDetailsExpanded_storage_add', photoFile: photoFile, onPhotoAdd: openPhotoSheet, onPhotoView: ()=>photoFile!=null?openFullPhotoViewer(photoFile!):null, onPhotoEdit: openPhotoSheet, valueController: valueController, qtyController: qtyController),
+        PhotoDetailsSection(isExpanded: _photoDetailsExpanded, onToggle: ()=>setState(()=>_photoDetailsExpanded=!_photoDetailsExpanded), variant: PhotoDetailsVariant.storage, storageKey: 'photoDetailsExpanded_storage_add', photoFile: photoFile, onPhotoChanged: (f) => setState(() => photoFile = f), onPhotoView: ()=>photoFile!=null?openFullPhotoViewer(photoFile!):null,  valueController: valueController, qtyController: qtyController),
         const SizedBox(height:14),
         NotesSection(storageKey: 'notesExpanded_storage_add', controller: notesController, isExpanded: _notesExpanded, onToggle: ()=>setState(()=>_notesExpanded=!_notesExpanded)),
         const SizedBox(height:16),

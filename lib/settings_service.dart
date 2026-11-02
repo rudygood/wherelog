@@ -3,12 +3,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsService {
   static const String _kTheme = 'theme';
-  static const String _kCollapse = 'collapse';
   static const String _kTabOrder = 'tabOrder';
   static const String _kConfirmDelete = 'confirmDelete';
   static const String _kPendingImports = 'pendingImports';
 
-  // All 6 permutations for 3 tabs
+  // New canonical order - Storage Items, Home Inventory, Places of Interest
+  static const List<String> defaultTabOrder = [
+    'Storage Items',
+    'Home Inventory',
+    'Places of Interest',
+  ];
+
+  // Legacy mapping for backward compat
+  static const Map<String, String> legacyToCanonical = {
+    'Storage': 'Storage Items',
+    'Inventory': 'Home Inventory',
+    'POI': 'Places of Interest',
+    'Storage Items': 'Storage Items',
+    'Home Inventory': 'Home Inventory',
+    'Places of Interest': 'Places of Interest',
+  };
+
+  // Keep old allOrders for reference only, not used in new UI
   static const List<List<String>> allOrders = [
     ['Storage','Inventory','POI'],
     ['Storage','POI','Inventory'],
@@ -29,29 +45,25 @@ class SettingsService {
     await p.setString(_kTheme, v);
   }
 
-  Future<bool> getCollapse() async {
-    final p = await _prefs;
-    return p.getBool(_kCollapse) ?? false;
-  }
-  Future<void> setCollapse(bool v) async {
-    final p = await _prefs;
-    await p.setBool(_kCollapse, v);
-  }
-
   Future<List<String>> getTabOrder() async {
     final p = await _prefs;
     final stored = p.getStringList(_kTabOrder);
     if (stored != null && stored.length == 3) {
-      // validate against known values
-      final valid = {'Storage','Inventory','POI'};
-      if (stored.every((e) => valid.contains(e))) return stored;
+      // translate legacy if needed
+      final translated = stored.map((e) => legacyToCanonical[e.trim()] ?? e).toList();
+      final valid = defaultTabOrder.toSet();
+      if (translated.every((e) => valid.contains(e)) && translated.toSet().length == 3) {
+        return translated;
+      }
     }
-    return List<String>.from(allOrders.first);
+    return List<String>.from(defaultTabOrder);
   }
 
   Future<void> setTabOrder(List<String> order) async {
     final p = await _prefs;
-    await p.setStringList(_kTabOrder, order);
+    // ensure we store canonical names
+    final canonical = order.map((e) => legacyToCanonical[e.trim()] ?? e).toList();
+    await p.setStringList(_kTabOrder, canonical);
   }
 
   Future<bool> getConfirmDelete() async {
@@ -82,5 +94,4 @@ class SettingsService {
     final pref = await _prefs;
     await pref.remove(_kPendingImports);
   }
-
 }

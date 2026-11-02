@@ -5,7 +5,9 @@ import '../widgets/gps_location_section.dart';
 import '../widgets/photo_details_section.dart';
 import '../widgets/notes_section.dart';
 import '../widgets/app_sheet.dart';
-import '../wherelog_repository.dart';
+import '../data/photo_store.dart';
+import '../data/poi_records.dart';
+import '../data/sqlite_poi_repository.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,8 +16,8 @@ import 'map_picker_screen.dart';
 import '../utils/map_utils.dart';
 
 class PoiEditScreen extends StatefulWidget {
-  final int itemIndex;
-  const PoiEditScreen({super.key, required this.itemIndex});
+  final int poiId;
+  const PoiEditScreen({super.key, required this.poiId});
   @override
   State<PoiEditScreen> createState() => _PoiEditScreenState();
 }
@@ -28,8 +30,11 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
   final lngController = TextEditingController();
   final valueController = TextEditingController();
   File? photoFile;
+  String? existingPhotoPath;
+  PoiItem? _loadedItem;
+  String? _originalPhotoFilename;
   final _picker = ImagePicker();
-  final _repo = WhereLogRepository();
+  final _poiRepo = SqlitePoiRepository.instance;
   bool _notesExpanded = true;
   bool _photoExpanded = true;
   bool _isGettingLocation = false;
@@ -38,26 +43,28 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
   @override
   void initState() {
     super.initState();
-    _repo.load().then((_) {
-      if (_repo.poiItems.length > widget.itemIndex) {
-        final item = _repo.poiItems[widget.itemIndex];
-        setState(() {
-          nameController.text = (item['name'] ?? '').toString();
-          notesController.text = (item['notes'] ?? '').toString();
-          addressController.text = (item['address'] ?? '').toString();
-          latController.text = (item['lat'] ?? '').toString();
-          lngController.text = (item['lng'] ?? '').toString();
-          if ((item['photo'] ?? item['photoPath'] ?? '').toString().isNotEmpty) {
-            try {
-              photoFile = File((item['photo'] ?? item['photoPath']).toString());
-            } catch (_) {}
-          }
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
+    _load();
+  }
+
+  Future<void> _load() async {
+    final item = await _poiRepo.getById(widget.poiId);
+    if (item != null) {
+      _loadedItem = item;
+      nameController.text = item.name;
+      notesController.text = item.notes;
+      addressController.text = item.address;
+      latController.text = item.latitude.toString();
+      lngController.text = item.longitude.toString();
+      _originalPhotoFilename = item.photoFilename;
+      if (item.photoFilename != null) {
+        existingPhotoPath = await PhotoStore.pathFor(item.photoFilename!);
+        try {
+          final f = File(existingPhotoPath!);
+          if (await f.exists()) photoFile = f;
+        } catch (_) {}
       }
-    });
+    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
@@ -79,9 +86,9 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
       builder: (c, _) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.place, size: 48, color: Colors.green),
+          const Icon(Icons.place, size: 48, color: AppColors.notice),
           const SizedBox(height: 12),
-          Text(msg, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(msg, textAlign: TextAlign.center, style: AppText.dialogNotice),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -180,26 +187,7 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
     }
   }
 
-  Future<void> openPhotoSheet() async {
-    final src = await showModalTopSheet<ImageSource>(
-      context: context,
-      builder: (c, _) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Camera'), onTap: () => Navigator.pop(c, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Gallery'), onTap: () => Navigator.pop(c, ImageSource.gallery)),
-          if (photoFile != null) ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Remove Photo'), onTap: () => Navigator.pop(c, null)),
-        ],
-      ),
-    );
-    if (src == null && photoFile != null) {
-      setState(() => photoFile = null);
-      return;
-    }
-    if (src == null) return;
-    final XFile? img = await _picker.pickImage(source: src, imageQuality: 80, maxWidth: 1024);
-    if (img != null) setState(() => photoFile = File(img.path));
-  }
+  
 
   Future<void> openFullPhotoViewer(File file) async {
     await showDialog(
@@ -228,22 +216,26 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
       showCenterNotice('Enter valid GPS coordinates');
       return;
     }
-    final nowIso = DateTime.now().toIso8601String();
-    final existing = (_repo.poiItems.length > widget.itemIndex) ? _repo.poiItems[widget.itemIndex] : <String, dynamic>{};
-    final item = {
-      'id': existing['id'] ?? 'poi_${DateTime.now().millisecondsSinceEpoch}',
-      'name': nameController.text.trim(),
-      'lat': lat,
-      'lng': lng,
-      'address': addressController.text.trim(),
-      'notes': notesController.text.trim(),
-      'photo': photoFile?.path,
-      'photoPath': photoFile?.path,
-      'createdAt': existing['createdAt'] ?? nowIso,
-      'modifyDate': nowIso,
-      'updatedAt': nowIso,
-    };
-    await _repo.updatePoiItem(widget.itemIndex, item);
+    final loaded = _loadedItem;
+    if (loaded == null) return;
+    final newPhotoFilename = PhotoStore.filenameOf(photoFile?.path);
+    final item = PoiItem(
+      id: loaded.id,
+      name: nameController.text.trim(),
+      latitude: lat,
+      longitude: lng,
+      address: addressController.text.trim(),
+      notes: notesController.text.trim(),
+      photoFilename: newPhotoFilename,
+      createdAt: loaded.createdAt,
+      modifiedAt: loaded.modifiedAt,
+    );
+    await _poiRepo.update(item);
+    // Photo removed or replaced: the old file goes with the save (the
+    // picker already removes it on replace; this is tolerant).
+    if (_originalPhotoFilename != null && _originalPhotoFilename != newPhotoFilename) {
+      await PhotoStore.deletePhoto(_originalPhotoFilename);
+    }
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -292,13 +284,13 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
                             }
                           : null,
                       // PNG with transparent interior - inverts via color tint
-                      icon: ImageIcon(AssetImage('assets/icon/directions_diamond.png'), size: 22, color: Colors.white),
+                      icon: ImageIcon(AssetImage('assets/icon/directions_diamond.png'), size: 22, color: AppColors.white),
                       label: const Text('Map Directions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: hasCoords ? AppColors.buttonBg : Colors.grey.shade300,
+                        backgroundColor: hasCoords ? AppColors.buttonBg : AppColors.disabledSurface,
                         foregroundColor: AppColors.white,
-                        disabledBackgroundColor: Colors.grey.shade300,
-                        disabledForegroundColor: Colors.grey.shade600,
+                        disabledBackgroundColor: AppColors.disabledSurface,
+                        disabledForegroundColor: AppColors.textDisabled,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
                       ),
                     ),
@@ -312,9 +304,9 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
               onToggle: () => setState(() => _photoExpanded = !_photoExpanded),
               variant: PhotoDetailsVariant.poi,
               photoFile: photoFile,
-              onPhotoAdd: openPhotoSheet,
+              onPhotoChanged: (f) => setState(() => photoFile = f),
               onPhotoView: () => openFullPhotoViewer(photoFile!),
-              onPhotoEdit: openPhotoSheet,
+              
               valueController: valueController,
               addressController: addressController,
               onPickMap: pickFromMapProgram,

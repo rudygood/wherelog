@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../wherelog_repository.dart';
+import '../data/location_data.dart';
 import '../theme/app_theme.dart';
 
 enum RequiredSectionSource { storage, inventory }
@@ -11,7 +11,7 @@ class RequiredSection extends StatefulWidget {
   final FocusNode generalFocus;
   final FocusNode specificFocus;
   final RequiredSectionSource source;
-  final WhereLogRepository repo;
+  final LocationData data;
   final String itemHint;
 
   const RequiredSection({
@@ -22,7 +22,7 @@ class RequiredSection extends StatefulWidget {
     required this.generalFocus,
     required this.specificFocus,
     required this.source,
-    required this.repo,
+    required this.data,
     this.itemHint = 'Item name',
   });
 
@@ -46,51 +46,37 @@ class _RequiredSectionState extends State<RequiredSection> {
     return g.isNotEmpty ? g : s;
   }
 
-  List<String> get generalList => widget.repo.generalNames;
+  List<String> get generalList => widget.data.generalNames;
 
   List<String> getSpecificsForCurrentGeneral() {
     final genName = widget.generalController.text.trim();
     if (genName.isEmpty) return [];
-    final genId = widget.repo.generalIdForName(genName);
+    final genId = widget.data.generalIdForName(genName);
     if (genId.isEmpty) return [];
     return widget.source == RequiredSectionSource.storage
-        ? widget.repo.storageSpecificNamesFor(genId)
-        : widget.repo.inventorySpecificNamesFor(genId);
+        ? widget.data.storageSpecificNamesFor(genId)
+        : widget.data.inventorySpecificNamesFor(genId);
   }
 
-  bool isDuplicateGeneral(String name) => widget.repo.isDuplicateGeneral(name);
+  bool isDuplicateGeneral(String name) => widget.data.isDuplicateGeneral(name);
 
   bool isDuplicateSpecific(String parent, String name) {
-    final genId = widget.repo.generalIdForName(parent);
+    final genId = widget.data.generalIdForName(parent);
     if (genId.isEmpty) return false;
     return widget.source == RequiredSectionSource.storage
-        ? widget.repo.isDuplicateStorageSpecific(genId, name)
-        : widget.repo.isDuplicateInventorySpecific(genId, name);
+        ? widget.data.isDuplicateStorageSpecific(genId, name)
+        : widget.data.isDuplicateInventorySpecific(genId, name);
   }
 
   String? findSimilarSpecific(String parent, String newName) {
-    // UI from correct_ui file - kept exactly, but repo reference fixed to widget.repo
-    // Note: this uses storageData/inventoryData if available on repo; if not, falls back to current list
-    try {
-      final Map<String, List<String>> storageData = (widget.repo as dynamic).storageData as Map<String, List<String>>;
-      final Map<String, List<String>> inventoryData = (widget.repo as dynamic).inventoryData as Map<String, List<String>>;
-      final list = widget.source == RequiredSectionSource.storage
-          ? (storageData[parent] ?? [])
-          : (inventoryData[parent] ?? []);
-      final nl = newName.toLowerCase();
-      for (final ex in list) {
-        if (ex.toLowerCase().contains(nl) || nl.contains(ex.toLowerCase())) {
-          if (ex.toLowerCase() != nl) return ex;
-        }
-      }
-    } catch (_) {
-      // Fallback to current specifics list if storageData not present
-      final list = getSpecificsForCurrentGeneral();
-      final nl = newName.toLowerCase();
-      for (final ex in list) {
-        if (ex.toLowerCase().contains(nl) || nl.contains(ex.toLowerCase())) {
-          if (ex.toLowerCase() != nl) return ex;
-        }
+    final list = widget.data.specificNamesByGeneralName(
+      parent,
+      storage: widget.source == RequiredSectionSource.storage,
+    );
+    final nl = newName.toLowerCase();
+    for (final ex in list) {
+      if (ex.toLowerCase().contains(nl) || nl.contains(ex.toLowerCase())) {
+        if (ex.toLowerCase() != nl) return ex;
       }
     }
     return null;
@@ -99,7 +85,7 @@ class _RequiredSectionState extends State<RequiredSection> {
   Future<void> addGeneral(String name) async {
     final t = name.trim();
     if (t.isEmpty || isDuplicateGeneral(t)) return;
-    await widget.repo.addGeneral(t);
+    await widget.data.addGeneral(t);
     if (mounted) setState(() {});
   }
 
@@ -107,12 +93,12 @@ class _RequiredSectionState extends State<RequiredSection> {
     final p = parent.trim();
     final t = name.trim();
     if (p.isEmpty || t.isEmpty || isDuplicateSpecific(p, t)) return;
-    final genId = widget.repo.generalIdForName(p);
+    final genId = widget.data.generalIdForName(p);
     if (genId.isEmpty) return;
     if (widget.source == RequiredSectionSource.storage) {
-      await widget.repo.addStorageSpecific(genId, t);
+      await widget.data.addStorageSpecific(genId, t);
     } else {
-      await widget.repo.addInventorySpecific(genId, t);
+      await widget.data.addInventorySpecific(genId, t);
     }
     if (mounted) setState(() {});
   }
@@ -181,16 +167,16 @@ class _RequiredSectionState extends State<RequiredSection> {
           children: [
             Expanded(
               child: SizedBox(
-                height: 36,
+                height: AppSize.fieldHeight,
                 child: TextField(
                   controller: controller,
                   focusNode: focusNode,
                   enabled: enabled,
-                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+                  style: AppText.input,
                   decoration: InputDecoration(
                     hintText: hint,
-                    hintStyle: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                    hintStyle: AppText.inputHint,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                     filled: true,
                     fillColor: enabled ? AppColors.white : AppColors.scaffoldDark,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -204,20 +190,20 @@ class _RequiredSectionState extends State<RequiredSection> {
             const SizedBox(width: 6),
             SizedBox(
               width: 36,
-              height: 36,
+              height: AppSize.fieldHeight,
               child: ElevatedButton(
                 onPressed: enabled ? onPickerTap : null,
-                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(36, 36)),
+                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: AppSize.buttonMinSizeIcon, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                 child: const Icon(Icons.arrow_drop_down, size: 20),
               ),
             ),
             const SizedBox(width: 6),
             SizedBox(
               width: 36,
-              height: 36,
+              height: AppSize.fieldHeight,
               child: ElevatedButton(
                 onPressed: canAdd ? onAddTap : null,
-                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(36, 36)),
+                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: AppSize.buttonMinSizeIcon, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                 child: const Icon(Icons.add, size: 18),
               ),
             ),
@@ -228,8 +214,8 @@ class _RequiredSectionState extends State<RequiredSection> {
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
               color: AppColors.white,
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.button),
+              border: Border.all(color: AppColors.border, width: AppBorder.width),
+              borderRadius: BorderRadius.circular(AppBorder.radius),
               boxShadow: const [BoxShadow(color: AppColors.border, blurRadius: 4, offset: Offset(0, 2))],
             ),
             constraints: const BoxConstraints(maxHeight: 180),
@@ -262,7 +248,7 @@ class _RequiredSectionState extends State<RequiredSection> {
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4),
             child: Text('Similar to "$similar" exists — select it from the list above',
-                style: TextStyle(fontSize: 11, color: Colors.orange.shade800, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 11, color: AppColors.warningText, fontWeight: FontWeight.w600)),
           ),
       ],
     );
@@ -285,15 +271,14 @@ class _RequiredSectionState extends State<RequiredSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Location:', style: AppText.dialogSection),
+        const Text('LOCATION', style: AppText.dialogSection),
         const SizedBox(height: 2),
         SizedBox(
           height: 48,
           child: Align(
             alignment: Alignment.topLeft,
             child: Text(summary,
-                style: const TextStyle(
-                    fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary, height: 1.35),
+                style: AppText.input,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
           ),
@@ -329,14 +314,14 @@ class _RequiredSectionState extends State<RequiredSection> {
         Text(widget.source == RequiredSectionSource.storage ? 'Storage Item (required)' : 'Inventory Item (required)', style: AppText.dialogSection),
         const SizedBox(height: 4),
         SizedBox(
-          height: 36,
+          height: AppSize.fieldHeight,
           child: TextField(
             controller: widget.itemNameController,
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+            style: AppText.input,
             decoration: InputDecoration(
               hintText: widget.itemHint,
-              hintStyle: const TextStyle(color: AppColors.textDisabled, fontSize: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+              hintStyle: AppText.inputHint,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
               filled: true,
               fillColor: AppColors.white,
               contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -394,7 +379,7 @@ class _GeneralSpecificPickerSheetState extends State<_GeneralSpecificPickerSheet
             decoration: InputDecoration(
               hintText: widget.hint,
               prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
             ),
           ),
           const SizedBox(height: 8),

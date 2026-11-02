@@ -11,62 +11,155 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final svc = SettingsService();
   String theme = 'system';
-  bool collapse = false;
-  List<String> tabOrder = ['Storage','Inventory','POI'];
+  List<String> tabOrder = ['Storage Items', 'Home Inventory', 'Places of Interest'];
   bool confirmDelete = true;
+  bool _isReordering = false;
+  int _pressedIndex = -1;
+
+  static const List<String> kTabDisplayNames = [
+    'Storage Items',
+    'Home Inventory',
+    'Places of Interest',
+  ];
+
+  static const Map<String, String> _legacyToDisplay = {
+    'Storage': 'Storage Items',
+    'Inventory': 'Home Inventory',
+    'POI': 'Places of Interest',
+    'Storage Items': 'Storage Items',
+    'Home Inventory': 'Home Inventory',
+    'Places of Interest': 'Places of Interest',
+  };
+
+  List<String> _normalize(List<String> raw) {
+    if (raw.length != 3) return List<String>.from(kTabDisplayNames);
+    final mapped = raw.map((e) => _legacyToDisplay[e.trim()] ?? e).toList();
+    final validSet = kTabDisplayNames.toSet();
+    if (mapped.every((e) => validSet.contains(e)) && mapped.toSet().length == 3) {
+      return mapped;
+    }
+    return List<String>.from(kTabDisplayNames);
+  }
 
   @override void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     theme = await svc.getTheme();
-    collapse = await svc.getCollapse();
-    tabOrder = await svc.getTabOrder();
+    final stored = await svc.getTabOrder();
+    tabOrder = _normalize(stored);
     confirmDelete = await svc.getConfirmDelete();
     setState(() {});
   }
 
   Widget _buildThemeButton({required String label, required bool selected, required VoidCallback onTap}) {
     return Padding(
-      padding: const EdgeInsets.only(right: 6, bottom: 4),
+      padding: const EdgeInsets.only(right: 8, bottom: 8),
       child: ElevatedButton(
         onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: selected ? AppColors.buttonBg : AppColors.white,
-          foregroundColor: selected ? AppColors.white : Colors.black87,
-          side: BorderSide(color: selected ? AppColors.buttonBg : AppColors.border, width: selected ? 1.8 : 1),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
-          elevation: selected ? 1 : 0,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          minimumSize: Size(0, 28),
-        ),
-        child: Text(label, 
-          style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600, fontSize: 11)),
+        style: selected ? AppButton.primarySmall : AppButton.secondarySmall,
+        child: Text(label),
       ),
     );
   }
 
-  Widget _buildTabOrderButton({required String label, required bool selected, required VoidCallback onTap}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: selected ? AppColors.buttonBg : AppColors.white,
-            foregroundColor: selected ? AppColors.white : Colors.black87,
-            side: BorderSide(color: selected ? AppColors.buttonBg : AppColors.border, width: selected ? 1.5 : 1),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-            elevation: selected ? 1 : 0,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            minimumSize: Size(0, 26),
+  Widget _buildReorderableArea() {
+    Widget buildBox(String label, int idx, bool showDragHandle) {
+      final isPressed = _pressedIndex == idx;
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 22,
+            child: Text('${idx + 1}', style: AppText.input),
           ),
-          child: Text(label, 
-            style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600, fontSize: 11, letterSpacing: 0.1)),
-        ),
-      ),
-    );
+          const SizedBox(width: 6),
+          Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(AppBorder.radius),
+                border: Border.all(color: isPressed ? AppColors.buttonBg : AppColors.border, width: isPressed ? 1.4 : AppBorder.width),
+                boxShadow: isPressed
+                    ? [BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: const Offset(0, 3))]
+                    : [],
+              ),
+              transform: isPressed ? (Matrix4.identity()..translate(0.0, -1.5, 0.0)..scale(1.02)) : Matrix4.identity(),
+              child: ListTile(
+                dense: true,
+                visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                title: Text(label, style: AppText.input),
+                trailing: showDragHandle ? const Icon(Icons.drag_handle_rounded, size: 20, color: AppColors.textSecondary) : null,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_isReordering) {
+      return ReorderableListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: false,
+        proxyDecorator: (child, index, animation) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              final t = Curves.easeOut.transform(animation.value);
+              return Transform.scale(
+                scale: 1.0 + (t * 0.05),
+                child: Material(
+                  elevation: 12 + (t * 8),
+                  shadowColor: AppColors.shadowMedium,
+                  borderRadius: BorderRadius.circular(AppBorder.radius),
+                  child: child,
+                ),
+              );
+            },
+            child: child,
+          );
+        },
+        itemCount: tabOrder.length,
+        onReorder: (oldIndex, newIndex) {
+          setState(() {
+            if (newIndex > oldIndex) newIndex--;
+            final item = tabOrder.removeAt(oldIndex);
+            tabOrder.insert(newIndex, item);
+            _pressedIndex = -1;
+          });
+          svc.setTabOrder(tabOrder);
+        },
+        itemBuilder: (context, index) {
+          final label = tabOrder[index];
+          return Padding(
+            key: ValueKey(label),
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Listener(
+              onPointerDown: (_) => setState(() => _pressedIndex = index),
+              onPointerUp: (_) => setState(() => _pressedIndex = -1),
+              onPointerCancel: (_) => setState(() => _pressedIndex = -1),
+              child: ReorderableDragStartListener(
+                index: index,
+                child: buildBox(label, index, true),
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      return Column(
+        children: tabOrder.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final label = entry.value;
+          return Padding(
+            key: ValueKey(label),
+            padding: const EdgeInsets.only(bottom: 8),
+            child: buildBox(label, idx, false),
+          );
+        }).toList(),
+      );
+    }
   }
 
   @override Widget build(BuildContext context) {
@@ -76,7 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Display Mode', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+          const Text('DISPLAY MODE', style: AppText.dialogSection),
           const SizedBox(height: 8),
           Wrap(
             alignment: WrapAlignment.start,
@@ -87,48 +180,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
 
-          const Divider(height: 28),
+          AppDivider.horizontal,
 
-          SwitchListTile(
-            title: const Text('Notes Collapsed is Default', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
-            subtitle: Text(collapse ? 'Collapsed by default' : 'Expanded by default', style: const TextStyle(fontSize: 10.5)),
-            value: collapse,
-            onChanged: (v){ setState(()=>collapse=v); svc.setCollapse(v); },
-            contentPadding: EdgeInsets.zero,
+          const Text('MAIN SCREEN TAB ORDER', style: AppText.dialogSection),
+          const SizedBox(height: 4),
+          const Text('Tap "Reorder" and then drag the tabs to your desired order.', style: AppText.dialog),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.5,
+                child: _buildReorderableArea(),
+              ),
+              const Spacer(),
+              Align(
+                alignment: Alignment.center,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() => _isReordering = !_isReordering);
+                    if (!_isReordering) {
+                      svc.setTabOrder(tabOrder);
+                    }
+                  },
+                  style: _isReordering ? AppButton.whiteSmall : AppButton.primarySmall,
+                  child: Text(_isReordering ? 'Done' : 'Reorder'),
+                ),
+              ),
+            ],
           ),
 
-          const Divider(height: 28),
-
-          const Text('Main Screen Tab order', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-          const Text('Tap to select order', style: TextStyle(fontSize: 10.5, color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
-          ...SettingsService.allOrders.map((order) {
-            final label = order.join(' • ');
-            final isSelected = order.join(',') == tabOrder.join(',');
-            return _buildTabOrderButton(
-              label: label,
-              selected: isSelected,
-              onTap: (){ setState(()=>tabOrder=order); svc.setTabOrder(order); },
-            );
-          }),
-
-          const Divider(height: 28),
+          AppDivider.horizontal,
 
           SwitchListTile(
-            title: const Text('Confirm Deletes', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
-            subtitle: Text(confirmDelete ? 'Confirm before delete' : 'Deletes immediately, no undo', style: const TextStyle(fontSize: 10.5)),
+            title: const Text('CONFIRM DELETES', style: AppText.dialogSection),
+            subtitle: const Text('Ask for confirmation before deleting information', style: AppText.dialog),
             value: confirmDelete,
+            activeColor: AppColors.white,
+            activeTrackColor: AppColors.buttonBg,
+            inactiveThumbColor: AppColors.white,
+            inactiveTrackColor: AppColors.border,
             contentPadding: EdgeInsets.zero,
             onChanged: (v) async {
               if (!v) {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (_) => AlertDialog(
-                    title: const Text('Turn off delete confirmation?'),
-                    content: const Text('If off, items are deleted immediately with no undo.'),
+                    backgroundColor: AppColors.card,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
+                    title: const Text('Turn off delete confirmation?', style: AppText.dialogTitle),
+                    content: const Text('If off, items are deleted immediately with no undo.', style: AppText.dialogAlert),
                     actions: [
                       TextButton(onPressed: ()=>Navigator.pop(context,false), child: const Text('Cancel')),
-                      TextButton(onPressed: ()=>Navigator.pop(context,true), child: const Text('Turn Off Anyway')),
+                      ElevatedButton(onPressed: ()=>Navigator.pop(context,true), style: AppButton.primary, child: const Text('Turn Off Anyway')),
                     ],
                   ),
                 );

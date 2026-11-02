@@ -5,7 +5,9 @@ import '../widgets/gps_location_section.dart';
 import '../widgets/photo_details_section.dart';
 import '../widgets/notes_section.dart';
 import '../widgets/app_sheet.dart';
-import '../wherelog_repository.dart';
+import '../data/photo_store.dart';
+import '../data/poi_records.dart';
+import '../data/sqlite_poi_repository.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -31,7 +33,7 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
   final valueController = TextEditingController();
   File? photoFile;
   final _picker = ImagePicker();
-  final _repo = WhereLogRepository();
+  final _poiRepo = SqlitePoiRepository.instance;
   bool _notesExpanded = true;
   bool _photoExpanded = true;
   bool _isGettingLocation = false;
@@ -39,7 +41,6 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
   @override
   void initState() {
     super.initState();
-    _repo.load();
     // Precise alteration for POI Import - prefill from shared data, preserve all existing features
     if (widget.initialName != null) nameController.text = widget.initialName!;
     if (widget.initialAddress != null) addressController.text = widget.initialAddress!;
@@ -66,9 +67,9 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
       builder: (c, _) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.place, size: 48, color: Colors.green),
+          const Icon(Icons.place, size: 48, color: AppColors.notice),
           const SizedBox(height: 12),
-          Text(msg, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(msg, textAlign: TextAlign.center, style: AppText.dialogNotice),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -184,25 +185,7 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
     }
   }
 
-  Future<void> openPhotoSheet() async {
-    final src = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (c) => SafeArea(
-        child: Wrap(children: [
-          ListTile(leading: const Icon(Icons.photo_camera), title: const Text('Take Photo'), onTap: () => Navigator.pop(c, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Choose from Gallery'), onTap: () => Navigator.pop(c, ImageSource.gallery)),
-          if (photoFile != null) ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Remove Photo'), onTap: () => Navigator.pop(c, null)),
-        ]),
-      ),
-    );
-    if (src == null && photoFile != null) {
-      setState(() => photoFile = null);
-      return;
-    }
-    if (src == null) return;
-    final XFile? img = await _picker.pickImage(source: src, imageQuality: 80, maxWidth: 1024);
-    if (img != null) setState(() => photoFile = File(img.path));
-  }
+  
 
   Future<void> openFullPhotoViewer(File file) async {
     await showDialog(
@@ -231,21 +214,15 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
       showCenterNotice('Enter valid GPS coordinates');
       return;
     }
-    final nowIso = DateTime.now().toIso8601String();
-    final item = {
-      'id': 'poi_${DateTime.now().millisecondsSinceEpoch}',
-      'name': nameController.text.trim(),
-      'lat': lat,
-      'lng': lng,
-      'address': addressController.text.trim(),
-      'notes': notesController.text.trim(),
-      'photo': photoFile?.path,
-      'photoPath': photoFile?.path,
-      'createdAt': nowIso,
-      'modifyDate': nowIso,
-      'updatedAt': nowIso,
-    };
-    await _repo.addPoiItem(item);
+    final item = PoiItem(
+      name: nameController.text.trim(),
+      latitude: lat,
+      longitude: lng,
+      address: addressController.text.trim(),
+      notes: notesController.text.trim(),
+      photoFilename: PhotoStore.filenameOf(photoFile?.path),
+    );
+    await _poiRepo.add(item);
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -273,9 +250,9 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
               onToggle: () => setState(() => _photoExpanded = !_photoExpanded),
               variant: PhotoDetailsVariant.poi,
               photoFile: photoFile,
-              onPhotoAdd: openPhotoSheet,
+              onPhotoChanged: (f) => setState(() => photoFile = f),
               onPhotoView: () => openFullPhotoViewer(photoFile!),
-              onPhotoEdit: openPhotoSheet,
+              
               valueController: valueController,
               addressController: addressController,
               onPickMap: pickFromMapProgram,
