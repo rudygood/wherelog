@@ -57,7 +57,7 @@ class PhotoDetailsSection extends StatefulWidget {
   State<PhotoDetailsSection> createState() => _PhotoDetailsSectionState();
 }
 
-class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
+class _PhotoDetailsSectionState extends State<PhotoDetailsSection> with WidgetsBindingObserver {
   late bool _expanded;
   bool _hasClipboard = false;
   final ImagePicker _picker = ImagePicker();
@@ -65,9 +65,26 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _expanded = widget.isExpanded;
     _load();
     _checkClipboard();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// The clipboard's contents change while the user is off in
+  /// another app copying a photo. When WhereLog comes back to
+  /// the front, look again, so the Clipboard button's enabled
+  /// state reflects the clipboard as it is now, not as it was
+  /// when this screen was first built.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkClipboard();
   }
 
   @override
@@ -84,6 +101,7 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
   }
 
   Future<void> _handleToggle() async {
+    _checkClipboard();
     setState(() => _expanded = !_expanded);
     if (widget.storageKey != null) {
       final prefs = await SharedPreferences.getInstance();
@@ -117,11 +135,16 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
     return 'img_${DateTime.now().microsecondsSinceEpoch}_${r}$ext';
   }
 
+  /// The extension for pasted bytes that actually begin as a
+  /// known image, or '' when they do not — pasted content is
+  /// never saved under a guessed extension.
   String _extFromBytes(Uint8List bytes) {
     if (bytes.length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return '.png';
     if (bytes.length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return '.jpg';
     if (bytes.length >= 12 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46) return '.webp';
-    return '.jpg';
+    if (bytes.length >= 4 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x38) return '.gif';
+    if (bytes.length >= 2 && bytes[0] == 0x42 && bytes[1] == 0x4D) return '.bmp';
+    return '';
   }
 
   Future<void> _deleteIfExists(String? path) async {
@@ -153,6 +176,23 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
     widget.onPhotoChanged(newFile);
   }
 
+  /// Diagnostic (long-press the Clipboard button): show what
+  /// the clipboard currently claims to hold, in plain text.
+  Future<void> _showClipDiagnostic() async {
+    final report = await ClipboardImageService.describeClip();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
+        title: const Text('Clipboard contents', style: AppText.dialogTitle),
+        content: SingleChildScrollView(child: SelectableText(report, style: const TextStyle(fontSize: 12, fontFamily: 'monospace'))),
+        actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close'))],
+      ),
+    );
+  }
+
   Future<void> _handlePaste() async {
     final bytes = await ClipboardImageService.getImageBytes();
     if (bytes == null || bytes.isEmpty) {
@@ -160,10 +200,17 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clipboard has no image')));
       return;
     }
+    final ext = _extFromBytes(bytes);
+    if (ext.isEmpty) {
+      // Bytes arrived but are not an image (a copied link's
+      // payload, a web page, ...). Save nothing.
+      await _checkClipboard();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clipboard has no image')));
+      return;
+    }
     final dir = await getApplicationDocumentsDirectory();
     final photosDir = Directory(p.join(dir.path, 'WhereLog', 'photos'));
     if (!await photosDir.exists()) await photosDir.create(recursive: true);
-    final ext = _extFromBytes(bytes);
     final newFile = File(p.join(photosDir.path, _uniqueName(ext)));
     await newFile.writeAsBytes(bytes);
     final oldPath = widget.photoFile?.path;
@@ -216,13 +263,13 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
     } else if (widget.variant == PhotoDetailsVariant.inventory) {
       return Column(children: [
         Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Brand', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.brandController, style: AppText.input, decoration: deco('Optional')))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Brand', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.brandController, textCapitalization: TextCapitalization.words, style: AppText.input, decoration: deco('Optional')))])),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Model', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.modelController, style: AppText.input, decoration: deco('Optional')))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Model', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.modelController, textCapitalization: TextCapitalization.sentences, style: AppText.input, decoration: deco('Optional')))])),
         ]),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Serial Number', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.serialController, style: AppText.input, decoration: deco('Optional')))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Serial Number', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.serialController, textCapitalization: TextCapitalization.none, style: AppText.input, decoration: deco('Optional')))])),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Quantity', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.qtyController, keyboardType: TextInputType.number, style: AppText.input, decoration: deco('1')))])),
         ]),
@@ -245,7 +292,7 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('ADDRESS (optional)', style: AppText.dialogSection),
         const SizedBox(height: 4),
-        SizedBox(height: fieldHeight, child: TextField(controller: widget.addressController, style: AppText.input, decoration: InputDecoration(hintText: 'Optional address from map', hintStyle: AppText.inputHint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), filled: true, fillColor: AppColors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), isDense: true, suffixIcon: IconButton(icon: const Icon(Icons.map_outlined, color: AppColors.textSecondary), onPressed: widget.onPickMap)))),
+        SizedBox(height: fieldHeight, child: TextField(controller: widget.addressController, textCapitalization: TextCapitalization.words, style: AppText.input, decoration: InputDecoration(hintText: 'Optional address from map', hintStyle: AppText.inputHint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), filled: true, fillColor: AppColors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), isDense: true, suffixIcon: IconButton(icon: const Icon(Icons.map_outlined, color: AppColors.textSecondary), onPressed: widget.onPickMap)))),
         const SizedBox(height: 12),
         const Text('COORDS SOURCE', style: AppText.dialogSection),
         const SizedBox(height: 4),
@@ -308,7 +355,12 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> {
                       const SizedBox(height: buttonSpacing),
                       leftBtn(_handleGallery, Icons.photo_library_outlined, 'Gallery'),
                       const SizedBox(height: buttonSpacing),
-                      leftBtn(_hasClipboard ? _handlePaste : null, Icons.content_paste_outlined, 'Clipboard'),
+                      // The diagnostic long-press lives on a
+                      // wrapper, NOT on the button: a button with
+                      // a long-press handler counts as enabled
+                      // even when its tap handler is null, which
+                      // made the button glow with nothing to paste.
+                      GestureDetector(onLongPress: _showClipDiagnostic, child: leftBtn(_hasClipboard ? _handlePaste : null, Icons.content_paste_outlined, 'Clipboard')),
                     ],
                   ),
                 ),

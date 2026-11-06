@@ -1,0 +1,57 @@
+# WhereLog — Codemagic unsigned iOS build (free route, for AltServer)
+#
+# DRAFT prepared 2026-11-06 for Rudy's iPhone smoke test (scheduled today).
+# Place this file at the root of the WhereLog repository as `codemagic.yaml`
+# and commit it. Codemagic detects it automatically; the Workflow Editor
+# configuration is ignored once it exists.
+#
+# What it does:
+#   - Builds the app unsigned (no Apple Developer membership needed).
+#   - Packages the resulting .app into an unsigned .ipa (Payload/Runner.app),
+#     which is the file AltServer on the Spectre installs and re-signs
+#     under Rudy's free Apple ID.
+# What it does NOT do: sign the app, or publish anywhere. No secrets,
+# no certificates, no App Store Connect key are involved in this workflow.
+#
+# Source: Codemagic docs, "Flutter apps" (docs.codemagic.io),
+# "To build an unsigned .app version for debug, replace the build command
+# with: flutter build ios --debug --no-codesign".
+# Note: an unsigned build produces a .app, not an .ipa — the packaging
+# step below is what turns it into the .ipa AltServer expects.
+#
+# Before the first build, the repo must exist on a host Codemagic can
+# reach (private GitHub repo). The WhereLog git in Muse's workspace
+# currently has NO remote — pushing it to a private repo is a session
+# step only Rudy can do from his own GitHub account.
+
+workflows:
+  wherelog-ios-unsigned:
+    name: WhereLog iOS (unsigned, for AltServer)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install pods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Build iOS unsigned (release, no codesign)
+        script: |
+          # Release (not debug) so there is no debug banner and the
+          # rendering matches a real install. If this fails, fall back
+          # to the exact Codemagic-documented command:
+          #   flutter build ios --debug --no-codesign
+          flutter build ios --release --no-codesign
+      - name: Package .app as unsigned .ipa for AltServer
+        script: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r wherelog-unsigned.ipa Payload
+          rm -rf Payload
+    artifacts:
+      - wherelog-unsigned.ipa
+      - /tmp/xcodebuild_logs/*.log

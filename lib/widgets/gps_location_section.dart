@@ -116,6 +116,7 @@ class GpsLocationSection extends StatelessWidget {
               const SizedBox(height: 6),
               TextField(
                 controller: nameController,
+                textCapitalization: TextCapitalization.words,
                 style: AppText.input,
                 decoration: InputDecoration(
                   hintText: 'e.g. Great campsite',

@@ -7,6 +7,7 @@ import 'screens/storage_edit_screen.dart';
 import 'screens/inventory_add_screen.dart';
 import 'screens/inventory_edit_screen.dart';
 import 'screens/poi_add_screen.dart';
+import 'screens/poi_import_verify_screen.dart';
 import 'screens/poi_edit_screen.dart';
 import 'data/inventory_records.dart';
 import 'data/location_data.dart';
@@ -390,7 +391,13 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _processImportAt(int index) async {
     if (index < 0 || index >= _pendingImports.length) return;
     final data = _pendingImports[index];
-    final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiAddScreen(initialName: data.name, initialLat: data.lat, initialLng: data.lng, initialAddress: data.address)));
+    // Every staged import passes the verification gate first:
+    // the point is checked on the map (and may be adjusted)
+    // before the add screen opens. Backing out of the gate
+    // leaves the import queued, untouched.
+    final verified = await Navigator.of(context).push<PoiImportData>(MaterialPageRoute(builder: (_) => PoiImportVerifyScreen(data: data)));
+    if (!mounted || verified == null) return;
+    final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiAddScreen(initialName: verified.name, initialLat: verified.lat, initialLng: verified.lng, initialAddress: verified.address, initialSource: verified.source, initialNameIsPlaceholder: verified.nameIsPlaceholder)));
     if (mounted) {
       await _refreshSqlitePois();
       if (result == true) {
@@ -417,7 +424,10 @@ class _HomeScreenState extends State<HomeScreen>
     if (idx >= 0) {
       await _processImportAt(idx);
     } else {
-      final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiAddScreen(initialName: data.name, initialLat: data.lat, initialLng: data.lng, initialAddress: data.address)));
+      // Same verification gate as the queued path above.
+      final verified = await Navigator.of(context).push<PoiImportData>(MaterialPageRoute(builder: (_) => PoiImportVerifyScreen(data: data)));
+      if (!mounted || verified == null) return;
+      final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiAddScreen(initialName: verified.name, initialLat: verified.lat, initialLng: verified.lng, initialAddress: verified.address, initialSource: verified.source, initialNameIsPlaceholder: verified.nameIsPlaceholder)));
       if (mounted) {
         await _refreshSqlitePois();
       }
@@ -518,16 +528,21 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _handleIncomingShare(String text) async {
+    var contextText = text;
     var parsed = PoiImportUtils.parseSharedText(text);
     if (parsed.isEmpty) {
       final lower = text.toLowerCase();
       if (lower.contains('goo.gl') || lower.contains('maps.app.goo.gl')) {
         final expanded = await PoiImportUtils.tryExpandShortLink(text);
+        contextText = expanded;
         parsed = PoiImportUtils.parseSharedText(expanded);
         if (parsed.isEmpty) {
           parsed = PoiImportUtils.parseSharedText(expanded + ' ' + text);
         }
       }
+    }
+    if (parsed.isNotEmpty) {
+      parsed = await PoiImportUtils.refineViewportResults(parsed, contextText);
     }
     if (parsed.isEmpty) return;
     setState(() { _pendingImports.addAll(parsed); });
@@ -783,6 +798,11 @@ class _HomeScreenState extends State<HomeScreen>
             unselectedLabelColor: AppColors.textSecondary,
             indicator: BoxDecoration(
               color: AppColors.white,
+              border: const Border(
+                top: BorderSide(color: AppColors.border, width: 1),
+                left: BorderSide(color: AppColors.border, width: 1),
+                right: BorderSide(color: AppColors.border, width: 1),
+              ),
               borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(12), topRight: Radius.circular(12))),
             indicatorPadding: EdgeInsets.symmetric(horizontal: 4),

@@ -19,6 +19,12 @@ class PoiItem {
   /// Filename only, in the app's WhereLog/photos folder. NULL = no photo.
   final String? photoFilename;
 
+  /// Where these coordinates came from: an import origin ('Google
+  /// Maps link', 'GPX file', ...) or a direct-entry channel ('Map
+  /// pick', 'Device GPS', 'Manual entry') — whichever set them last.
+  /// NULL = not recorded (every record predating schema v3).
+  final String? source;
+
   /// System stamps, UTC ISO-8601 with the Z marker, written by
   /// SqlitePoiRepository. Empty strings on a not-yet-saved record.
   final String createdAt;
@@ -32,6 +38,7 @@ class PoiItem {
     this.address = '',
     this.notes = '',
     this.photoFilename,
+    this.source,
     this.createdAt = '',
     this.modifiedAt = '',
   });
@@ -44,6 +51,7 @@ class PoiItem {
         address: map['address'] as String,
         notes: map['notes'] as String,
         photoFilename: map['photo_filename'] as String?,
+        source: map['source'] as String?,
         createdAt: map['created_at'] as String,
         modifiedAt: map['modified_at'] as String,
       );
@@ -56,6 +64,7 @@ class PoiItem {
         'address': address,
         'notes': notes,
         'photo_filename': photoFilename,
+        'source': source,
         'created_at': createdAt,
         'modified_at': modifiedAt,
       };

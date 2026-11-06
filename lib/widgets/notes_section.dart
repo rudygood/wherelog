@@ -81,6 +81,7 @@ class _NotesSectionState extends State<NotesSection> {
                 padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
                 child: TextField(
                   controller: tempCtrl,
+                  textCapitalization: TextCapitalization.sentences,
                   focusNode: focusNode,
                   minLines: 8,
                   maxLines: 20,
@@ -161,6 +162,7 @@ class _NotesSectionState extends State<NotesSection> {
             height: AppSize.fieldHeightMulti,
             child: TextField(
               controller: widget.controller,
+              textCapitalization: TextCapitalization.sentences,
               minLines: 3,
               maxLines: 3,
               scrollPhysics: const AlwaysScrollableScrollPhysics(),

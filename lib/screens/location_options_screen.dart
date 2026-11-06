@@ -181,7 +181,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                     visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                     leading: IconButton(icon: Icon(isExp?Icons.expand_less:Icons.chevron_right, size: 18), onPressed: ()=>setState(()=>isExp?expanded.remove(genId):expanded.add(genId)), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                    title: isEditingGen ? TextField(controller: _editController, autofocus: true, onSubmitted: (v)=>_renameGeneral(genId, v), decoration: _fieldDec('General name'), style: AppText.input) : Text(genName, style: AppText.cardTitle),
+                    title: isEditingGen ? TextField(controller: _editController, textCapitalization: TextCapitalization.words, autofocus: true, onSubmitted: (v)=>_renameGeneral(genId, v), decoration: _fieldDec('General name'), style: AppText.input) : Text(genName, style: AppText.cardTitle),
                     subtitle: Text('$itemCount Storage/Inventory items', style: AppText.dialog),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       if(!isEditingGen) Padding(padding: const EdgeInsets.only(right: 8), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.textSecondary), onPressed: ()=>setState(()=>{editingGeneralId=genId, _editController.text=genName}), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
@@ -210,7 +210,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(24, 2, 8, 2),
                         child: Row(children: [
-                          Expanded(child: isEditing ? TextField(controller: _editController, autofocus: true, onSubmitted: (v)=>_renameSpecific(specId, v, 'storage'), decoration: _fieldDec('Specific name'), style: AppText.input) : Text('• $specName ($count items)', style: AppText.dialog)),
+                          Expanded(child: isEditing ? TextField(controller: _editController, textCapitalization: TextCapitalization.words, autofocus: true, onSubmitted: (v)=>_renameSpecific(specId, v, 'storage'), decoration: _fieldDec('Specific name'), style: AppText.input) : Text('• $specName ($count items)', style: AppText.dialog)),
                           if(!isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary), onPressed: ()=>setState(()=>{editingSpecificId=specId, editingSpecificType='storage', _editController.text=specName}), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
                           if(isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.check, size: 20, color: AppColors.success), onPressed: ()=>_renameSpecific(specId, _editController.text, 'storage'), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
                           IconButton(icon: Icon(Icons.delete_outline, size: 18, color: canDelete?AppColors.alert:AppColors.border), onPressed: canDelete?()=>_deleteSpecific(specId, 'storage'):null, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap)),
@@ -220,7 +220,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 3, 8, 5),
                       child: Row(children: [
-                        Expanded(child: TextField(controller: _newStorageSpecificControllers.putIfAbsent(genId, ()=>TextEditingController()), decoration: _fieldDec('New Storage Specific Location Option'), style: AppText.input, onSubmitted: (v)=>_addSpecific(genId, v, 'storage'))),
+                        Expanded(child: TextField(controller: _newStorageSpecificControllers.putIfAbsent(genId, ()=>TextEditingController()), textCapitalization: TextCapitalization.words, decoration: _fieldDec('New Storage Specific Location Option'), style: AppText.input, onSubmitted: (v)=>_addSpecific(genId, v, 'storage'))),
                         const SizedBox(width: 6),
                         SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: ()=>_addSpecific(genId, _newStorageSpecificControllers[genId]?.text??'', 'storage'), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
                       ]),
@@ -244,7 +244,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(24, 2, 8, 2),
                         child: Row(children: [
-                          Expanded(child: isEditing ? TextField(controller: _editController, autofocus: true, onSubmitted: (v)=>_renameSpecific(specId, v, 'inventory'), decoration: _fieldDec('Specific name'), style: AppText.input) : Text('• $specName ($count items)', style: AppText.dialog)),
+                          Expanded(child: isEditing ? TextField(controller: _editController, textCapitalization: TextCapitalization.words, autofocus: true, onSubmitted: (v)=>_renameSpecific(specId, v, 'inventory'), decoration: _fieldDec('Specific name'), style: AppText.input) : Text('• $specName ($count items)', style: AppText.dialog)),
                           if(!isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary), onPressed: ()=>setState(()=>{editingSpecificId=specId, editingSpecificType='inventory', _editController.text=specName}), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
                           if(isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.check, size: 20, color: AppColors.success), onPressed: ()=>_renameSpecific(specId, _editController.text, 'inventory'), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
                           IconButton(icon: Icon(Icons.delete_outline, size: 18, color: canDelete?AppColors.alert:AppColors.border), onPressed: canDelete?()=>_deleteSpecific(specId, 'inventory'):null, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap)),
@@ -254,7 +254,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 3, 8, 8),
                       child: Row(children: [
-                        Expanded(child: TextField(controller: _newInventorySpecificControllers.putIfAbsent(genId, ()=>TextEditingController()), decoration: _fieldDec('New Inventory Specific Location Option'), style: AppText.input, onSubmitted: (v)=>_addSpecific(genId, v, 'inventory'))),
+                        Expanded(child: TextField(controller: _newInventorySpecificControllers.putIfAbsent(genId, ()=>TextEditingController()), textCapitalization: TextCapitalization.words, decoration: _fieldDec('New Inventory Specific Location Option'), style: AppText.input, onSubmitted: (v)=>_addSpecific(genId, v, 'inventory'))),
                         const SizedBox(width: 6),
                         SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: ()=>_addSpecific(genId, _newInventorySpecificControllers[genId]?.text??'', 'inventory'), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
                       ]),
@@ -271,7 +271,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
           padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
           child: SafeArea(
             child: Row(children: [
-              Expanded(child: TextField(controller: _newGeneralController, decoration: _fieldDec('New General Location Option'), style: AppText.input, onSubmitted: (v)=>_addGeneral(v))),
+              Expanded(child: TextField(controller: _newGeneralController, textCapitalization: TextCapitalization.words, decoration: _fieldDec('New General Location Option'), style: AppText.input, onSubmitted: (v)=>_addGeneral(v))),
               const SizedBox(width: 8),
               SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: ()=>_addGeneral(_newGeneralController.text), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
             ]),

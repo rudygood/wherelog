@@ -245,6 +245,11 @@ class AppTheme {
         unselectedLabelStyle: AppText.tabUnselected,
         indicator: BoxDecoration(
           color: AppColors.white,
+          border: Border(
+            top: BorderSide(color: AppColors.border, width: 1),
+            left: BorderSide(color: AppColors.border, width: 1),
+            right: BorderSide(color: AppColors.border, width: 1),
+          ),
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(AppRadius.tabIndicator),
             topRight: Radius.circular(AppRadius.tabIndicator),

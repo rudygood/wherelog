@@ -7,10 +7,15 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String screenName;
   final VoidCallback? onBack;
 
+  /// Optional AppBar actions (e.g. a map screen's center-on-pin
+  /// button), shown at the right of the header.
+  final List<Widget>? actions;
+
   const AppHeader({
     super.key,
     required this.screenName,
     this.onBack,
+    this.actions,
   });
 
   @override
@@ -28,6 +33,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
         onPressed: onBack ?? () => Navigator.pop(context),
       ),
+      actions: actions,
       title: RichText(
         text: TextSpan(
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),

@@ -40,9 +40,22 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
   bool _isGettingLocation = false;
   bool _isLoading = true;
 
+  /// Provenance of the record's coordinates: the stored source,
+  /// replaced by whichever control sets the coordinates last
+  /// ('Device GPS', 'Map pick', 'Manual entry').
+  String? _coordsSource;
+  bool _applyingCoords = false;
+
+  void _coordsEdited() {
+    if (_applyingCoords || !mounted) return;
+    if (_coordsSource != 'Manual entry') setState(() => _coordsSource = 'Manual entry');
+  }
+
   @override
   void initState() {
     super.initState();
+    latController.addListener(_coordsEdited);
+    lngController.addListener(_coordsEdited);
     _load();
   }
 
@@ -53,8 +66,11 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
       nameController.text = item.name;
       notesController.text = item.notes;
       addressController.text = item.address;
+      _applyingCoords = true;
       latController.text = item.latitude.toString();
       lngController.text = item.longitude.toString();
+      _coordsSource = item.source;
+      _applyingCoords = false;
       _originalPhotoFilename = item.photoFilename;
       if (item.photoFilename != null) {
         existingPhotoPath = await PhotoStore.pathFor(item.photoFilename!);
@@ -142,8 +158,11 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
         return;
       }
 
+      _applyingCoords = true;
       latController.text = pos.latitude.toStringAsFixed(6);
       lngController.text = pos.longitude.toStringAsFixed(6);
+      _applyingCoords = false;
+      _coordsSource = 'Device GPS';
 
       try {
         List<Placemark> marks = await Geocoding().placemarkFromCoordinates(pos.latitude, pos.longitude);
@@ -179,11 +198,14 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
       ),
     );
     if (result != null) {
+      _applyingCoords = true;
       setState(() {
         if (result['lat'] != null) latController.text = result['lat']!;
         if (result['lng'] != null) lngController.text = result['lng']!;
         if (result['address'] != null) addressController.text = result['address']!;
+        _coordsSource = 'Map pick';
       });
+      _applyingCoords = false;
     }
   }
 
@@ -227,6 +249,7 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
       address: addressController.text.trim(),
       notes: notesController.text.trim(),
       photoFilename: newPhotoFilename,
+      source: _coordsSource,
       createdAt: loaded.createdAt,
       modifiedAt: loaded.modifiedAt,
     );
@@ -310,6 +333,7 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
               valueController: valueController,
               addressController: addressController,
               onPickMap: pickFromMapProgram,
+              coordsSource: _coordsSource ?? 'Not recorded',
               storageKey: 'photoDetailsExpanded_poi_edit',
             ),
             const SizedBox(height: 16),

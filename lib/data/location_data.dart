@@ -30,6 +30,12 @@ abstract class LocationData {
   Future<void> addGeneral(String name);
   Future<void> addStorageSpecific(String generalId, String name);
   Future<void> addInventorySpecific(String generalId, String name);
+
+  /// Renames, by current name. Items reference locations by id, so a
+  /// rename is one row and every item filed under it follows.
+  Future<void> renameGeneral(String oldName, String newName);
+  Future<void> renameStorageSpecific(String generalName, String oldName, String newName);
+  Future<void> renameInventorySpecific(String generalName, String oldName, String newName);
 }
 
 class SqliteLocationData implements LocationData {
@@ -130,5 +136,43 @@ class SqliteLocationData implements LocationData {
     if (id == null) return;
     await _repo.addInventorySpecific(id, name);
     await load();
+  }
+
+  @override
+  Future<void> renameGeneral(String oldName, String newName) async {
+    final id = int.tryParse(generalIdForName(oldName));
+    if (id == null) return;
+    await _repo.renameGeneral(id, newName.trim());
+    await load();
+  }
+
+  @override
+  Future<void> renameStorageSpecific(String generalName, String oldName, String newName) async {
+    final gid = int.tryParse(generalIdForName(generalName));
+    if (gid == null) return;
+    for (final s in _storageSpecifics) {
+      if (s.generalId == gid && s.name == oldName) {
+        final id = s.id;
+        if (id == null) return;
+        await _repo.renameStorageSpecific(id, newName.trim());
+        await load();
+        return;
+      }
+    }
+  }
+
+  @override
+  Future<void> renameInventorySpecific(String generalName, String oldName, String newName) async {
+    final gid = int.tryParse(generalIdForName(generalName));
+    if (gid == null) return;
+    for (final s in _inventorySpecifics) {
+      if (s.generalId == gid && s.name == oldName) {
+        final id = s.id;
+        if (id == null) return;
+        await _repo.renameInventorySpecific(id, newName.trim());
+        await load();
+        return;
+      }
+    }
   }
 }

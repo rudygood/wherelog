@@ -218,7 +218,7 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Edit Notes'),
-        content: TextField(controller: tempCtrl, minLines: 4, maxLines: 8),
+        content: TextField(controller: tempCtrl, textCapitalization: TextCapitalization.sentences, minLines: 4, maxLines: 8),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
           ElevatedButton(onPressed: () => Navigator.pop(c, tempCtrl.text), child: const Text('Save')),

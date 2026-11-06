@@ -26,6 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>WhereLog takes photos of storage items, inventory and places.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>WhereLog saves the GPS location of your storage items, inventory and places, so you can find them again later.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>WhereLog attaches photos from your library to storage items, inventory and places.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

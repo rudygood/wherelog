@@ -370,6 +370,7 @@ class DataTransfer {
       _reqString(r, 'address');
       _reqString(r, 'notes');
       _optString(r, 'photo_filename');
+      _optString(r, 'source');
       _reqString(r, 'created_at');
       _reqString(r, 'modified_at');
     }
@@ -576,6 +577,7 @@ class DataTransfer {
           'address': r['address'],
           'notes': r['notes'],
           'photo_filename': r['photo_filename'],
+          'source': r['source'],
           'created_at': r['created_at'],
           'modified_at': r['modified_at'],
         });

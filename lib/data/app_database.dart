@@ -10,11 +10,15 @@ import 'package:sqflite/sqflite.dart';
 /// becomes nullable (NULL = not recorded, consistent with brand/model;
 /// v1 inherited the JSON shape's empty string — Rudy ruled there was no
 /// rationale for two ways to say "no value").
+/// Version 3 adds poi_items.source — where a place's coordinates
+/// came from (an import origin or a direct-entry channel). A plain
+/// nullable column added with ADD COLUMN, no rebuild; rows that
+/// predate it read NULL (not recorded).
 class AppDatabase {
   AppDatabase._();
   static final AppDatabase instance = AppDatabase._();
 
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   /// The inventory_items definition, shared by onCreate and the v1→v2
   /// rebuild so the two can never drift apart.
@@ -103,6 +107,7 @@ class AppDatabase {
             address TEXT NOT NULL DEFAULT '',
             notes TEXT NOT NULL DEFAULT '',
             photo_filename TEXT,
+            source TEXT,
             created_at TEXT NOT NULL,
             modified_at TEXT NOT NULL
           )
@@ -123,6 +128,9 @@ class AppDatabase {
           ''');
           await db.execute('DROP TABLE inventory_items');
           await db.execute('ALTER TABLE inventory_items_new RENAME TO inventory_items');
+        }
+        if (oldVersion < 3) {
+          await db.execute('ALTER TABLE poi_items ADD COLUMN source TEXT');
         }
       },
     );

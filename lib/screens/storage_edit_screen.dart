@@ -268,36 +268,13 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
     });
   }
 
-  Future<void> handleDelete() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Delete item?'),
-        content: Text('Delete "${itemNameController.text.trim()}" ? This cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(c, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: AppColors.white),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await _storageRepo.delete(widget.itemId);
-      await PhotoStore.deletePhoto(_originalPhotoFilename);
-      if (mounted) Navigator.pop(context, true);
-    }
-  }
-
   Future<void> openNotesEditor() async {
     final tempCtrl = TextEditingController(text: notesController.text);
     final result = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Edit Notes'),
-        content: TextField(controller: tempCtrl, minLines: 4, maxLines: 8),
+        content: TextField(controller: tempCtrl, textCapitalization: TextCapitalization.sentences, minLines: 4, maxLines: 8),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
           ElevatedButton(onPressed: () => Navigator.pop(c, tempCtrl.text), child: const Text('Save')),

@@ -1,1 +1,0 @@
-export 'wherelog_repository.dart';

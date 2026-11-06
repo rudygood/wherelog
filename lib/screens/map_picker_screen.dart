@@ -6,6 +6,8 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
+import '../widgets/app_header.dart';
+import '../widgets/map_view.dart';
 
 class MapPickerScreen extends StatefulWidget {
   final double? initialLat;
@@ -36,6 +38,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   bool _isGeocoding = false;
   bool _isGettingLocation = false;
   bool _isSearching = false;
+  bool _satellite = false;
   double _currentZoom = 16.0;
   List<_SearchResult> _searchResults = [];
   String _searchError = '';
@@ -234,15 +237,16 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pick Location on Map'),
-        backgroundColor: AppColors.white,
+      backgroundColor: AppColors.scaffold,
+      appBar: AppHeader(
+        screenName: 'Pick Location on Map',
         actions: [
           if (_picked != null)
-            IconButton(icon: const Icon(Icons.center_focus_strong), onPressed: _goToPicked, tooltip: 'Center on pin'),
+            IconButton(icon: const Icon(Icons.center_focus_strong, color: AppColors.textPrimary), onPressed: _goToPicked, tooltip: 'Center on pin'),
         ],
       ),
-      body: Stack(
+      body: MapFrame(
+        child: Stack(
         children: [
           FlutterMap(
             mapController: _mapController,
@@ -255,11 +259,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               },
             ),
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.wherelog',
-                maxZoom: 19,
-              ),
+              ...mapTileLayers(satellite: _satellite),
               if (_picked != null)
                 MarkerLayer(
                   markers: [
@@ -272,9 +272,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   ],
                 ),
               RichAttributionWidget(
-                attributions: [
-                  TextSourceAttribution('© OpenStreetMap contributors', onTap: () {}),
-                ],
+                attributions: mapAttributions(satellite: _satellite),
               ),
             ],
           ),
@@ -297,6 +295,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   child: _isGettingLocation
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
                       : const Icon(Icons.my_location),
+                ),
+                const SizedBox(height: 8),
+                MapStyleToggle(
+                  satellite: _satellite,
+                  onToggle: () => setState(() => _satellite = !_satellite),
                 ),
               ],
             ),
@@ -460,7 +463,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

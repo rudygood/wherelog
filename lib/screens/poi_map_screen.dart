@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_header.dart';
+import '../widgets/map_view.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:geolocator/geolocator.dart';
@@ -22,6 +24,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
   // Default 25 miles per Rudy's request
   static const double _defaultRadiusMiles = 25;
   double _radiusMiles = _defaultRadiusMiles;
+  bool _satellite = false;
   final List<double> _radiusOptions = [0, 1, 5, 10, 25, 50, 100]; // 0 = All
 
   Position? _currentPos;
@@ -129,10 +132,11 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('POI Map (${_filteredPois.length}/${_allPois.length})'),
+      backgroundColor: AppColors.scaffold,
+      appBar: AppHeader(
+        screenName: 'POI Map (${_filteredPois.length}/${_allPois.length})',
         actions: [
-          IconButton(icon: const Icon(Icons.my_location), onPressed: _loadLocation, tooltip: 'Recenter'),
+          IconButton(icon: const Icon(Icons.my_location, color: AppColors.textPrimary), onPressed: _loadLocation, tooltip: 'Recenter'),
         ],
       ),
       body: Column(
@@ -182,19 +186,19 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
               child: Text(_locError!, style: TextStyle(color: AppColors.warningText, fontSize: 12), textAlign: TextAlign.center),
             ),
           Expanded(
-            child: FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _initialCenter(),
-                initialZoom: _currentPos != null ? 11 : 10,
-                maxZoom: 18,
-                minZoom: 3,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.wherelog.app',
-                ),
+            child: MapFrame(
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _initialCenter(),
+                      initialZoom: _currentPos != null ? 11 : 10,
+                      maxZoom: 18,
+                      minZoom: 3,
+                    ),
+                    children: [
+                      ...mapTileLayers(satellite: _satellite),
                 // Radius circle
                 if (_currentPos != null && _radiusMiles > 0)
                   CircleLayer(
@@ -253,7 +257,21 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                       ),
                   ],
                 ),
-              ],
+                      RichAttributionWidget(
+                        attributions: mapAttributions(satellite: _satellite),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    right: 12,
+                    top: 12,
+                    child: MapStyleToggle(
+                      satellite: _satellite,
+                      onToggle: () => setState(() => _satellite = !_satellite),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           // Bottom list of filtered POIs sorted nearest

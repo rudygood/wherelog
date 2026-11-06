@@ -15,11 +15,18 @@ import 'package:geocoding/geocoding.dart';
 import 'map_picker_screen.dart';
 
 class PoiAddScreen extends StatefulWidget {
-  const PoiAddScreen({super.key, this.initialName, this.initialLat, this.initialLng, this.initialAddress});
+  const PoiAddScreen({super.key, this.initialName, this.initialLat, this.initialLng, this.initialAddress, this.initialSource, this.initialNameIsPlaceholder = false});
   final String? initialName;
   final double? initialLat;
   final double? initialLng;
   final String? initialAddress;
+
+  /// Provenance carried from a staged import; null for a direct add.
+  final String? initialSource;
+
+  /// True when [initialName] is a generated import label rather
+  /// than a real name (see PoiImportData.nameIsPlaceholder).
+  final bool initialNameIsPlaceholder;
   @override
   State<PoiAddScreen> createState() => _PoiAddScreenState();
 }
@@ -38,6 +45,22 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
   bool _photoExpanded = true;
   bool _isGettingLocation = false;
 
+  /// Provenance of the coordinates as they will be saved. For a
+  /// direct add this is whichever control set the coordinates
+  /// last ('Device GPS', 'Map pick', 'Manual entry'). A staged
+  /// import instead KEEPS its original source for the whole
+  /// screen: position changes are the verification screen's
+  /// business, and if the saved point differs from the point
+  /// handed over, handleAdd marks the source ' (adjusted)'.
+  String? _coordsSource;
+  bool _applyingCoords = false;
+
+  void _coordsEdited() {
+    if (_applyingCoords || !mounted) return;
+    if (widget.initialSource != null) return;
+    if (_coordsSource != 'Manual entry') setState(() => _coordsSource = 'Manual entry');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +69,9 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
     if (widget.initialAddress != null) addressController.text = widget.initialAddress!;
     if (widget.initialLat != null) latController.text = widget.initialLat!.toStringAsFixed(6);
     if (widget.initialLng != null) lngController.text = widget.initialLng!.toStringAsFixed(6);
+    _coordsSource = widget.initialSource;
+    latController.addListener(_coordsEdited);
+    lngController.addListener(_coordsEdited);
   }
 
   @override
@@ -130,8 +156,11 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
         return;
       }
 
+      _applyingCoords = true;
       latController.text = pos.latitude.toStringAsFixed(6);
       lngController.text = pos.longitude.toStringAsFixed(6);
+      _applyingCoords = false;
+      if (widget.initialSource == null) _coordsSource = 'Device GPS';
 
       // 5. Reverse geocode address
       try {
@@ -177,11 +206,14 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
       ),
     );
     if (result != null) {
+      _applyingCoords = true;
       setState(() {
         if (result['lat'] != null) latController.text = result['lat']!;
         if (result['lng'] != null) lngController.text = result['lng']!;
         if (result['address'] != null) addressController.text = result['address']!;
+        if (widget.initialSource == null) _coordsSource = 'Map pick';
       });
+      _applyingCoords = false;
     }
   }
 
@@ -204,7 +236,8 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
   }
 
   Future<void> handleAdd() async {
-    if (nameController.text.trim().isEmpty) {
+    final typedName = nameController.text.trim();
+    if (typedName.isEmpty) {
       showCenterNotice('Enter Place Name');
       return;
     }
@@ -214,13 +247,48 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
       showCenterNotice('Enter valid GPS coordinates');
       return;
     }
+    var saveName = typedName;
+    // A staged import's placeholder label is scaffolding, not a
+    // name: if it is still in the field untouched, ask comfortably
+    // before it can become anything permanent.
+    if (widget.initialNameIsPlaceholder && typedName == widget.initialName) {
+      final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
+        title: const Text('Name this place?', style: AppText.dialogTitle),
+        content: Text('This place still has the label from its import ("${widget.initialName}"). Is it OK to save it as "Unnamed place" for now? You can rename it any time from the edit screen.', style: const TextStyle(fontSize: 12)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Name it now')),
+          ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('Save as Unnamed place')),
+        ],
+      ));
+      if (ok != true) return;
+      saveName = 'Unnamed place';
+    }
+    // A staged import keeps its source, but if the point being
+    // saved differs from the point handed over (moved on the
+    // verification screen or here), the source says so. The
+    // comparison allows 1e-5 degrees (~1 m): the coordinate
+    // fields carry six decimals, so an untouched point returns
+    // a hair different from the exact value handed over, and
+    // that rounding is not an adjustment.
+    var saveSource = _coordsSource;
+    if (widget.initialSource != null &&
+        widget.initialLat != null &&
+        widget.initialLng != null &&
+        ((lat - widget.initialLat!).abs() > 1e-5 ||
+            (lng - widget.initialLng!).abs() > 1e-5)) {
+      final base = widget.initialSource!;
+      saveSource = base.endsWith(' (adjusted)') ? base : '$base (adjusted)';
+    }
     final item = PoiItem(
-      name: nameController.text.trim(),
+      name: saveName,
       latitude: lat,
       longitude: lng,
       address: addressController.text.trim(),
       notes: notesController.text.trim(),
       photoFilename: PhotoStore.filenameOf(photoFile?.path),
+      source: saveSource,
     );
     await _poiRepo.add(item);
     if (mounted) Navigator.pop(context, true);
@@ -236,6 +304,10 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // The import map-check notice used to live here; it
+            // now sits on the import verification screen, which
+            // every staged import passes through before this
+            // screen opens. Direct adds never saw it either way.
             GpsLocationSection(
               nameController: nameController,
               latController: latController,
@@ -256,6 +328,7 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
               valueController: valueController,
               addressController: addressController,
               onPickMap: pickFromMapProgram,
+              coordsSource: _coordsSource,
               storageKey: 'photoDetailsExpanded_poi_add',
             ),
             const SizedBox(height: 16),
