@@ -24,6 +24,7 @@ import 'widgets/app_icons.dart';
 import 'widgets/location_filter_section.dart';
 import 'utils/map_utils.dart';
 import 'utils/poi_import_utils.dart';
+import 'services/incoming_gpx_service.dart';
 import 'settings_service.dart';
 import 'dart:async';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
@@ -459,6 +460,44 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  /// GPX waypoints arriving from outside the in-app picker —
+  /// an iOS "Open with WhereLog" hand-off, or a GPX file shared
+  /// into the app — join the same pending-import queue and get
+  /// the same verification gate as every other import.
+  Future<void> _queueGpxList(List<PoiImportData> list) async {
+    if (list.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No waypoints found in GPX')));
+      return;
+    }
+    setState(() => _pendingImports.addAll(list));
+    await _savePendingImports();
+    if (mounted) await _openImportSheet();
+  }
+
+  Future<void> _queueGpxPath(String path) async {
+    await _queueGpxList(await PoiImportUtils.importFromGpxPath(path));
+  }
+
+  Future<void> _queueGpxContent(String content) async {
+    await _queueGpxList(PoiImportUtils.parseGpxContent(content));
+  }
+
+  /// The iOS "Open with" mailbox: a pending hand-off is taken
+  /// once the first frame is up (the import sheet needs a built
+  /// screen to open on), and later hand-offs are pushed to the
+  /// availability handler while the app is running.
+  Future<void> _initIncomingGpx() async {
+    IncomingGpxService.setAvailabilityHandler((content) async {
+      await _queueGpxContent(content);
+    });
+    final pending = await IncomingGpxService.takePendingGpxContent();
+    if (pending != null && pending.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _queueGpxContent(pending);
+      });
+    }
+  }
+
   double? calcDistanceMeters(double? lat, double? lng) {
     if (currentLat == null || currentLng == null || lat == null || lng == null) return null;
     try {
@@ -497,6 +536,7 @@ class _HomeScreenState extends State<HomeScreen>
     _loadTabOrder();
     _loadPendingImports();
     _initSharing();
+    _initIncomingGpx();
   }
 
   @override
@@ -512,12 +552,22 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
       if (initialMedia.isNotEmpty) {
-        final initialText = initialMedia.first.message ?? initialMedia.first.path ?? '';
-        if (initialText.isNotEmpty) _handleIncomingShare(initialText);
+        final first = initialMedia.first;
+        if (first.path.toLowerCase().endsWith('.gpx')) {
+          _queueGpxPath(first.path);
+        } else {
+          final initialText = first.message ?? first.path;
+          if (initialText.isNotEmpty) _handleIncomingShare(initialText);
+        }
       }
       _sharingSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> sharedFiles) {
         if (sharedFiles.isEmpty) return;
-        final text = sharedFiles.first.message ?? sharedFiles.first.path ?? '';
+        final first = sharedFiles.first;
+        if (first.path.toLowerCase().endsWith('.gpx')) {
+          _queueGpxPath(first.path);
+          return;
+        }
+        final text = first.message ?? first.path;
         if (text.isNotEmpty) _handleIncomingShare(text);
       }, onError: (err) {
         debugPrint('Sharing stream error: ' + err.toString());

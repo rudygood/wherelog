@@ -740,6 +740,18 @@ class PoiImportUtils {
     }
   }
 
+  /// Parses a GPX file already on disk — the shape an external
+  /// "Open with WhereLog" (or a share of the file itself)
+  /// arrives in, as opposed to the in-app picker's own flow.
+  static Future<List<PoiImportData>> importFromGpxPath(String path) async {
+    try {
+      final content = await File(path).readAsString();
+      return parseGpxContent(content);
+    } catch (e) {
+      return [];
+    }
+  }
+
   static List<PoiImportData> parseGpxContent(String gpxString) {
     final List<PoiImportData> results = [];
     try {

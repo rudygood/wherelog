@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'package:path_provider/path_provider.dart';
 import '../data/data_transfer.dart';
+import '../services/directory_access_service.dart';
 import '../widgets/app_header.dart';
 import 'backup_viewer_screen.dart';
 import 'package:file_picker/file_picker.dart';
@@ -128,8 +129,20 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
 
   Future<void> _handleExportKeep() async {
     setState(() { _isExporting = true; _status = 'Choosing export folder...'; });
+    // On iOS the folder must be picked through the native side,
+    // which holds the folder's security-scoped access open until
+    // the write is done; a plain path from the file picker carries
+    // no permission to write. The hold is released in the finally,
+    // whatever the export's outcome.
+    var holdIosFolder = false;
     try {
-      final picked = await _safePickDirectory(dialogTitle: 'Choose Export Folder');
+      final String? picked;
+      if (Platform.isIOS) {
+        picked = await DirectoryAccessService.pickDirectory();
+        holdIosFolder = picked != null && picked.isNotEmpty;
+      } else {
+        picked = await _safePickDirectory(dialogTitle: 'Choose Export Folder');
+      }
       if (picked == null || picked.isEmpty) { setState(() => _status = 'Export cancelled'); return; }
       final dir = Directory(picked);
       if (!await dir.exists()) await dir.create(recursive: true);
@@ -139,6 +152,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     } catch (e) {
       setState(() => _status = 'Export failed: $e');
     } finally {
+      if (holdIosFolder) await DirectoryAccessService.releaseDirectory();
       setState(() => _isExporting = false);
     }
   }
