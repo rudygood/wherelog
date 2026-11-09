@@ -18,6 +18,7 @@
 		49876867AEA66DA073092152 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0372378A4834CD4B33EB15 /* ShareViewController.swift */; };
 		9CE7CC04E285DE11DA3221B6 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 22CA1A19E034E3C5232FE7E9 /* MainInterface.storyboard */; };
 		CB9051A062F0E7F321DF4D0C /* Share Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 43DC3D2099C03CC4C615901F /* Share Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AB62FE6D3A34644CB39F1B0C /* receive-sharing-intent in Frameworks */ = {isa = PBXBuildFile; productRef = 3790EE3D8E92E8D2CB58BB3E /* receive-sharing-intent */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -98,6 +99,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB62FE6D3A34644CB39F1B0C /* receive-sharing-intent in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -227,6 +229,9 @@
 			dependencies = (
 			);
 			name = "Share Extension";
+			packageProductDependencies = (
+				3790EE3D8E92E8D2CB58BB3E /* receive-sharing-intent */,
+			);
 			productName = "Share Extension";
 			productReference = 43DC3D2099C03CC4C615901F /* Share Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -268,6 +273,9 @@
 				Base,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
+			packageReferences = (
+				85A3E3F0A528CEEEB78E784D /* XCLocalSwiftPackageReference "receive_sharing_intent" */,
+			);
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -867,6 +875,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		85A3E3F0A528CEEEB78E784D /* XCLocalSwiftPackageReference "receive_sharing_intent" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "Flutter/ephemeral/Packages/.packages/receive_sharing_intent";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3790EE3D8E92E8D2CB58BB3E /* receive-sharing-intent */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "receive-sharing-intent";
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 97C146E61CF9000F007C117D /* Project object */;
 }
