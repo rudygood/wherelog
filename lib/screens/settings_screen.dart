@@ -64,6 +64,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildReorderableArea() {
     Widget buildBox(String label, int idx, bool showDragHandle) {
       final isPressed = _pressedIndex == idx;
+      // The boxes imitate the main page's tab tops (evaluation fix
+      // E7): the name broken into two lines where the tab breaks
+      // (before the last word), one fixed box width sized for the
+      // widest name, and the drag handle OUTSIDE the box — a tab
+      // top holds nothing but its name.
+      final twoLine = label.replaceFirstMapped(
+          RegExp(r' (\S+)$'), (m) => '\n${m[1]}');
       return Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -72,27 +79,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text('${idx + 1}', style: AppText.input),
           ),
           const SizedBox(width: 6),
-          Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(AppBorder.radius),
-                border: Border.all(color: isPressed ? AppColors.buttonBg : AppColors.border, width: isPressed ? 1.4 : AppBorder.width),
-                boxShadow: isPressed
-                    ? [BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: const Offset(0, 3))]
-                    : [],
-              ),
-              transform: isPressed ? (Matrix4.identity()..translate(0.0, -1.5, 0.0)..scale(1.02)) : Matrix4.identity(),
-              child: ListTile(
-                dense: true,
-                visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                title: Text(label, style: AppText.input),
-                trailing: showDragHandle ? const Icon(Icons.drag_handle_rounded, size: 20, color: AppColors.textSecondary) : null,
-              ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: 96,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(AppBorder.radius),
+              border: Border.all(color: isPressed ? AppColors.buttonBg : AppColors.border, width: isPressed ? 1.4 : AppBorder.width),
+              boxShadow: isPressed
+                  ? [BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: const Offset(0, 3))]
+                  : [],
+            ),
+            transform: isPressed ? (Matrix4.identity()..translate(0.0, -1.5, 0.0)..scale(1.02)) : Matrix4.identity(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Text(twoLine, style: AppText.input, textAlign: TextAlign.center),
             ),
           ),
+          if (showDragHandle) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.drag_handle_rounded, size: 20, color: AppColors.textSecondary),
+          ],
         ],
       );
     }

@@ -276,16 +276,20 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
               ),
             ],
           ),
-          // Zoom buttons + current location
+          // Zoom buttons + current location: a horizontal row at the
+          // top now, not a column down the side — one shallow strip
+          // pays less map rent (cosmetics round, item 12). The GPS
+          // button keeps its full size; the rest stay small.
           Positioned(
             right: 12,
             top: 12,
-            child: Column(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 FloatingActionButton.small(heroTag: 'zoom_in', onPressed: _zoomIn, child: const Icon(Icons.add)),
-                const SizedBox(height: 8),
+                const SizedBox(width: 8),
                 FloatingActionButton.small(heroTag: 'zoom_out', onPressed: _zoomOut, child: const Icon(Icons.remove)),
-                const SizedBox(height: 16),
+                const SizedBox(width: 12),
                 FloatingActionButton(
                   heroTag: 'my_location',
                   onPressed: _isGettingLocation ? null : _goToCurrentLocation,
@@ -296,7 +300,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
                       : const Icon(Icons.my_location),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(width: 8),
                 MapStyleToggle(
                   satellite: _satellite,
                   onToggle: () => setState(() => _satellite = !_satellite),

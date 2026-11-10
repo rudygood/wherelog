@@ -129,52 +129,68 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
     return ll.LatLng(38.573, -78.512);
   }
 
+  void _zoomIn() {
+    final z = (_mapController.camera.zoom + 1).clamp(3.0, 18.0);
+    _mapController.move(_mapController.camera.center, z);
+  }
+
+  void _zoomOut() {
+    final z = (_mapController.camera.zoom - 1).clamp(3.0, 18.0);
+    _mapController.move(_mapController.camera.center, z);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       appBar: AppHeader(
         screenName: 'POI Map (${_filteredPois.length}/${_allPois.length})',
-        actions: [
-          IconButton(icon: const Icon(Icons.my_location, color: AppColors.textPrimary), onPressed: _loadLocation, tooltip: 'Recenter'),
-        ],
       ),
       body: Column(
         children: [
-          // Radius selector
+          // Radius selector: a compact dropdown now, and the map's
+          // zoom buttons live at the bar's right end — off the map, in
+          // space the bar already spends (cosmetics round, items 10
+          // and 13). The slimmer bar hands its saved height to the map.
           Container(
             color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             child: Row(
               children: [
                 const Icon(Icons.radar, size: 18),
                 const SizedBox(width: 6),
-                Text(_currentPos == null ? 'Radius: All (no location)' : 'Radius:', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(_currentPos == null ? 'Radius: All (no location)' : 'Radius:', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _radiusOptions.map((r) {
-                        final label = r == 0 ? 'All' : '${r.toInt()} mi';
-                        final selected = r == _radiusMiles;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(label),
-                            selected: selected,
-                            onSelected: (v) {
-                              if (!v) return;
-                              setState(() { _radiusMiles = r; });
-                              _applyFilter();
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
+                DropdownButton<double>(
+                  value: _radiusMiles,
+                  isDense: true,
+                  style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                  items: _radiusOptions.map((r) => DropdownMenuItem<double>(
+                    value: r,
+                    child: Text(r == 0 ? 'All' : '${r.toInt()} mi'),
+                  )).toList(),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() { _radiusMiles = v; });
+                    _applyFilter();
+                  },
                 ),
+                const Spacer(),
                 if (_locLoading) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                IconButton(
+                  icon: const Icon(Icons.remove, size: 20),
+                  tooltip: 'Zoom out',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                  onPressed: _zoomOut,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 20),
+                  tooltip: 'Zoom in',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                  onPressed: _zoomIn,
+                ),
               ],
             ),
           ),

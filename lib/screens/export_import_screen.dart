@@ -18,6 +18,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   final _transfer = DataTransfer.instance;
   bool _isExporting = false;
   bool _isImporting = false;
+  bool _infoExpanded = false;
   String _status = '';
   String _lastExportPath = '';
 
@@ -464,12 +465,31 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // 1) What this page does, in brief.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.banner, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
-            child: const Text('Imports and Exports utilize a ZIP file that stores the app\'s data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open — navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.', style: TextStyle(fontSize: 12, color: AppColors.infoBrown, fontWeight: FontWeight.w600, height: 1.3)),
+          // 1) What this page does, in brief — a labeled box like the
+          // others on this screen. It rests at three lines and expands
+          // in place to the full text on tap (evaluation fix E8,
+          // Rudy's call over a visible scrollbar: no small scrollable
+          // window inside a scrolling page, no drag trap).
+          _labeledBox(
+            label: 'Important information',
+            child: InkWell(
+              onTap: () => setState(() => _infoExpanded = !_infoExpanded),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Imports and Exports utilize a ZIP file that stores the app\'s data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open — navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.',
+                    style: const TextStyle(fontSize: 12, color: AppColors.infoBrown, fontWeight: FontWeight.w600, height: 1.3),
+                    maxLines: _infoExpanded ? null : 3,
+                    overflow: _infoExpanded ? TextOverflow.visible : TextOverflow.fade,
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Icon(_infoExpanded ? Icons.expand_less : Icons.expand_more, size: 18, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
           ),
           Row(children: [
             const Spacer(),

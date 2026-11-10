@@ -9,10 +9,11 @@ import '../utils/poi_import_utils.dart';
 
 /// The verification gate every staged POI import passes through
 /// before the add screen: the imported point shown in the middle
-/// of a WhereLog map, with the place's name, address and import
-/// source, so its position can be checked — and moved, by tapping
+/// of a WhereLog map, with the place's name, address and coords,
+/// so its position can be checked — and moved, by tapping
 /// the map — before anything is saved. Looking alone changes
-/// nothing.
+/// nothing. (The import source is no longer displayed here —
+/// cosmetics round, item 16 — but it is still recorded.)
 ///
 /// Confirming returns the (possibly adjusted) [PoiImportData];
 /// if the pin was moved, the source gains an " (adjusted)"
@@ -38,21 +39,6 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
   double _currentZoom = 16.0;
 
   bool get _moved => _point != _importedPoint;
-
-  /// How far the pin now sits from where the import put it.
-  String get _movedText {
-    final m = Geolocator.distanceBetween(_importedPoint.latitude,
-        _importedPoint.longitude, _point.latitude, _point.longitude);
-    final dist = m < 1000
-        ? '${m.toStringAsFixed(0)} m'
-        : '${(m / 1000).toStringAsFixed(2)} km';
-    return 'Moved $dist from the imported position';
-  }
-
-  void _resetToImported() {
-    setState(() => _point = _importedPoint);
-    _mapController.move(_importedPoint, _currentZoom);
-  }
 
   @override
   void initState() {
@@ -134,17 +120,7 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
     final d = widget.data;
     return Scaffold(
       backgroundColor: AppColors.scaffold,
-      appBar: AppHeader(
-        screenName: 'Check Imported Place',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.center_focus_strong,
-                color: AppColors.textPrimary),
-            onPressed: _goToPoint,
-            tooltip: 'Center on pin',
-          ),
-        ],
-      ),
+      appBar: const AppHeader(screenName: 'Verify Pin'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -153,30 +129,15 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // The import notice, moved here from the add
-                // screen: this is the moment of the check.
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.warningBackground,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.info_outline,
-                          size: 16, color: AppColors.warningText),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Coordinates from other apps aren\'t always exact. Please check that the pin sits where it should on the map — and move it if it needs adjusting.',
-                          style: TextStyle(
-                              fontSize: 12, color: AppColors.warningText),
-                        ),
-                      ),
-                    ],
-                  ),
+                // One plain line (cosmetics round, item 15; wording
+                // settled in evaluation fix E6 — the line teaches the
+                // action instead of naming the task, Rudy's ruling:
+                // his first wording presumed the user already knew
+                // what verifying entailed and how a pin moves here).
+                const Text(
+                  'If the pin isn\'t on the right spot, zoom in and tap the right spot to move it.',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 12),
                 Text(d.name,
@@ -188,37 +149,12 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
                       style: const TextStyle(
                           fontSize: 13, color: AppColors.textSecondary)),
                 ],
-                const SizedBox(height: 2),
-                Text('Source: ${d.source}',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 Text(
                   '${_point.latitude.toStringAsFixed(6)}, ${_point.longitude.toStringAsFixed(6)}',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                 ),
-                if (_moved)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(_movedText,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary)),
-                      ),
-                      TextButton(
-                        onPressed: _resetToImported,
-                        style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap),
-                        child: const Text('Reset to imported point',
-                            style: TextStyle(fontSize: 12)),
-                      ),
-                    ],
-                  ),
               ],
             ),
           ),
@@ -271,18 +207,24 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
                   Positioned(
                     right: 12,
                     top: 12,
-                    child: Column(
+                    // Five in a horizontal strip at the top: zoom +,
+                    // zoom -, GPS, satellite/street, and center-on-pin
+                    // (moved here from the header) — one shallow row
+                    // instead of a column down the side (cosmetics
+                    // round, items 12, 17 and 18).
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         FloatingActionButton.small(
                             heroTag: 'zoom_in',
                             onPressed: _zoomIn,
                             child: const Icon(Icons.add)),
-                        const SizedBox(height: 8),
+                        const SizedBox(width: 8),
                         FloatingActionButton.small(
                             heroTag: 'zoom_out',
                             onPressed: _zoomOut,
                             child: const Icon(Icons.remove)),
-                        const SizedBox(height: 16),
+                        const SizedBox(width: 12),
                         FloatingActionButton(
                           heroTag: 'my_location',
                           onPressed:
@@ -299,12 +241,18 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
                                       color: AppColors.white))
                               : const Icon(Icons.my_location),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(width: 8),
                         MapStyleToggle(
                           satellite: _satellite,
                           onToggle: () =>
                               setState(() => _satellite = !_satellite),
                         ),
+                        const SizedBox(width: 8),
+                        FloatingActionButton.small(
+                            heroTag: 'center_on_pin',
+                            onPressed: _goToPoint,
+                            tooltip: 'Center on pin',
+                            child: const Icon(Icons.center_focus_strong)),
                       ],
                     ),
                   ),

@@ -804,34 +804,25 @@ class _HomeScreenState extends State<HomeScreen>
         ]),
         actions: [
           if (_pendingImports.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: InkWell(
-                onTap: _openImportSheet,
-                borderRadius: BorderRadius.circular(AppBorder.radius),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(AppBorder.radius),
-                    border: Border.all(color: AppColors.border, width: AppBorder.width),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.asset('assets/icon/poi_import_icon.png', width: 18, height: 18, errorBuilder: (c,e,s) => const Icon(Icons.file_download, size: 18, color: AppColors.textPrimary)),
-                      const SizedBox(width: 5),
-                      const Text('POI import', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.alert, borderRadius: BorderRadius.circular(10)),
-                        child: Text('${_pendingImports.length}', style: const TextStyle(color: AppColors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: ImageIcon(AssetImage('assets/icon/poi_import_icon.png'), size: 29, color: AppColors.textPrimary),
+                  tooltip: 'Import',
+                  onPressed: _openImportSheet,
+                ),
+                Positioned(
+                  right: -4,
+                  top: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                    decoration: BoxDecoration(color: AppColors.alert, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.white, width: 1)),
+                    constraints: const BoxConstraints(minWidth: 14, minHeight: 12),
+                    child: Text('${_pendingImports.length}', style: const TextStyle(color: AppColors.white, fontSize: 8, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                   ),
                 ),
-              ),
+              ],
             ),
           IconButton(
               icon: Icon(Icons.menu, color: AppColors.textPrimary),
@@ -868,6 +859,19 @@ class _HomeScreenState extends State<HomeScreen>
       bottomNavigationBar: null, // Per-tab bars handle select independently
     );
   }
+
+  /// Trial treatment (cosmetics round, 2026-11-09): the icon buttons
+  /// at the top of each tab sit on an off-white rounded background so
+  /// they read as buttons. The POI card's Directions button (item 5)
+  /// wears the same treatment.
+  ButtonStyle _tabIconBtnStyle() => IconButton.styleFrom(
+        backgroundColor: AppColors.scaffoldDark,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.button),
+            // Evaluation fix E1: the app's own light border, so the
+            // squares' edges are definite against the white bars.
+            side: AppBorder.side),
+      );
 
   Widget _buildSearchFilterBar() {
     final isStorage = _tabIndex == 0;
@@ -912,9 +916,11 @@ class _HomeScreenState extends State<HomeScreen>
             Text('$count ${isStorage ? 'storage' : 'inventory'} items',
                 style: AppText.countBar),
             Spacer(),
-            IconButton(icon: Icon(Icons.tune, size: 29, color: AppColors.textPrimary), onPressed: () => _openFilterSheet()),
+            IconButton(icon: Icon(Icons.tune, size: 29, color: AppColors.textPrimary), style: _tabIconBtnStyle(), onPressed: () => _openFilterSheet()),
+            SizedBox(width: 6),
             IconButton(
                 icon: Icon(Icons.search),
+                style: _tabIconBtnStyle(),
                 onPressed: () => setState(() => _searchMode = true)),
           ]),
           if (isFilterActive)
@@ -923,24 +929,17 @@ class _HomeScreenState extends State<HomeScreen>
               child: Row(
                 children: [
                   Text('Filter: $filterDisplay', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                  SizedBox(width: 8),
-                  // Pill very tightly surrounding Clear Filter
-                  ElevatedButton(
-                    onPressed: () => setState(() {
+                  SizedBox(width: 6),
+                  // A red X clears the filter (cosmetics round, item 7).
+                  InkWell(
+                    onTap: () => setState(() {
                       _filterGeneralMap[_currentTabName] = 'All';
                       _filterSpecificMap[_currentTabName] = null;
                     }),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.white,
-                      foregroundColor: AppColors.textSecondary,
-                      side: BorderSide(color: AppColors.border, width: 1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-                      padding: EdgeInsets.symmetric(vertical: 2, horizontal: 8),
-                      elevation: 0,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      minimumSize: Size(0, 22),
+                    child: Padding(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(Icons.close, size: 16, color: AppColors.alert),
                     ),
-                    child: Text('Clear Filter', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
@@ -1008,14 +1007,9 @@ class _HomeScreenState extends State<HomeScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(children: [
         Expanded(child: Text(text, style: AppText.countBar, overflow: TextOverflow.ellipsis)),
-        if (currentLat != null) ...[
-          InkWell(
-            onTap: () => setState(() { currentLat = null; currentLng = null; }),
-            child: const Padding(padding: EdgeInsets.only(right: 8), child: Text('Distance', style: AppText.dialog)),
-          ),
-        ],
         IconButton(
           icon: ImageIcon(AssetImage('assets/icon/calc_distance_icon.png'), size: 29, color: AppColors.textPrimary),
+          style: _tabIconBtnStyle(),
           tooltip: currentLat == null ? 'Calc distance' : 'Clear location',
           onPressed: () {
             if (currentLat != null) {
@@ -1025,18 +1019,20 @@ class _HomeScreenState extends State<HomeScreen>
             }
           },
         ),
+        const SizedBox(width: 6),
         Stack(
           clipBehavior: Clip.none,
           children: [
             IconButton(
               icon: ImageIcon(AssetImage('assets/icon/poi_import_icon.png'), size: 29, color: AppColors.textPrimary),
+              style: _tabIconBtnStyle(),
               tooltip: 'Import',
               onPressed: _openImportSheet,
             ),
             if (pending > 0)
               Positioned(
-                right: 2,
-                top: 2,
+                right: -4,
+                top: -4,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                   decoration: BoxDecoration(color: AppColors.alert, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.white, width: 1)),
@@ -1046,15 +1042,19 @@ class _HomeScreenState extends State<HomeScreen>
               ),
           ],
         ),
+        const SizedBox(width: 6),
         IconButton(
           icon: ImageIcon(AssetImage('assets/icon/poi_map_icon.png'), size: 29, color: AppColors.textPrimary),
+          style: _tabIconBtnStyle(),
           tooltip: 'Map view - 25 mi default radius',
           onPressed: () {
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => PoiMapScreen()));
           },
         ),
+        const SizedBox(width: 6),
         IconButton(
           icon: const Icon(Icons.search, size: 29, color: AppColors.textPrimary),
+          style: _tabIconBtnStyle(),
               tooltip: 'Search places',
           onPressed: () => setState(() => _searchMode = true),
         ),
@@ -1077,20 +1077,24 @@ class _HomeScreenState extends State<HomeScreen>
       color: AppColors.scaffold,
                                     child: Column(
         children: [
+          _buildPoiTopBar(),
           if (currentLat != null)
             Padding(
               padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
-                                    child: Row(children: [
-                Icon(Icons.my_location, size: 14, color: AppColors.textSecondary),
+              // Below the icon bar, filter-line style (cosmetics round,
+              // item 6): the distance button's own icon instead of the
+              // word 'Distance', and a red X after the coords clears
+              // the calculation.
+              child: Row(children: [
+                ImageIcon(AssetImage('assets/icon/calc_distance_icon.png'), size: 16, color: AppColors.textSecondary),
                 SizedBox(width: 4),
-                Text('Distance from: ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)}', style: AppText.dialog),
-                Spacer(),
-                InkWell(onTap: () => setState(() { currentLat = null; currentLng = null; }), child: Text('Distance', style: AppText.dialog)),
+                Text('from: ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)}', style: AppText.dialog),
+                SizedBox(width: 6),
+                InkWell(onTap: () => setState(() { currentLat = null; currentLng = null; }), child: Icon(Icons.close, size: 16, color: AppColors.alert)),
               ])),
-          _buildPoiTopBar(),
           Expanded(
             child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: EdgeInsets.fromLTRB(6, 0, 6, 12),
               itemCount: filteredPoiItems.length,
               itemBuilder: (c, i) {
                 final poi = filteredPoiItems[i];
@@ -1109,6 +1113,7 @@ class _HomeScreenState extends State<HomeScreen>
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
                                     child: ListTile(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6),
                     onTap: () async {
                       if (_isSelectMode('POI')) {
                         setState(() {
@@ -1130,26 +1135,25 @@ class _HomeScreenState extends State<HomeScreen>
               title: Text(name, style: AppText.cardTitle),
                     subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       SizedBox(height: 4),
-                      Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: AppColors.scaffoldDark, borderRadius: BorderRadius.circular(AppRadius.tabIndicator)), child: Text(coords, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace'))),
+                      // Directions rides the coords row, at its right
+                      // end, wearing the tab-icon treatment (cosmetics
+                      // round, items 3 + 5).
+                      Row(children: [
+                        Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: AppColors.scaffoldDark, borderRadius: BorderRadius.circular(AppRadius.tabIndicator)), child: Text(coords, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'monospace'))),
+                        SizedBox(width: 6),
+                        if (!_isSelectMode('POI') && MapUtils.hasCoordinates(lat, lng))
+                          IconButton(
+                            icon: ImageIcon(AssetImage('assets/icon/directions_diamond.png'), size: 26, color: AppColors.buttonBg),
+                            tooltip: 'Navigate',
+                            style: _tabIconBtnStyle(),
+                            onPressed: () {
+                              MapUtils.openDirections(lat: lat!, lng: lng!, label: name);
+                            },
+                          ),
+                      ]),
                       if (distStr.isNotEmpty) Padding(padding: EdgeInsets.only(top: 4), child: Text(distStr, style: AppText.dialogAlert)),
                       if (address.isNotEmpty) Padding(padding: EdgeInsets.only(top: 4), child: Text(address, style: AppText.dialog, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    ]),
-                    trailing: _isSelectMode('POI')
-                        ? null
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (MapUtils.hasCoordinates(lat, lng))
-                                IconButton(
-                                  icon: ImageIcon(AssetImage('assets/icon/directions_diamond.png'), size: 26, color: AppColors.buttonBg),
-                                  tooltip: 'Navigate',
-                                  onPressed: () {
-                                    MapUtils.openDirections(lat: lat!, lng: lng!, label: name);
-                                  },
-                                ),
-                              const Icon(Icons.chevron_right),
-                            ],
-                          )));
+                    ])));
               })),
         ]));
   }
@@ -1157,7 +1161,9 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildStorageActionBar() {
     return Container(
       color: AppColors.white,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      // Bottom padding 12 -> 2: the tab's buttons sit 10px lower
+      // (cosmetics round, item 1). Same change in every action bar.
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                     child: SafeArea(
         child: Row(children: [
           Expanded(
@@ -1185,7 +1191,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildInventoryActionBar() {
     return Container(
       color: AppColors.white,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                     child: SafeArea(
         child: Row(children: [
           Expanded(
@@ -1213,7 +1219,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildPoiActionBar() {
     return Container(
       color: AppColors.white,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                     child: SafeArea(
         child: Row(children: [
           Expanded(
@@ -1246,7 +1252,7 @@ class _HomeScreenState extends State<HomeScreen>
     final selectedCount = _selectedCountFor(tabName);
     return Container(
       color: AppColors.white,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                     child: SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text('$selectedCount selected in $tabName', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -1285,7 +1291,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       color: AppColors.scaffold,
                                     child: ListView.builder(
-        padding: EdgeInsets.all(12),
+        padding: EdgeInsets.fromLTRB(6, 12, 6, 12),
         itemCount: filteredItems.length,
         itemBuilder: (c, i) {
           final item = filteredItems[i];
@@ -1298,6 +1304,7 @@ class _HomeScreenState extends State<HomeScreen>
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
                                     child: ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 6),
               onTap: () async {
                 if (_isSelectMode('Storage')) {
                   setState(() {
@@ -1331,8 +1338,7 @@ class _HomeScreenState extends State<HomeScreen>
                       borderRadius: BorderRadius.circular(AppRadius.tabIndicator)),
                                     child: Text(locationLabel,
                       style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600))),
-              trailing: _isSelectMode('Storage') ? null : Icon(Icons.chevron_right)));
+                          fontSize: 12, fontWeight: FontWeight.w600)))));
         }));
   }
 
@@ -1340,7 +1346,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       color: AppColors.scaffold,
                                     child: ListView.builder(
-        padding: EdgeInsets.all(12),
+        padding: EdgeInsets.fromLTRB(6, 12, 6, 12),
         itemCount: filteredInventoryItems.length,
         itemBuilder: (c, i) {
           final item = filteredInventoryItems[i];
@@ -1352,6 +1358,7 @@ class _HomeScreenState extends State<HomeScreen>
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
                                     child: ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 6),
               onTap: () async {
                 if (_isSelectMode('Inventory')) {
                   setState(() {
@@ -1379,8 +1386,7 @@ class _HomeScreenState extends State<HomeScreen>
                   margin: EdgeInsets.only(top: 4),
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(color: AppColors.scaffoldDark, borderRadius: BorderRadius.circular(AppRadius.tabIndicator)),
-                                    child: Text(locationLabel, style: AppText.cardLocation)),
-              trailing: _isSelectMode('Inventory') ? null : Icon(Icons.chevron_right)));
+                                    child: Text(locationLabel, style: AppText.cardLocation))));
         }));
   }
 
