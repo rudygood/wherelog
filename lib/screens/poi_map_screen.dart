@@ -139,6 +139,18 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
     _mapController.move(_mapController.camera.center, z);
   }
 
+  // Back to the center everything on this screen is measured from:
+  // the device's current position, which the radius circle is drawn
+  // around. If the load-time fix never landed, ask again instead of
+  // sitting still (the load moves the camera when a fix arrives).
+  void _recenter() {
+    if (_currentPos != null) {
+      _mapController.move(ll.LatLng(_currentPos!.latitude, _currentPos!.longitude), 11);
+    } else {
+      _loadLocation();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,10 +160,10 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
       ),
       body: Column(
         children: [
-          // Radius selector: a compact dropdown now, and the map's
-          // zoom buttons live at the bar's right end — off the map, in
-          // space the bar already spends (cosmetics round, items 10
-          // and 13). The slimmer bar hands its saved height to the map.
+          // Radius selector: a compact dropdown (cosmetics round,
+          // item 10). The zoom buttons that shared this bar (item 13)
+          // moved onto the map's own control strip (review round R3);
+          // the slimmer bar hands its saved height to the map.
           Container(
             color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -177,20 +189,6 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                 ),
                 const Spacer(),
                 if (_locLoading) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                IconButton(
-                  icon: const Icon(Icons.remove, size: 20),
-                  tooltip: 'Zoom out',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                  onPressed: _zoomOut,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add, size: 20),
-                  tooltip: 'Zoom in',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                  onPressed: _zoomIn,
-                ),
               ],
             ),
           ),
@@ -278,12 +276,37 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                       ),
                     ],
                   ),
+                  // The map's controls in one shallow strip at the
+                  // top, like the picker and verify maps (review round
+                  // R3): zoom in, zoom out, recenter on the device
+                  // location, and the satellite toggle, which used to
+                  // sit here alone.
                   Positioned(
                     right: 12,
                     top: 12,
-                    child: MapStyleToggle(
-                      satellite: _satellite,
-                      onToggle: () => setState(() => _satellite = !_satellite),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FloatingActionButton.small(heroTag: 'zoom_in', onPressed: _zoomIn, child: const Icon(Icons.add)),
+                        const SizedBox(width: 8),
+                        FloatingActionButton.small(heroTag: 'zoom_out', onPressed: _zoomOut, child: const Icon(Icons.remove)),
+                        const SizedBox(width: 12),
+                        FloatingActionButton(
+                          heroTag: 'recenter',
+                          onPressed: _locLoading ? null : _recenter,
+                          backgroundColor: AppColors.buttonBg,
+                          foregroundColor: AppColors.white,
+                          tooltip: 'Back to my location',
+                          child: _locLoading
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
+                              : const Icon(Icons.my_location),
+                        ),
+                        const SizedBox(width: 8),
+                        MapStyleToggle(
+                          satellite: _satellite,
+                          onToggle: () => setState(() => _satellite = !_satellite),
+                        ),
+                      ],
                     ),
                   ),
                 ],

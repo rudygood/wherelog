@@ -23,6 +23,10 @@ class AppColors {
   // current green so its look does not change in this pass; change here when directed.
   static const notice = Color(0xFF4CAF50);
   static const mapAccent = Color(0xFF2196F3);
+  // The wordmark blue: 'Where' in the AppHeader logo (AppText.logoWhere).
+  // Storage wears it in the Location Options trees, and the POI card
+  // distance display uses it (review round, 2026-11-10).
+  static const logoBlue = Color(0xFF1E90FF);
   static const warningBackground = Color(0xFFFFE0B2);
   static const warningText = Color(0xFFE65100);
   static const infoBrown = Color(0xFF5D4037);
@@ -208,6 +212,7 @@ class AppText {
   static const dialogTitleAlert = TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.alert);
   static const dialog = TextStyle(fontWeight: FontWeight.w400, fontSize: 12, color: AppColors.textSecondary);
   static const dialogAlert = TextStyle(fontWeight: FontWeight.w400, fontSize: 12, color: AppColors.alert);
+  static const dialogDistance = TextStyle(fontWeight: FontWeight.w400, fontSize: 12, color: AppColors.logoBlue);
   static const dialogNotice = TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textPrimary);
   static const photoCaption = TextStyle(color: AppColors.whiteDim, fontSize: 11, fontWeight: FontWeight.w600);
   static const menuTileTitle = TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary);
@@ -218,7 +223,7 @@ class AppText {
   static const input = TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary);
   static const inputHint = TextStyle(fontWeight: FontWeight.w400, fontSize: 12, color: AppColors.textDisabled);
   static const inputMulti = TextStyle(fontWeight: FontWeight.w400, fontSize: 13, color: AppColors.textPrimary);
-  static const logoWhere = TextStyle(color: Color(0xFF1E90FF), fontWeight: FontWeight.w900, fontSize: 22);
+  static const logoWhere = TextStyle(color: AppColors.logoBlue, fontWeight: FontWeight.w900, fontSize: 22);
   static const logoLogAlert = TextStyle(color: AppColors.alert, fontWeight: FontWeight.w900, fontSize: 22);
 }
 

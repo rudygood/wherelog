@@ -7,6 +7,7 @@ import '../services/directory_access_service.dart';
 import '../widgets/app_header.dart';
 import 'backup_viewer_screen.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ExportImportScreen extends StatefulWidget {
   const ExportImportScreen({super.key});
@@ -18,7 +19,9 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   final _transfer = DataTransfer.instance;
   bool _isExporting = false;
   bool _isImporting = false;
-  bool _infoExpanded = false;
+  // The instruction box opens by default; _loadInfoState applies the
+  // remembered state, and its Hide/Show is the only way it closes.
+  bool _infoExpanded = true;
   String _status = '';
   String _lastExportPath = '';
 
@@ -72,6 +75,19 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     super.initState();
     _refreshCounts();
     _refreshAutoBackups();
+    _loadInfoState();
+  }
+
+  Future<void> _loadInfoState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool('exportImportInfoOpen');
+    if (saved != null && mounted) setState(() => _infoExpanded = saved);
+  }
+
+  Future<void> _toggleInfo() async {
+    setState(() => _infoExpanded = !_infoExpanded);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('exportImportInfoOpen', _infoExpanded);
   }
 
   /// The app's own backup folder, on the shared storage — visible
@@ -389,6 +405,35 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     );
   }
 
+  /// The instruction box: label and Hide/Show in a header row INSIDE
+  /// the box, the same construction as the Location Options box
+  /// (Rudy, 2026-11-10 — with the whole message hidden, a label and
+  /// toggle straddling an empty box's border looked odd). The
+  /// paragraph wears the same style as that box's text, AppText.dialog.
+  Widget _infoBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 11),
+      decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Text('Important information', style: AppText.dialogSection),
+            const Spacer(),
+            TextButton(
+              onPressed: _toggleInfo,
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              child: Text(_infoExpanded ? 'Hide' : 'Show', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+            ),
+          ]),
+          if (_infoExpanded)
+            const Text('Imports and Exports utilize a ZIP file that stores the app\'s data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open — navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.', style: AppText.dialog),
+        ],
+      ),
+    );
+  }
+
   void _showMoreInfo() {
     showDialog<void>(context: context, builder: (c) => AlertDialog(
       backgroundColor: AppColors.card,
@@ -465,32 +510,13 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // 1) What this page does, in brief — a labeled box like the
-          // others on this screen. It rests at three lines and expands
-          // in place to the full text on tap (evaluation fix E8,
-          // Rudy's call over a visible scrollbar: no small scrollable
-          // window inside a scrolling page, no drag trap).
-          _labeledBox(
-            label: 'Important information',
-            child: InkWell(
-              onTap: () => setState(() => _infoExpanded = !_infoExpanded),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Imports and Exports utilize a ZIP file that stores the app\'s data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open — navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.',
-                    style: const TextStyle(fontSize: 12, color: AppColors.infoBrown, fontWeight: FontWeight.w600, height: 1.3),
-                    maxLines: _infoExpanded ? null : 3,
-                    overflow: _infoExpanded ? TextOverflow.visible : TextOverflow.fade,
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Icon(_infoExpanded ? Icons.expand_less : Icons.expand_more, size: 18, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // 1) What this page does, in brief — the instruction box
+          // with its Hide/Show header. This supersedes E8's
+          // rest-at-three-lines teaser (Rudy, 2026-11-10): the box
+          // defaults open, closes only at the user's hand, its state
+          // is remembered, and no page shows part of the text — the
+          // same pattern as the Location Options instructions.
+          _infoBox(),
           Row(children: [
             const Spacer(),
             TextButton.icon(

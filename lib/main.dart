@@ -873,6 +873,25 @@ class _HomeScreenState extends State<HomeScreen>
             side: AppBorder.side),
       );
 
+  /// The small white pill that clears a filter or a distance
+  /// calculation (review round R1, 2026-11-10): the red X tried in
+  /// the cosmetics round (items 6c and 7) did not please Rudy's eye
+  /// in use, and there is room for the pill on both lines.
+  Widget _clearPill(String label, VoidCallback onPressed) => ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.textSecondary,
+          side: BorderSide(color: AppColors.border, width: 1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+          padding: EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+          elevation: 0,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          minimumSize: Size(0, 22),
+        ),
+        child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+      );
+
   Widget _buildSearchFilterBar() {
     final isStorage = _tabIndex == 0;
     final count = isStorage ? filteredItems.length : filteredInventoryItems.length;
@@ -929,18 +948,11 @@ class _HomeScreenState extends State<HomeScreen>
               child: Row(
                 children: [
                   Text('Filter: $filterDisplay', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                  SizedBox(width: 6),
-                  // A red X clears the filter (cosmetics round, item 7).
-                  InkWell(
-                    onTap: () => setState(() {
-                      _filterGeneralMap[_currentTabName] = 'All';
-                      _filterSpecificMap[_currentTabName] = null;
-                    }),
-                    child: Padding(
-                      padding: EdgeInsets.all(2),
-                      child: Icon(Icons.close, size: 16, color: AppColors.alert),
-                    ),
-                  ),
+                  SizedBox(width: 8),
+                  _clearPill('Clear Filter', () => setState(() {
+                    _filterGeneralMap[_currentTabName] = 'All';
+                    _filterSpecificMap[_currentTabName] = null;
+                  })),
                 ],
               ),
             ),
@@ -1083,14 +1095,15 @@ class _HomeScreenState extends State<HomeScreen>
               padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
               // Below the icon bar, filter-line style (cosmetics round,
               // item 6): the distance button's own icon instead of the
-              // word 'Distance', and a red X after the coords clears
-              // the calculation.
+              // word 'Distance'; the pill after the coords clears the
+              // calculation (review round R1 — the red X from items 6c
+              // and 7 is retired on both lines).
               child: Row(children: [
                 ImageIcon(AssetImage('assets/icon/calc_distance_icon.png'), size: 16, color: AppColors.textSecondary),
                 SizedBox(width: 4),
                 Text('from: ${currentLat!.toStringAsFixed(4)}, ${currentLng!.toStringAsFixed(4)}', style: AppText.dialog),
-                SizedBox(width: 6),
-                InkWell(onTap: () => setState(() { currentLat = null; currentLng = null; }), child: Icon(Icons.close, size: 16, color: AppColors.alert)),
+                SizedBox(width: 8),
+                _clearPill('Clear', () => setState(() { currentLat = null; currentLng = null; })),
               ])),
           Expanded(
             child: ListView.builder(
@@ -1151,7 +1164,16 @@ class _HomeScreenState extends State<HomeScreen>
                             },
                           ),
                       ]),
-                      if (distStr.isNotEmpty) Padding(padding: EdgeInsets.only(top: 4), child: Text(distStr, style: AppText.dialogAlert)),
+                      // The card's distance, while a calculation is
+                      // active (review round R2): the distance icon in
+                      // front, in its natural black, and the text in
+                      // the header blue instead of alert red. Icon and
+                      // text come and go together with the state.
+                      if (distStr.isNotEmpty) Padding(padding: EdgeInsets.only(top: 4), child: Row(children: [
+                        ImageIcon(AssetImage('assets/icon/calc_distance_icon.png'), size: 16),
+                        SizedBox(width: 4),
+                        Text(distStr, style: AppText.dialogDistance),
+                      ])),
                       if (address.isNotEmpty) Padding(padding: EdgeInsets.only(top: 4), child: Text(address, style: AppText.dialog, maxLines: 1, overflow: TextOverflow.ellipsis)),
                     ])));
               })),

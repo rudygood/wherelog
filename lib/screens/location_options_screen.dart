@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_header.dart';
 import '../data/location_records.dart';
 import '../data/sqlite_inventory_repository.dart';
 import '../data/sqlite_location_repository.dart';
 import '../data/sqlite_storage_repository.dart';
 
-/// Location Options - SINGLE GENERALS CLEAN
+/// Location Options — REWORKED VIEW (2026-11-10), same plumbing.
 /// Locations live in SQLite (SqliteLocationRepository). Item counts are
 /// read from both item tables (storage_items + inventory_items).
+///
+/// The page Rudy designed: a collapsible "About this Page" box at
+/// the front (Hide/Show beside its label, opens by default, and its
+/// state is remembered like the Notes/Photo sections'), one standing
+/// instruction line, then a card per General. Inside an open card, two
+/// trees drawn in the wordmark's split colors — Storage specifics in
+/// logo blue, Inventory specifics in Alert red — each entry one line,
+/// name plus item count. Tapping any entry opens its edit popup
+/// (rename, or a red Delete that explains itself when greyed out).
+/// The last row of each tree is its add-entry row; new Generals are
+/// added at the bottom of the page. Horizontal padding is the main
+/// page's 6 outside / 6 inside.
 
 class LocationOptionsScreen extends StatefulWidget {
   const LocationOptionsScreen({super.key});
@@ -47,10 +60,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
   Map<int, int> _invCountsByGeneral = {};
   bool _loaded = false;
   Set<int> expanded = {};
-  int? editingGeneralId;
-  int? editingSpecificId;
-  String editingSpecificType = 'storage'; // 'storage' or 'inventory'
-  final TextEditingController _editController = TextEditingController();
+  bool _howToOpen = true;
   final TextEditingController _newGeneralController = TextEditingController();
   final Map<int, TextEditingController> _newStorageSpecificControllers = {};
   final Map<int, TextEditingController> _newInventorySpecificControllers = {};
@@ -59,6 +69,22 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
   void initState() {
     super.initState();
     _reload();
+    _loadHowTo();
+  }
+
+  // The instruction box's state is remembered across sessions, the
+  // way the Notes and Photo sections remember theirs: no saved value
+  // means it has never been closed, so it starts open.
+  Future<void> _loadHowTo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool('locationOptionsHowToOpen');
+    if (saved != null && mounted) setState(() => _howToOpen = saved);
+  }
+
+  Future<void> _toggleHowTo() async {
+    setState(() => _howToOpen = !_howToOpen);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('locationOptionsHowToOpen', _howToOpen);
   }
 
   Future<void> _reload() async {
@@ -118,7 +144,6 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
 
   @override
   void dispose() {
-    _editController.dispose();
     _newGeneralController.dispose();
     for (final c in _newStorageSpecificControllers.values) {
       c.dispose();
@@ -129,20 +154,166 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     super.dispose();
   }
 
+  // The instruction box: a label header with Hide/Show beside it.
+  Widget _howToBox() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppBorder.radius),
+        border: Border.all(color: AppColors.border, width: AppBorder.width),
+      ),
+      padding: const EdgeInsets.fromLTRB(6, 2, 6, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Text('About this Page', style: AppText.dialogSection),
+            const Spacer(),
+            TextButton(
+              onPressed: _toggleHowTo,
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              child: Text(_howToOpen ? 'Hide' : 'Show', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+            ),
+          ]),
+          if (_howToOpen) ...[
+            const Text('Location options record the location of Storage Items and Home Inventory. Every entry in these two categories must have a General location and may also have an optional Specific location. There is one shared list of General locations for both; the Specific locations are separate — Storage Items and Home Inventory each have their own Specifics for each General. Locations can also be added or edited while adding or editing items, to accommodate new or changed entries.', style: AppText.dialog),
+            const SizedBox(height: 6),
+            const Text('This page lets you view and manage location options as a whole — particularly useful for prepopulating them before capturing your Storage and Inventory items. Each General appears as an expandable card; expanded, it shows all its Specific locations, those connected by blue lines belonging to Storage and those by red to Inventory. Add a new General with the entry field at the bottom of the screen. New Specifics are added in the last row of each color\'s list. To edit or delete, tap any entry: a popup lets you update it or delete it — though delete is unavailable while items still use that location.', style: AppText.dialog),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // One tree of a card: the family's entry rows, then its add row as
+  // the tree's last branch. [color] is the family's wordmark color.
+  Widget _treeSection({
+    required int genId,
+    required String kind,
+    required Color color,
+    required List<int> ids,
+    required List<String> names,
+    required List<int> counts,
+    required TextEditingController addController,
+    required String addHint,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
+      child: Column(children: [
+        for (var i = 0; i < ids.length; i++)
+          _treeRow(
+            color: color,
+            isLast: false,
+            child: InkWell(
+              onTap: () => _showEntryPopup(kind: kind, id: ids[i], name: names[i]),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Text('${names[i]} (${counts[i]})', style: AppText.countBar),
+              ),
+            ),
+          ),
+        _treeRow(
+          color: color,
+          isLast: true,
+          child: Row(children: [
+            Expanded(child: TextField(controller: addController, textCapitalization: TextCapitalization.words, decoration: _fieldDec(addHint), style: AppText.input, onSubmitted: (v) => _addSpecific(genId, v, kind))),
+            const SizedBox(width: 6),
+            SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addSpecific(genId, addController.text, kind), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  // A tree row: the drawn branch at the left, the content beside it.
+  Widget _treeRow({required Color color, required bool isLast, required Widget child}) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: 22, child: CustomPaint(painter: _TreeLinePainter(color: color, isLast: isLast))),
+          Expanded(child: Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: child)),
+        ],
+      ),
+    );
+  }
+
+  // The edit popup for one entry: rename in the field, Update to
+  // commit, and a red Delete — enabled only when the standing rules
+  // allow it, with the reason on the popup when it is greyed out.
+  // The dialog owns its text controller (see _EntryEditDialog): the
+  // first version disposed the controller here, the moment the
+  // dialog started closing — while the closing dialog was still on
+  // screen using it — which tripped a framework assertion on Cancel
+  // (Rudy's report, 2026-11-10).
+  Future<void> _showEntryPopup({required String kind, required int id, required String name}) async {
+    final isGeneral = kind == 'general';
+    final bool canDelete;
+    final String why;
+    if (isGeneral) {
+      final itemCount = _itemCountForGeneral(id);
+      final specCount = _storageSpecificsForGeneral(id).length + _inventorySpecificsForGeneral(id).length;
+      canDelete = itemCount == 0 && specCount == 0;
+      why = [
+        if (specCount > 0) '$specCount specific${specCount == 1 ? '' : 's'} below it',
+        if (itemCount > 0) '$itemCount item${itemCount == 1 ? '' : 's'} use it',
+      ].join(' and ');
+    } else {
+      final itemCount = kind == 'storage' ? _itemCountForStorageSpecific(id) : _itemCountForInventorySpecific(id);
+      canDelete = itemCount == 0;
+      why = '$itemCount item${itemCount == 1 ? '' : 's'} use it';
+    }
+    final result = await showDialog<({bool delete, String name})>(
+      context: context,
+      builder: (c) => _EntryEditDialog(
+        title: isGeneral ? 'General location' : (kind == 'storage' ? 'Storage specific' : 'Inventory specific'),
+        initialName: name,
+        canDelete: canDelete,
+        why: why,
+        fieldDecoration: _fieldDec('Name'),
+      ),
+    );
+    if (result == null) return;
+    if (result.delete) {
+      await _applyDelete(kind, id);
+    } else {
+      await _applyRename(kind, id, result.name);
+    }
+  }
+
+  Future<void> _applyRename(String kind, int id, String newName) async {
+    if (kind == 'general') {
+      await _renameGeneral(id, newName);
+    } else {
+      await _renameSpecific(id, newName, kind);
+    }
+  }
+
+  Future<void> _applyDelete(String kind, int id) async {
+    if (kind == 'general') {
+      await _deleteGeneral(id);
+    } else {
+      await _deleteSpecific(id, kind);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          color: AppColors.scaffold,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(children: [
-            const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textPrimary),
-            const SizedBox(width: 8),
-            Expanded(child: Text('GENERAL LOCATION OPTIONS (${generals.length})', style: AppText.dialogSection)),
-          ]),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+          child: _howToBox(),
         ),
-        const Divider(height: 1, color: AppColors.border),
+        // The standing one-line instruction: it stays on the page
+        // whatever the instruction box is doing.
+        const Padding(
+          padding: EdgeInsets.fromLTRB(12, 8, 12, 2),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Tap an entry to edit or delete.', style: AppText.dialog),
+          ),
+        ),
         Expanded(
           child: !_loaded
               ? const SizedBox.shrink()
@@ -151,14 +322,14 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
-                          'No General locations in the database yet.\n\nAdd your first one using the "New General Location Option" at the bottom of this screen.',
+                          'No General locations in the database yet.\n\nAdd your first one using the "New General Location" at the bottom of this screen.',
                           textAlign: TextAlign.center,
                           style: AppText.dialogNotice,
                         ),
                       ),
                     )
                   : ListView.builder(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
             itemCount: generals.length,
             itemBuilder: (c, idx) {
               final g = generals[idx];
@@ -168,97 +339,55 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
               final stoSpecifics = _storageSpecificsForGeneral(genId);
               final invSpecifics = _inventorySpecificsForGeneral(genId);
               final itemCount = _itemCountForGeneral(genId);
-              final canDeleteGeneral = itemCount==0 && stoSpecifics.isEmpty && invSpecifics.isEmpty;
-              final isEditingGen = editingGeneralId==genId;
               return Card(
-                margin: const EdgeInsets.only(bottom: 3),
+                margin: const EdgeInsets.only(bottom: 6),
                 elevation: 0,
                 color: AppColors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
                 child: Column(children: [
-                  ListTile(
-                    dense: true,
-                    visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                    leading: IconButton(icon: Icon(isExp?Icons.expand_less:Icons.chevron_right, size: 18), onPressed: ()=>setState(()=>isExp?expanded.remove(genId):expanded.add(genId)), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                    title: isEditingGen ? TextField(controller: _editController, textCapitalization: TextCapitalization.words, autofocus: true, onSubmitted: (v)=>_renameGeneral(genId, v), decoration: _fieldDec('General name'), style: AppText.input) : Text(genName, style: AppText.cardTitle),
-                    subtitle: Text('$itemCount Storage/Inventory items', style: AppText.dialog),
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if(!isEditingGen) Padding(padding: const EdgeInsets.only(right: 8), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.textSecondary), onPressed: ()=>setState(()=>{editingGeneralId=genId, _editController.text=genName}), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
-                      if(isEditingGen) Padding(padding: const EdgeInsets.only(right: 8), child: IconButton(icon: const Icon(Icons.check, size: 22, color: AppColors.success), onPressed: ()=>_renameGeneral(genId, _editController.text), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
-                      if(isEditingGen) Padding(padding: const EdgeInsets.only(right: 8), child: IconButton(icon: const Icon(Icons.close, size: 20, color: AppColors.textSecondary), onPressed: ()=>setState(()=>editingGeneralId=null), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
-                      IconButton(icon: Icon(Icons.delete_outline, size: 20, color: canDeleteGeneral?AppColors.alert:AppColors.border), onPressed: canDeleteGeneral?()=>_deleteGeneral(genId):null, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap)),
-                    ]),
+                  // Header line: name and everything-below count at the
+                  // left; tapping the line opens the entry's edit
+                  // popup. The expand control is at the far right, a
+                  // full button-sized target.
+                  InkWell(
+                    onTap: () => _showEntryPopup(kind: 'general', id: genId, name: genName),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+                      child: Row(children: [
+                        Expanded(child: Text('$genName ($itemCount)', style: AppText.cardTitle)),
+                        IconButton(
+                          icon: Icon(isExp ? Icons.expand_less : Icons.expand_more, size: 22, color: AppColors.textSecondary),
+                          onPressed: () => setState(() => isExp ? expanded.remove(genId) : expanded.add(genId)),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        ),
+                      ]),
+                    ),
                   ),
-                  if(isExp) ...[
-                    // Storage specifics section
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      child: Row(children: [
-                        const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textPrimary),
-                        const SizedBox(width: 6),
-                        Text('STORAGE SPECIFIC LOCATION OPTIONS (${stoSpecifics.length})', style: AppText.dialogSection),
-                      ]),
+                  if (isExp) ...[
+                    Container(height: 1, color: AppColors.border, margin: const EdgeInsets.symmetric(horizontal: 6)),
+                    _treeSection(
+                      genId: genId,
+                      kind: 'storage',
+                      color: AppColors.logoBlue,
+                      ids: [for (final s in stoSpecifics) s.id!],
+                      names: [for (final s in stoSpecifics) s.name],
+                      counts: [for (final s in stoSpecifics) _itemCountForStorageSpecific(s.id!)],
+                      addController: _newStorageSpecificControllers.putIfAbsent(genId, () => TextEditingController()),
+                      addHint: 'New Storage Specific',
                     ),
-                    ...stoSpecifics.map((s) {
-                      final specId = s.id!;
-                      final specName = s.name;
-                      final count = _itemCountForStorageSpecific(specId);
-                      final canDelete = count==0;
-                      final isEditing = editingSpecificId==specId && editingSpecificType=='storage';
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 2, 8, 2),
-                        child: Row(children: [
-                          Expanded(child: isEditing ? TextField(controller: _editController, textCapitalization: TextCapitalization.words, autofocus: true, onSubmitted: (v)=>_renameSpecific(specId, v, 'storage'), decoration: _fieldDec('Specific name'), style: AppText.input) : Text('• $specName ($count items)', style: AppText.dialog)),
-                          if(!isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary), onPressed: ()=>setState(()=>{editingSpecificId=specId, editingSpecificType='storage', _editController.text=specName}), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
-                          if(isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.check, size: 20, color: AppColors.success), onPressed: ()=>_renameSpecific(specId, _editController.text, 'storage'), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
-                          IconButton(icon: Icon(Icons.delete_outline, size: 18, color: canDelete?AppColors.alert:AppColors.border), onPressed: canDelete?()=>_deleteSpecific(specId, 'storage'):null, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap)),
-                        ]),
-                      );
-                    }),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 3, 8, 5),
-                      child: Row(children: [
-                        Expanded(child: TextField(controller: _newStorageSpecificControllers.putIfAbsent(genId, ()=>TextEditingController()), textCapitalization: TextCapitalization.words, decoration: _fieldDec('New Storage Specific Location Option'), style: AppText.input, onSubmitted: (v)=>_addSpecific(genId, v, 'storage'))),
-                        const SizedBox(width: 6),
-                        SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: ()=>_addSpecific(genId, _newStorageSpecificControllers[genId]?.text??'', 'storage'), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
-                      ]),
+                    _treeSection(
+                      genId: genId,
+                      kind: 'inventory',
+                      color: AppColors.alert,
+                      ids: [for (final s in invSpecifics) s.id!],
+                      names: [for (final s in invSpecifics) s.name],
+                      counts: [for (final s in invSpecifics) _itemCountForInventorySpecific(s.id!)],
+                      addController: _newInventorySpecificControllers.putIfAbsent(genId, () => TextEditingController()),
+                      addHint: 'New Inventory Specific',
                     ),
-                    // Inventory specifics section
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      child: Row(children: [
-                        const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textPrimary),
-                        const SizedBox(width: 6),
-                        Text('INVENTORY SPECIFIC LOCATION OPTIONS (${invSpecifics.length})', style: AppText.dialogSection),
-                      ]),
-                    ),
-                    ...invSpecifics.map((s) {
-                      final specId = s.id!;
-                      final specName = s.name;
-                      final count = _itemCountForInventorySpecific(specId);
-                      final canDelete = count==0;
-                      final isEditing = editingSpecificId==specId && editingSpecificType=='inventory';
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 2, 8, 2),
-                        child: Row(children: [
-                          Expanded(child: isEditing ? TextField(controller: _editController, textCapitalization: TextCapitalization.words, autofocus: true, onSubmitted: (v)=>_renameSpecific(specId, v, 'inventory'), decoration: _fieldDec('Specific name'), style: AppText.input) : Text('• $specName ($count items)', style: AppText.dialog)),
-                          if(!isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary), onPressed: ()=>setState(()=>{editingSpecificId=specId, editingSpecificType='inventory', _editController.text=specName}), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
-                          if(isEditing) Padding(padding: const EdgeInsets.only(left: 8, right: 8), child: IconButton(icon: const Icon(Icons.check, size: 20, color: AppColors.success), onPressed: ()=>_renameSpecific(specId, _editController.text, 'inventory'), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap))),
-                          IconButton(icon: Icon(Icons.delete_outline, size: 18, color: canDelete?AppColors.alert:AppColors.border), onPressed: canDelete?()=>_deleteSpecific(specId, 'inventory'):null, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap)),
-                        ]),
-                      );
-                    }),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 3, 8, 8),
-                      child: Row(children: [
-                        Expanded(child: TextField(controller: _newInventorySpecificControllers.putIfAbsent(genId, ()=>TextEditingController()), textCapitalization: TextCapitalization.words, decoration: _fieldDec('New Inventory Specific Location Option'), style: AppText.input, onSubmitted: (v)=>_addSpecific(genId, v, 'inventory'))),
-                        const SizedBox(width: 6),
-                        SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: ()=>_addSpecific(genId, _newInventorySpecificControllers[genId]?.text??'', 'inventory'), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
-                      ]),
-                    ),
+                    const SizedBox(height: 4),
                   ],
                 ]),
               );
@@ -268,12 +397,12 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
         const Divider(height: 1, color: AppColors.border),
         if (!kIsWeb) Container(
           color: AppColors.scaffold,
-          padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+          padding: const EdgeInsets.fromLTRB(6, 6, 6, 10),
           child: SafeArea(
             child: Row(children: [
-              Expanded(child: TextField(controller: _newGeneralController, textCapitalization: TextCapitalization.words, decoration: _fieldDec('New General Location Option'), style: AppText.input, onSubmitted: (v)=>_addGeneral(v))),
-              const SizedBox(width: 8),
-              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: ()=>_addGeneral(_newGeneralController.text), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
+              Expanded(child: TextField(controller: _newGeneralController, textCapitalization: TextCapitalization.words, decoration: _fieldDec('New General Location'), style: AppText.input, onSubmitted: (v) => _addGeneral(v))),
+              const SizedBox(width: 6),
+              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addGeneral(_newGeneralController.text), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
             ]),
           ),
         ),
@@ -303,16 +432,15 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     await _reload();
   }
   Future<void> _renameGeneral(int genId, String newName) async {
-    final t=newName.trim(); if(t.isEmpty){setState(()=>editingGeneralId=null); return;}
+    final t=newName.trim(); if(t.isEmpty) return;
     final idx=generals.indexWhere((g)=>g.id==genId); if(idx<0) return;
-    final oldName=generals[idx].name; if(t.toLowerCase()==oldName.toLowerCase()){setState(()=>editingGeneralId=null); return;}
+    final oldName=generals[idx].name; if(t.toLowerCase()==oldName.toLowerCase()) return;
     if(await _locRepo.isDuplicateGeneral(t)){_snack('General "$t" already exists'); return;}
     await _locRepo.renameGeneral(genId, t);
-    setState(()=>editingGeneralId=null);
     await _reload();
   }
   Future<void> _renameSpecific(int specId, String newName, String type) async {
-    final t=newName.trim(); if(t.isEmpty){setState(()=>editingSpecificId=null); return;}
+    final t=newName.trim(); if(t.isEmpty) return;
     final int genId;
     final String old;
     if(type=='storage'){
@@ -322,10 +450,9 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
       final idx=inventorySpecifics.indexWhere((s)=>s.id==specId); if(idx<0) return;
       old=inventorySpecifics[idx].name; genId=inventorySpecifics[idx].generalId;
     }
-    if(t.toLowerCase()==old.toLowerCase()){setState(()=>editingSpecificId=null); return;}
+    if(t.toLowerCase()==old.toLowerCase()) return;
     if(type=='storage' && await _locRepo.isDuplicateStorageSpecific(genId, t) || type=='inventory' && await _locRepo.isDuplicateInventorySpecific(genId, t)){_snack('Specific "$t" already exists'); return;}
     if(type=='storage'){ await _locRepo.renameStorageSpecific(specId, t); } else { await _locRepo.renameInventorySpecific(specId, t); }
-    setState(()=>editingSpecificId=null);
     await _reload();
   }
   Future<void> _deleteGeneral(int genId) async {
@@ -335,7 +462,6 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     final confirm=await showDialog<bool>(context: context, builder: (c)=>AlertDialog(title: Text('Delete General "$genName"?'), content: const Text('General has no specifics and no items. This cannot be undone.'), actions: [TextButton(onPressed: ()=>Navigator.pop(c,false), child: const Text('Cancel')), ElevatedButton(onPressed: ()=>Navigator.pop(c,true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert), child: const Text('Delete'))]));
     if(confirm!=true) return;
     await _locRepo.deleteGeneral(genId);
-    if(editingGeneralId==genId) editingGeneralId=null;
     setState(()=>{expanded.remove(genId)});
     await _reload();
   }
@@ -352,8 +478,105 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     final confirm=await showDialog<bool>(context: context, builder: (c)=>AlertDialog(title: Text('Delete Specific "$genName / $specName"?'), content: const Text('Specific has no items. Delete?'), actions: [TextButton(onPressed: ()=>Navigator.pop(c,false), child: const Text('Cancel')), ElevatedButton(onPressed: ()=>Navigator.pop(c,true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert), child: const Text('Delete'))]));
     if(confirm!=true) return;
     if(type=='storage'){ await _locRepo.deleteStorageSpecific(specId); } else { await _locRepo.deleteInventorySpecific(specId); }
-    if(editingSpecificId==specId && editingSpecificType==type) editingSpecificId=null;
     await _reload();
   }
   void _snack(String msg)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+}
+
+/// Draws one row of a location tree in the family's color: the
+/// vertical trunk running through the row, and a horizontal branch
+/// reaching to the entry. The tree's last row stops its trunk at the
+/// branch, closing the tree.
+class _TreeLinePainter extends CustomPainter {
+  final Color color;
+  final bool isLast;
+  const _TreeLinePainter({required this.color, required this.isLast});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 3.2
+      ..style = PaintingStyle.stroke;
+    final trunkX = size.width / 2;
+    final midY = size.height / 2;
+    canvas.drawLine(Offset(trunkX, 0), Offset(trunkX, isLast ? midY : size.height), paint);
+    canvas.drawLine(Offset(trunkX, midY), Offset(size.width, midY), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TreeLinePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.isLast != isLast;
+}
+
+
+/// The entry edit popup as its own widget, so the text controller is
+/// owned by the dialog's State and disposed in its dispose() — which
+/// the framework calls only after the dialog has fully left the
+/// tree. Pops with (delete: true) for Delete, (delete: false, name)
+/// for Update or keyboard submit, and null for Cancel.
+class _EntryEditDialog extends StatefulWidget {
+  final String title;
+  final String initialName;
+  final bool canDelete;
+  final String why;
+  final InputDecoration fieldDecoration;
+  const _EntryEditDialog({
+    required this.title,
+    required this.initialName,
+    required this.canDelete,
+    required this.why,
+    required this.fieldDecoration,
+  });
+
+  @override
+  State<_EntryEditDialog> createState() => _EntryEditDialogState();
+}
+
+class _EntryEditDialogState extends State<_EntryEditDialog> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _ctrl,
+            textCapitalization: TextCapitalization.words,
+            autofocus: true,
+            decoration: widget.fieldDecoration,
+            style: AppText.input,
+            onSubmitted: (v) => Navigator.pop(context, (delete: false, name: v)),
+          ),
+          if (!widget.canDelete)
+            Padding(padding: const EdgeInsets.only(top: 10), child: Text('Delete is unavailable: ${widget.why}.', style: AppText.dialog)),
+        ],
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: widget.canDelete ? () => Navigator.pop(context, (delete: true, name: '')) : null,
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: AppColors.white, disabledBackgroundColor: AppColors.buttonBgDisabled, disabledForegroundColor: AppColors.whiteDim),
+          child: const Text('Delete'),
+        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(onPressed: () => Navigator.pop(context, (delete: false, name: _ctrl.text)), style: AppButton.primary, child: const Text('Update', style: AppText.buttonPrimary)),
+      ],
+    );
+  }
 }
