@@ -385,7 +385,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
         Container(
           width: double.infinity,
           margin: const EdgeInsets.only(top: 9),
-          padding: const EdgeInsets.fromLTRB(14, 15, 14, 11),
+          padding: const EdgeInsets.fromLTRB(6, 15, 6, 6),
           decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
           child: child,
         ),
@@ -413,7 +413,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   Widget _infoBox() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 11),
+      padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
       decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,7 +455,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   Widget _countHeaderRow() {
     const style = TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary);
     return const Padding(
-      padding: EdgeInsets.only(left: 2, right: 2, bottom: 3),
+      padding: EdgeInsets.only(left: 4, right: 4, bottom: 3),
       child: Row(children: [
         Expanded(child: SizedBox()),
         SizedBox(width: 56, child: Text('Current', textAlign: TextAlign.right, style: style)),
@@ -464,9 +464,12 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     );
   }
 
-  Widget _countRow(String label, int count, {int? backup}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.5, horizontal: 2),
+  // One Record Counts row. Rows alternate white / off-white bands
+  // (Rudy, 2026-11-10).
+  Widget _countRow(String label, int count, {int? backup, bool alt = false}) {
+    return Container(
+      decoration: BoxDecoration(color: alt ? AppColors.card : AppColors.white, borderRadius: BorderRadius.circular(4)),
+      padding: const EdgeInsets.symmetric(vertical: 2.5, horizontal: 4),
       child: Row(children: [
         Expanded(child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary))),
         SizedBox(width: 56, child: Text(count.toString(), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
@@ -508,7 +511,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
       backgroundColor: AppColors.scaffold,
       appBar: const AppHeader(screenName: 'Export / Import'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(6),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           // 1) What this page does, in brief — the instruction box
           // with its Hide/Show header. This supersedes E8's
@@ -583,11 +586,11 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
             child: Column(children: [
               _countHeaderRow(),
               _countRow('Storage Item', _cStorageItems, backup: _selection?.countOf('storageItems')),
-              _countRow('Home Inventory', _cInventoryItems, backup: _selection?.countOf('inventoryItems')),
+              _countRow('Home Inventory', _cInventoryItems, backup: _selection?.countOf('inventoryItems'), alt: true),
               _countRow('Place of Interest', _cPoiItems, backup: _selection?.countOf('poiItems')),
-              _countRow('General Location', _cGenerals, backup: _selection?.countOf('generals')),
+              _countRow('General Location', _cGenerals, backup: _selection?.countOf('generals'), alt: true),
               _countRow('Storage Specific Location', _cStorageSpecifics, backup: _selection?.countOf('storageSpecifics')),
-              _countRow('Inventory Specific Location', _cInventorySpecifics, backup: _selection?.countOf('inventorySpecifics')),
+              _countRow('Inventory Specific Location', _cInventorySpecifics, backup: _selection?.countOf('inventorySpecifics'), alt: true),
               _countRow('Images linked', _cImages, backup: _selection?.photoCount),
             ]),
           ),

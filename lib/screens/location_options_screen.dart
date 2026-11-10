@@ -61,6 +61,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
   bool _loaded = false;
   Set<int> expanded = {};
   bool _howToOpen = true;
+  bool _editEnabled = true;
   final TextEditingController _newGeneralController = TextEditingController();
   final Map<int, TextEditingController> _newStorageSpecificControllers = {};
   final Map<int, TextEditingController> _newInventorySpecificControllers = {};
@@ -70,6 +71,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     super.initState();
     _reload();
     _loadHowTo();
+    _loadEditEnabled();
   }
 
   // The instruction box's state is remembered across sessions, the
@@ -85,6 +87,20 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     setState(() => _howToOpen = !_howToOpen);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('locationOptionsHowToOpen', _howToOpen);
+  }
+
+  // The read-only switch's state is remembered the same way: no
+  // saved value means the page has always opened editable.
+  Future<void> _loadEditEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool('locationOptionsEditEnabled');
+    if (saved != null && mounted) setState(() => _editEnabled = saved);
+  }
+
+  Future<void> _toggleEdit(bool value) async {
+    setState(() => _editEnabled = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('locationOptionsEditEnabled', _editEnabled);
   }
 
   Future<void> _reload() async {
@@ -185,8 +201,13 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     );
   }
 
-  // One tree of a card: the family's entry rows, then its add row as
-  // the tree's last branch. [color] is the family's wordmark color.
+  // One tree of a card: the family's entry rows, then its add row.
+  // [color] is the family's wordmark color. The Storage tree never
+  // ends inside its section — its trunk runs on into the junction
+  // row between the families. The Inventory tree ends at its add
+  // row, or, in read-only, at its last entry. In read-only the add
+  // row is not built at all, and entry taps are quiet (Rudy,
+  // 2026-11-10: the adds disappear entirely, never show disabled).
   Widget _treeSection({
     required int genId,
     required String kind,
@@ -197,30 +218,46 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     required TextEditingController addController,
     required String addHint,
   }) {
+    final isInventory = kind == 'inventory';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
+      padding: isInventory ? const EdgeInsets.fromLTRB(6, 0, 6, 2) : const EdgeInsets.fromLTRB(6, 4, 6, 0),
       child: Column(children: [
         for (var i = 0; i < ids.length; i++)
           _treeRow(
             color: color,
-            isLast: false,
+            isLast: isInventory && !_editEnabled && i == ids.length - 1,
             child: InkWell(
-              onTap: () => _showEntryPopup(kind: kind, id: ids[i], name: names[i]),
+              onTap: _editEnabled ? () => _showEntryPopup(kind: kind, id: ids[i], name: names[i]) : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Text('${names[i]} (${counts[i]})', style: AppText.countBar),
               ),
             ),
           ),
-        _treeRow(
-          color: color,
-          isLast: true,
-          child: Row(children: [
-            Expanded(child: TextField(controller: addController, textCapitalization: TextCapitalization.words, decoration: _fieldDec(addHint), style: AppText.input, onSubmitted: (v) => _addSpecific(genId, v, kind))),
-            const SizedBox(width: 6),
-            SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addSpecific(genId, addController.text, kind), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
-          ]),
-        ),
+        if (_editEnabled)
+          _treeRow(
+            color: color,
+            isLast: isInventory,
+            child: Row(children: [
+              Expanded(child: TextField(controller: addController, textCapitalization: TextCapitalization.words, decoration: _fieldDec(addHint), style: AppText.input, onSubmitted: (v) => _addSpecific(genId, v, kind))),
+              const SizedBox(width: 6),
+              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addSpecific(genId, addController.text, kind), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
+            ]),
+          ),
+      ]),
+    );
+  }
+
+  // The junction between a card's two trees: the blue trunk descends
+  // into a red ball, and the red trunk descends out of it — one
+  // connected tree per card (Rudy, 2026-11-10). The ball falls in
+  // the gap between the last blue row and the first red row.
+  Widget _junctionRow() {
+    return const SizedBox(
+      height: 14,
+      child: Row(children: [
+        SizedBox(width: 28, child: CustomPaint(painter: _JunctionPainter())),
+        Expanded(child: SizedBox()),
       ]),
     );
   }
@@ -305,14 +342,28 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
           padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
           child: _howToBox(),
         ),
-        // The standing one-line instruction: it stays on the page
-        // whatever the instruction box is doing.
-        const Padding(
-          padding: EdgeInsets.fromLTRB(12, 8, 12, 2),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Tap an entry to edit or delete.', style: AppText.dialog),
-          ),
+        // The standing control line: pencil, the read-only switch,
+        // and the short instruction. It stays on the page whatever
+        // the instruction box is doing. Switched off, the page is
+        // read-only — every add element disappears and the entry
+        // taps go quiet, leaving a clean view of the data.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          child: Row(children: [
+            Icon(Icons.edit, size: 16, color: _editEnabled ? AppColors.textPrimary : AppColors.border),
+            const SizedBox(width: 6),
+            Transform.scale(
+              scale: 0.8,
+              child: Switch(
+                value: _editEnabled,
+                onChanged: _toggleEdit,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                trackColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? AppColors.logoBlue : null),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(_editEnabled ? 'Tap entry for edit/delete.' : 'Read only.', style: AppText.dialog),
+          ]),
         ),
         Expanded(
           child: !_loaded
@@ -322,7 +373,9 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
-                          'No General locations in the database yet.\n\nAdd your first one using the "New General Location" at the bottom of this screen.',
+                          _editEnabled
+                              ? 'No General locations in the database yet.\n\nAdd your first one using the "New General Location" at the bottom of this screen.'
+                              : 'No General locations in the database yet.',
                           textAlign: TextAlign.center,
                           style: AppText.dialogNotice,
                         ),
@@ -350,7 +403,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                   // popup. The expand control is at the far right, a
                   // full button-sized target.
                   InkWell(
-                    onTap: () => _showEntryPopup(kind: 'general', id: genId, name: genName),
+                    onTap: _editEnabled ? () => _showEntryPopup(kind: 'general', id: genId, name: genName) : null,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
                       child: Row(children: [
@@ -377,6 +430,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                       addController: _newStorageSpecificControllers.putIfAbsent(genId, () => TextEditingController()),
                       addHint: 'New Storage Specific',
                     ),
+                    _junctionRow(),
                     _treeSection(
                       genId: genId,
                       kind: 'inventory',
@@ -395,7 +449,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
           ),
         ),
         const Divider(height: 1, color: AppColors.border),
-        if (!kIsWeb) Container(
+        if (!kIsWeb && _editEnabled) Container(
           color: AppColors.scaffold,
           padding: const EdgeInsets.fromLTRB(6, 6, 6, 10),
           child: SafeArea(
@@ -579,4 +633,32 @@ class _EntryEditDialogState extends State<_EntryEditDialog> {
       ],
     );
   }
+}
+
+
+/// Paints the junction between a card's two trees inside the 28-wide
+/// gutter (the trunk center, x 17, matches the tree rows': their 22
+/// gutter plus the sections' 6 left padding): the blue trunk comes
+/// down from above, meets a red ball at the row's middle, and the
+/// red trunk continues down out of the ball.
+class _JunctionPainter extends CustomPainter {
+  const _JunctionPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const x = 17.0;
+    final cy = size.height / 2;
+    final blue = Paint()
+      ..color = AppColors.logoBlue
+      ..strokeWidth = 3.2;
+    canvas.drawLine(const Offset(x, 0), Offset(x, cy - 4.5), blue);
+    final red = Paint()
+      ..color = AppColors.alert
+      ..strokeWidth = 3.2;
+    canvas.drawLine(Offset(x, cy + 4.5), Offset(x, size.height), red);
+    canvas.drawCircle(Offset(x, cy), 4.5, Paint()..color = AppColors.alert);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
