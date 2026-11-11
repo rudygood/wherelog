@@ -10,8 +10,15 @@
 #   - Packages the resulting .app into an unsigned .ipa (Payload/Runner.app),
 #     which is the file AltServer on the Spectre installs and re-signs
 #     under Rudy's free Apple ID.
-# What it does NOT do: sign the app, or publish anywhere. No secrets,
-# no certificates, no App Store Connect key are involved in this workflow.
+# What it does NOT do: sign the app for distribution, or publish
+# anywhere. No secrets, no certificates, no App Store Connect key
+# are involved in this workflow. (The packaging step does AD-HOC
+# sign the finished .app and its Share Extension — no identity,
+# purely so each binary's signature carries its entitlements.
+# AltStore reads an app's declared App Group from the signature's
+# entitlements at install time; a never-signed binary declares
+# nothing, so AltStore granted no group and the share container
+# never existed on the phone — diagnosed 2026-11-10.)
 #
 # Source: Codemagic docs, "Flutter apps" (docs.codemagic.io),
 # "To build an unsigned .app version for debug, replace the build command
@@ -48,8 +55,22 @@ workflows:
           flutter build ios --release --no-codesign
       - name: Package .app as unsigned .ipa for AltServer
         script: |
+          set -e
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
+          # Ad-hoc sign, inside-out (extension first, then the app),
+          # embedding each target's entitlements in its signature so
+          # AltStore can see and grant the App Group at install.
+          for appex in Payload/Runner.app/PlugIns/*.appex; do
+            codesign --force --sign - --timestamp=none \
+              --entitlements "ios/Share Extension/Share Extension.entitlements" \
+              "$appex"
+          done
+          codesign --force --sign - --timestamp=none \
+            --entitlements ios/Runner/Runner.entitlements \
+            Payload/Runner.app
+          # Leave proof in the build log that the group is embedded.
+          codesign -d --entitlements - Payload/Runner.app 2>&1 | grep -A2 application-groups || true
           zip -r wherelog-unsigned.ipa Payload
           rm -rf Payload
     artifacts:
