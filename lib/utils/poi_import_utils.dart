@@ -112,7 +112,9 @@ class PoiImportUtils {
       if (urlMatch == null) return text;
       String url = urlMatch.group(0)!;
       url = url.replaceAll(RegExp(r'[\).,]+$'), '');
-      final isShort = url.contains('goo.gl') || url.contains('maps.app.goo.gl');
+      final isShort = url.contains('goo.gl') ||
+          url.contains('maps.app.goo.gl') ||
+          url.contains('maps.apple');
       if (!isShort) return text;
 
       final client = http.Client();

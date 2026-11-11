@@ -558,7 +558,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (first.path.toLowerCase().endsWith('.gpx')) {
           _queueGpxPath(first.path);
         } else {
-          final initialText = first.message ?? first.path;
+          final initialText = _sharePayload(first);
           if (initialText.isNotEmpty) _handleIncomingShare(initialText);
         }
       }
@@ -570,7 +570,7 @@ class _HomeScreenState extends State<HomeScreen>
           _queueGpxPath(first.path);
           return;
         }
-        final text = first.message ?? first.path;
+        final text = _sharePayload(first);
         if (text.isNotEmpty) _handleIncomingShare(text);
       }, onError: (err) {
         debugPrint('Sharing stream error: ' + err.toString());
@@ -580,13 +580,32 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // A share arrives as (path, message): the iOS extension puts the
+  // shared content in path and the user's typed caption in message.
+  // The old message-first order threw the Maps link away and parsed
+  // the caption instead, so no coordinates ever reached the parser
+  // (Ciro's Pizza, 2026-11-10: the link sat unused in path while the
+  // typed label was parsed and silently dropped). The content wins
+  // whenever either value carries a URL; otherwise the first
+  // non-empty value stands (Android text shares carry the content
+  // in message).
+  String _sharePayload(SharedMediaFile f) {
+    bool carriesUrl(String? s) =>
+        s != null && (s.contains('http://') || s.contains('https://'));
+    if (carriesUrl(f.path)) return f.path;
+    if (carriesUrl(f.message)) return f.message!;
+    final m = f.message;
+    if (m != null && m.isNotEmpty) return m;
+    return f.path;
+  }
+
   void _handleIncomingShare(String text) async {
     ShareDiagService.logEvent('handleIncomingShare: ${text.length > 80 ? text.substring(0, 80) : text}');
     var contextText = text;
     var parsed = PoiImportUtils.parseSharedText(text);
     if (parsed.isEmpty) {
       final lower = text.toLowerCase();
-      if (lower.contains('goo.gl') || lower.contains('maps.app.goo.gl')) {
+      if (lower.contains('goo.gl') || lower.contains('maps.app.goo.gl') || lower.contains('maps.apple')) {
         final expanded = await PoiImportUtils.tryExpandShortLink(text);
         contextText = expanded;
         parsed = PoiImportUtils.parseSharedText(expanded);
@@ -598,6 +617,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (parsed.isNotEmpty) {
       parsed = await PoiImportUtils.refineViewportResults(parsed, contextText);
     }
+    ShareDiagService.logEvent('parsed: ${parsed.length} candidate(s)');
     if (parsed.isEmpty) return;
     setState(() { _pendingImports.addAll(parsed); });
     await _savePendingImports();
@@ -613,22 +633,42 @@ class _HomeScreenState extends State<HomeScreen>
     final report = await ShareDiagService.containerReport();
     final log = await ShareDiagService.readLog();
     if (!mounted) return;
-    showDialog<void>(
+    final fullText =
+        'Group container:\n$report\n\nShare intake log:\n${log.isEmpty ? '(nothing recorded)' : log.join('\n')}';
+    // The report sits in a read-only text field so it can be
+    // selected and copied (Rudy, 2026-11-10) — screenshots of
+    // wrapped group IDs were nobody's friend. Copy all does it in
+    // one tap. The controller is created and disposed here, around
+    // the dialog's own lifetime.
+    final controller = TextEditingController(text: fullText);
+    await showDialog<void>(
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Share diagnostics'),
-        content: SingleChildScrollView(
-          child: Text(
-            'Group container:\n$report\n\nShare intake log:\n${log.isEmpty ? '(nothing recorded)' : log.join('\n')}',
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: controller,
+            readOnly: true,
+            maxLines: 14,
             style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+            decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
         ),
         actions: [
           TextButton(onPressed: () { ShareDiagService.clearLog(); Navigator.pop(c); }, child: const Text('Clear log')),
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: fullText));
+              Navigator.pop(c);
+            },
+            child: const Text('Copy all'),
+          ),
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close')),
         ],
       ),
     );
+    controller.dispose();
   }
 
 
