@@ -7,9 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// visible — a persistent log of everything the share intake was
 /// handed (before parsing), and a native report of which app-group
 /// containers the app can actually resolve on the device and what
-/// is in them. Surfaced by long-pressing the POI tab's import
-/// button. Remove with the rest of the diagnostic once the iOS
-/// share path is proven.
+/// is in them. Surfaced by long-pressing the WhereLog title in
+/// the app bar. Remove with the rest of the diagnostic once the
+/// iOS share path is proven.
 class ShareDiagService {
   static const MethodChannel _channel = MethodChannel('com.wherelog/share_diag');
   static const String _logKey = 'shareDiagLog';

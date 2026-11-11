@@ -604,9 +604,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
 
-  // The share diagnostic readout (2026-11-10): long-press the POI
-  // tab's import button. Shows the native group-container report
-  // and the persistent intake log side by side.
+  // The share diagnostic readout (2026-11-10): long-press the
+  // WhereLog title in the app bar. (It began on the POI import
+  // button, but that button's own tooltip claims the long-press —
+  // the title has no competing gesture.) Shows the native
+  // group-container report and the persistent intake log.
   Future<void> _showShareDiagnostics() async {
     final report = await ShareDiagService.containerReport();
     final log = await ShareDiagService.readLog();
@@ -816,22 +818,26 @@ class _HomeScreenState extends State<HomeScreen>
       appBar: AppBar(
         backgroundColor: AppColors.scaffold,
         elevation: 0,
-        title: Row(children: [
-          Image.asset('assets/icon/app_icon.png',
-              width: 48,
-              height: 48,
-              errorBuilder: (c, e, s) => Icon(Icons.inventory_2)),
-          SizedBox(width: 8),
-          RichText(
-              text: TextSpan(children: [
-            TextSpan(
-                text: 'Where',
-                style: AppText.logoWhere),
-            TextSpan(
-                text: 'Log',
-                style: AppText.logoLogAlert),
-          ])),
-        ]),
+        title: GestureDetector(
+          onLongPress: _showShareDiagnostics,
+          behavior: HitTestBehavior.opaque,
+          child: Row(children: [
+            Image.asset('assets/icon/app_icon.png',
+                width: 48,
+                height: 48,
+                errorBuilder: (c, e, s) => Icon(Icons.inventory_2)),
+            SizedBox(width: 8),
+            RichText(
+                text: TextSpan(children: [
+              TextSpan(
+                  text: 'Where',
+                  style: AppText.logoWhere),
+              TextSpan(
+                  text: 'Log',
+                  style: AppText.logoLogAlert),
+            ])),
+          ]),
+        ),
         actions: [
           if (_pendingImports.isNotEmpty)
             Stack(
@@ -1062,9 +1068,7 @@ class _HomeScreenState extends State<HomeScreen>
           },
         ),
         const SizedBox(width: 6),
-        GestureDetector(
-          onLongPress: _showShareDiagnostics,
-          child: Stack(
+        Stack(
           clipBehavior: Clip.none,
           children: [
             IconButton(
@@ -1085,7 +1089,6 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
           ],
-          ),
         ),
         const SizedBox(width: 6),
         IconButton(
