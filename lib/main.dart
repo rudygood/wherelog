@@ -25,6 +25,7 @@ import 'widgets/location_filter_section.dart';
 import 'utils/map_utils.dart';
 import 'utils/poi_import_utils.dart';
 import 'services/incoming_gpx_service.dart';
+import 'services/share_diag_service.dart';
 import 'settings_service.dart';
 import 'dart:async';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
@@ -551,6 +552,7 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _initSharing() async {
     try {
       final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
+      ShareDiagService.logEvent('initialMedia: ${initialMedia.length} item(s)${initialMedia.isNotEmpty ? ' | first path=${initialMedia.first.path} | message=${initialMedia.first.message}' : ''}');
       if (initialMedia.isNotEmpty) {
         final first = initialMedia.first;
         if (first.path.toLowerCase().endsWith('.gpx')) {
@@ -561,6 +563,7 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
       _sharingSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> sharedFiles) {
+        ShareDiagService.logEvent('stream: ${sharedFiles.length} item(s)${sharedFiles.isNotEmpty ? ' | first path=${sharedFiles.first.path} | message=${sharedFiles.first.message}' : ''}');
         if (sharedFiles.isEmpty) return;
         final first = sharedFiles.first;
         if (first.path.toLowerCase().endsWith('.gpx')) {
@@ -578,6 +581,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _handleIncomingShare(String text) async {
+    ShareDiagService.logEvent('handleIncomingShare: ${text.length > 80 ? text.substring(0, 80) : text}');
     var contextText = text;
     var parsed = PoiImportUtils.parseSharedText(text);
     if (parsed.isEmpty) {
@@ -597,6 +601,32 @@ class _HomeScreenState extends State<HomeScreen>
     if (parsed.isEmpty) return;
     setState(() { _pendingImports.addAll(parsed); });
     await _savePendingImports();
+  }
+
+
+  // The share diagnostic readout (2026-11-10): long-press the POI
+  // tab's import button. Shows the native group-container report
+  // and the persistent intake log side by side.
+  Future<void> _showShareDiagnostics() async {
+    final report = await ShareDiagService.containerReport();
+    final log = await ShareDiagService.readLog();
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Share diagnostics'),
+        content: SingleChildScrollView(
+          child: Text(
+            'Group container:\n$report\n\nShare intake log:\n${log.isEmpty ? '(nothing recorded)' : log.join('\n')}',
+            style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () { ShareDiagService.clearLog(); Navigator.pop(c); }, child: const Text('Clear log')),
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 
 
@@ -1032,7 +1062,9 @@ class _HomeScreenState extends State<HomeScreen>
           },
         ),
         const SizedBox(width: 6),
-        Stack(
+        GestureDetector(
+          onLongPress: _showShareDiagnostics,
+          child: Stack(
           clipBehavior: Clip.none,
           children: [
             IconButton(
@@ -1053,6 +1085,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
           ],
+          ),
         ),
         const SizedBox(width: 6),
         IconButton(

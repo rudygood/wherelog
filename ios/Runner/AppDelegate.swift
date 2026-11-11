@@ -27,6 +27,7 @@ final class WhereLogIosBridge: NSObject, UIDocumentPickerDelegate {
   private let directoryChannel: FlutterMethodChannel
   private let clipboardChannel: FlutterMethodChannel
   private let incomingGpxChannel: FlutterMethodChannel
+  private let shareDiagChannel: FlutterMethodChannel
   private var directoryResult: FlutterResult?
   private var heldDirectoryURL: URL?
 
@@ -43,11 +44,23 @@ final class WhereLogIosBridge: NSObject, UIDocumentPickerDelegate {
       name: "com.wherelog/incoming_gpx",
       binaryMessenger: messenger
     )
+    shareDiagChannel = FlutterMethodChannel(
+      name: "com.wherelog/share_diag",
+      binaryMessenger: messenger
+    )
     super.init()
     incomingGpxChannel.setMethodCallHandler { call, result in
       switch call.method {
       case "takePendingGpx":
         result(IncomingGpxMailbox.shared.takeContent())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    shareDiagChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "containerReport":
+        result(shareContainerReport())
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -345,4 +358,44 @@ final class IncomingGpxMailbox {
     try? FileManager.default.removeItem(at: pendingURL)
     return String(data: data, encoding: .utf8)
   }
+}
+
+
+/// Share diagnostic (2026-11-10): reports which app-group
+/// containers this app can actually resolve on the device, and
+/// what is in them. The answer distinguishes a group that was
+/// never provisioned (NIL) from one the Share Extension never
+/// wrote to (resolves, but empty after shares were sent).
+func shareContainerReport() -> String {
+  let fm = FileManager.default
+  var candidates: [String] = []
+  if let fromPlist = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String,
+     !fromPlist.isEmpty {
+    candidates.append(fromPlist)
+  }
+  if !candidates.contains("group.org.solutionwise.wherelog") {
+    candidates.append("group.org.solutionwise.wherelog")
+  }
+  var lines: [String] = []
+  for group in candidates {
+    guard let url = fm.containerURL(forSecurityApplicationGroupIdentifier: group) else {
+      lines.append("GROUP \(group) -> NIL")
+      continue
+    }
+    lines.append("GROUP \(group) -> \(url.path)")
+    if let entries = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
+      if entries.isEmpty {
+        lines.append("  (empty)")
+      }
+      for entry in entries.prefix(30) {
+        lines.append("  - \(entry.lastPathComponent)")
+        if let sub = try? fm.contentsOfDirectory(at: entry, includingPropertiesForKeys: nil) {
+          for s in sub.prefix(20) {
+            lines.append("    - \(s.lastPathComponent)")
+          }
+        }
+      }
+    }
+  }
+  return lines.joined(separator: "\n")
 }
