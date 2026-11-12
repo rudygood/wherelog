@@ -26,6 +26,19 @@ class ShareDiagService {
     }
   }
 
+  /// What the INSTALLED app's own Info.plist declares for document
+  /// types, read at runtime on the device (2026-11-12). The .ipa's
+  /// plist proves the declaration was built; this proves it survived
+  /// AltStore's re-signing into the app on the phone. iOS only.
+  static Future<String> documentTypesReport() async {
+    try {
+      return await _channel.invokeMethod<String>('documentTypesReport') ??
+          '(no reply from the native side)';
+    } catch (e) {
+      return 'Document types report unavailable: $e';
+    }
+  }
+
   /// Appends one timestamped line to the persistent intake log.
   static void logEvent(String event) {
     _append(event);

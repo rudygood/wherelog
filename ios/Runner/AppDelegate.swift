@@ -67,6 +67,8 @@ final class WhereLogIosBridge: NSObject, UIDocumentPickerDelegate {
       switch call.method {
       case "containerReport":
         result(shareContainerReport())
+      case "documentTypesReport":
+        result(documentTypesReport())
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -509,6 +511,30 @@ func shareContainerReport() -> String {
         }
       }
     }
+  }
+  return lines.joined(separator: "\n")
+}
+
+/// Open With diagnostic (2026-11-12): reads the INSTALLED app's own
+/// Info.plist document types at runtime. The .ipa's plist proves the
+/// declaration was built; this proves it survived AltStore's
+/// re-signing (which rewrites the bundle ID and the plist) into the
+/// app on the phone. If the key is absent entirely, that absence
+/// IS the finding — print ABSENT, not an empty list.
+func documentTypesReport() -> String {
+  guard let types = Bundle.main.object(forInfoDictionaryKey: "CFBundleDocumentTypes") as? [[String: Any]] else {
+    return "CFBundleDocumentTypes: ABSENT in the installed app"
+  }
+  if types.isEmpty {
+    return "CFBundleDocumentTypes: present but empty (no entries)"
+  }
+  var lines: [String] = []
+  for entry in types {
+    let name = entry["CFBundleTypeName"] as? String ?? "(no name)"
+    let role = entry["CFBundleTypeRole"] as? String ?? "(no role)"
+    let rank = entry["LSHandlerRank"] as? String ?? "(no rank)"
+    let content = (entry["LSItemContentTypes"] as? [String])?.joined(separator: ", ") ?? "(no content types)"
+    lines.append("- \(name) | role \(role) | rank \(rank) | types: \(content)")
   }
   return lines.joined(separator: "\n")
 }

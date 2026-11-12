@@ -804,10 +804,11 @@ class _HomeScreenState extends State<HomeScreen>
   // group-container report and the persistent intake log.
   Future<void> _showShareDiagnostics() async {
     final report = await ShareDiagService.containerReport();
+    final docTypes = await ShareDiagService.documentTypesReport();
     final log = await ShareDiagService.readLog();
     if (!mounted) return;
     final fullText =
-        '${AboutScreen.versionLabel}\n\nGroup container:\n$report\n\nShare intake log:\n${log.isEmpty ? '(nothing recorded)' : log.join('\n')}';
+        '${AboutScreen.versionLabel}\n\nGroup container:\n$report\n\nDocument types (installed app):\n$docTypes\n\nShare intake log:\n${log.isEmpty ? '(nothing recorded)' : log.join('\n')}';
     // The report sits in a read-only text field so it can be
     // selected and copied (Rudy, 2026-11-10) — screenshots of
     // wrapped group IDs were nobody's friend. Copy all does it in
