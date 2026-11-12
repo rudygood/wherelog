@@ -554,30 +554,110 @@ class _HomeScreenState extends State<HomeScreen>
       final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
       ShareDiagService.logEvent('initialMedia: ${initialMedia.length} item(s)${initialMedia.isNotEmpty ? ' | first path=${initialMedia.first.path} | message=${initialMedia.first.message}' : ''}');
       if (initialMedia.isNotEmpty) {
-        final first = initialMedia.first;
-        if (first.path.toLowerCase().endsWith('.gpx')) {
-          _queueGpxPath(first.path);
-        } else {
-          final initialText = _sharePayload(first);
-          if (initialText.isNotEmpty) _handleIncomingShare(initialText);
-        }
+        await _handleSharedFile(initialMedia.first);
+        _consumeShare();
+      } else {
+        // A cold start with an empty plugin list can still carry a
+        // GPX the Share Extension handed off natively (see
+        // _drainSharedGpxInbox): the plugin saves an empty list
+        // for files it cannot copy, so the empty list is the
+        // trigger, not the absence of a share.
+        await _drainSharedGpxInbox(queue: true);
       }
-      _sharingSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> sharedFiles) {
+      _sharingSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> sharedFiles) async {
         ShareDiagService.logEvent('stream: ${sharedFiles.length} item(s)${sharedFiles.isNotEmpty ? ' | first path=${sharedFiles.first.path} | message=${sharedFiles.first.message}' : ''}');
-        if (sharedFiles.isEmpty) return;
-        final first = sharedFiles.first;
-        if (first.path.toLowerCase().endsWith('.gpx')) {
-          _queueGpxPath(first.path);
+        if (sharedFiles.isEmpty) {
+          await _drainSharedGpxInbox(queue: true);
           return;
         }
-        final text = _sharePayload(first);
-        if (text.isNotEmpty) _handleIncomingShare(text);
+        await _handleSharedFile(sharedFiles.first);
+        _consumeShare();
       }, onError: (err) {
         debugPrint('Sharing stream error: ' + err.toString());
       });
     } catch (e) {
       debugPrint('Sharing init error: ' + e.toString());
     }
+  }
+
+  /// One shared item, however the plugin delivered it: a .gpx
+  /// path queues its waypoints; GPX XML carried as text (the
+  /// plugin's text branch, once the GPX type is registered) is
+  /// parsed as GPX content; anything else is a Maps link (or
+  /// caption) for the normal share parser.
+  Future<void> _handleSharedFile(SharedMediaFile first) async {
+    if (first.path.toLowerCase().endsWith('.gpx')) {
+      ShareDiagService.logEvent('gpx path: ${first.path}');
+      try {
+        await _queueGpxPath(first.path);
+      } catch (e) {
+        ShareDiagService.logEvent('gpx path failed: $e');
+      }
+      // The extension also saved a native copy in the group
+      // container; discard it so it cannot queue a second time.
+      await _drainSharedGpxInbox(queue: false);
+      return;
+    }
+    final text = _sharePayload(first);
+    if (text.isEmpty) return;
+    if (_looksLikeGpxXml(text)) {
+      ShareDiagService.logEvent('gpx xml text: ${text.length} chars');
+      try {
+        await _queueGpxContent(text);
+      } catch (e) {
+        ShareDiagService.logEvent('gpx xml text failed: $e');
+      }
+      await _drainSharedGpxInbox(queue: false);
+      return;
+    }
+    await _handleIncomingShare(text);
+  }
+
+  /// GPX XML carried as share text: the plugin hands the whole
+  /// file content over when the .gpx type is registered, and the
+  /// link parser would otherwise drop it as a 0-candidate share.
+  bool _looksLikeGpxXml(String s) {
+    final t = s.trimLeft();
+    return t.contains('<gpx') && (t.startsWith('<?xml') || t.startsWith('<gpx'));
+  }
+
+  /// The Share Extension's native file hand-off: it copies a
+  /// shared .gpx into the App Group container (the plugin cannot
+  /// copy security-scoped files) and records it in group
+  /// UserDefaults. The plugin then delivers an empty list, so an
+  /// empty intake event is the trigger to take the file from the
+  /// inbox and queue it. With queue=false the inbox is only
+  /// cleared — a GPX already queued through the plugin must not
+  /// queue twice.
+  Future<void> _drainSharedGpxInbox({required bool queue}) async {
+    String? content;
+    try {
+      content = await IncomingGpxService.takePendingSharedGpxContent();
+    } catch (_) {
+      content = null;
+    }
+    if (content == null || content.isEmpty) {
+      ShareDiagService.logEvent('sharedGpx inbox: none');
+      return;
+    }
+    if (!queue) {
+      ShareDiagService.logEvent('sharedGpx inbox: discarded (already queued)');
+      return;
+    }
+    ShareDiagService.logEvent('sharedGpx inbox: ${content.length} chars');
+    try {
+      await _queueGpxContent(content);
+    } catch (e) {
+      ShareDiagService.logEvent('sharedGpx inbox failed: $e');
+    }
+  }
+
+  /// The plugin prescribes reset() after consuming shared media,
+  /// so a share is not re-delivered on the next cold start.
+  void _consumeShare() {
+    try {
+      ReceiveSharingIntent.instance.reset();
+    } catch (_) {}
   }
 
   // A share arrives as (path, message): the iOS extension puts the
@@ -599,7 +679,7 @@ class _HomeScreenState extends State<HomeScreen>
     return f.path;
   }
 
-  void _handleIncomingShare(String text) async {
+  Future<void> _handleIncomingShare(String text) async {
     ShareDiagService.logEvent('handleIncomingShare: ${text.length > 80 ? text.substring(0, 80) : text}');
     var contextText = text;
     var parsed = PoiImportUtils.parseSharedText(text);

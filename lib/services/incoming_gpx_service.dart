@@ -18,6 +18,18 @@ class IncomingGpxService {
     }
   }
 
+  /// The Share Extension's native .gpx hand-off (2026-11-11):
+  /// the extension copies a shared .gpx into the App Group
+  /// container and records it; the app takes the content here.
+  /// Returns null when no shared file is waiting.
+  static Future<String?> takePendingSharedGpxContent() async {
+    try {
+      return await _channel.invokeMethod<String>('takePendingSharedGpx');
+    } catch (_) {
+      return null;
+    }
+  }
+
   static void setAvailabilityHandler(
     Future<void> Function(String content) handler,
   ) {

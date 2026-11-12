@@ -53,6 +53,8 @@ final class WhereLogIosBridge: NSObject, UIDocumentPickerDelegate {
       switch call.method {
       case "takePendingGpx":
         result(IncomingGpxMailbox.shared.takeContent())
+      case "takePendingSharedGpx":
+        result(SharedGpxInbox.shared.takeContent())
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -360,6 +362,38 @@ final class IncomingGpxMailbox {
   }
 }
 
+/// The Share Extension's native .gpx hand-off (2026-11-11): the
+/// plugin cannot copy security-scoped files, so the extension
+/// copies a shared .gpx into the App Group container itself and
+/// records its name in group UserDefaults. The app takes the
+/// content from here when the plugin's (empty) share list
+/// arrives. Mirrors IncomingGpxMailbox, but the file lives in the
+/// shared container, not in Application Support.
+final class SharedGpxInbox {
+  static let shared = SharedGpxInbox()
+  private let fileKey = "WhereLogSharedGpxFile"
+
+  private func groupId() -> String? {
+    Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String
+  }
+
+  func takeContent() -> String? {
+    guard let group = groupId(),
+          let name = UserDefaults(suiteName: group)?.string(forKey: fileKey),
+          let url = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: group)?
+            .appendingPathComponent(name)
+    else { return nil }
+    // The hand-off is consumed on take, whatever the content
+    // turns out to be — a file that cannot be read must not sit
+    // in the inbox and queue again on a later share.
+    UserDefaults(suiteName: group)?.removeObject(forKey: fileKey)
+    defer { try? FileManager.default.removeItem(at: url) }
+    guard let data = try? Data(contentsOf: url) else { return nil }
+    return String(data: data, encoding: .utf8)
+  }
+}
+
 
 /// Share diagnostic (2026-11-10): reports which app-group
 /// containers this app can actually resolve on the device, and
@@ -377,6 +411,11 @@ func shareContainerReport() -> String {
     candidates.append("group.org.solutionwise.wherelog")
   }
   var lines: [String] = []
+  if let alt = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") {
+    lines.append("ALTAppGroups (as recorded by AltStore): \(alt)")
+  } else {
+    lines.append("ALTAppGroups: (not present in the installed app)")
+  }
   for group in candidates {
     guard let url = fm.containerURL(forSecurityApplicationGroupIdentifier: group) else {
       lines.append("GROUP \(group) -> NIL")
