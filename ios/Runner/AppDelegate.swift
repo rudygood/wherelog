@@ -322,6 +322,15 @@ final class WhereLogIosBridge: NSObject, UIDocumentPickerDelegate {
   }
 }
 
+/// Content test shared with Dart's _looksLikeGpxXml (lib/main.dart)
+/// and the Share Extension's copy: content is GPX when it holds a
+/// <gpx element and opens with <?xml or <gpx. The extension is
+/// only a hint.
+private func looksLikeGpxXml(_ s: String) -> Bool {
+  let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+  return t.contains("<gpx") && (t.hasPrefix("<?xml") || t.hasPrefix("<gpx"))
+}
+
 /// Holds a GPX file handed to WhereLog by iOS ("Open with
 /// WhereLog" on a .gpx in Files or Mail) until Dart is ready to
 /// queue its waypoints. The scene delegate can receive the file
@@ -343,19 +352,21 @@ final class IncomingGpxMailbox {
 
   func store(url: URL) {
     guard url.isFileURL else { return }
-    // A non-.gpx file opened into WhereLog (2026-11-11): it is
-    // not dropped silently — only its filename is kept, and Dart
-    // turns it into a rejected queue entry (Delete only).
-    if url.pathExtension.lowercased() != "gpx" {
-      storeRejected(url: url)
-      return
-    }
     let accessing = url.startAccessingSecurityScopedResource()
     defer {
       if accessing { url.stopAccessingSecurityScopedResource() }
     }
+    // Content decides (2026-11-11): the extension is only a hint.
+    // A .txt holding GPX XML is stored as GPX; a .gpx holding
+    // anything else — or nothing readable — keeps only its
+    // filename, and Dart turns it into a rejected queue entry
+    // (Delete only) instead of dropping it silently.
     guard let data = try? Data(contentsOf: url),
-          let content = String(data: data, encoding: .utf8) else { return }
+          let content = String(data: data, encoding: .utf8),
+          looksLikeGpxXml(content) else {
+      storeRejected(url: url)
+      return
+    }
     do {
       try FileManager.default.createDirectory(
         at: pendingURL.deletingLastPathComponent(),
@@ -377,7 +388,8 @@ final class IncomingGpxMailbox {
 
   // --- Rejected files (2026-11-11) ---
   // Only the filename is kept: a rejected entry needs a name
-  // and nothing else, so no file content is ever read.
+  // and nothing else. The content was already read in store()
+  // to decide — it is not kept.
   var onRejected: ((String) -> Void)?
 
   private var pendingRejectedURL: URL {

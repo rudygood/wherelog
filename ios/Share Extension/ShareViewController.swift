@@ -22,12 +22,13 @@ class ShareViewController: RSIShareViewController {
     // GPX file hand-off (2026-11-11): the plugin's extension code
     // copies shared files without claiming security-scoped access,
     // so a .gpx shared from Files arrives in Dart as an empty list.
-    // This override copies a shared .gpx into the App Group
+    // This override copies a shared file into the App Group
     // container itself (holding scoped access for the copy) and
     // records it in group UserDefaults; the app takes it from there
     // when the plugin's empty list arrives. Map shares are
-    // untouched — only .gpx files take this path. The plugin's own
-    // Send flow still runs afterwards (finishPost).
+    // untouched. Content decides which stash a file gets (below) —
+    // the extension is only a hint. The plugin's own Send flow
+    // still runs afterwards (finishPost).
     override func didSelectPost() {
         guard let provider = firstFileAttachmentProvider() else {
             super.didSelectPost()
@@ -35,14 +36,22 @@ class ShareViewController: RSIShareViewController {
         }
         provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { [weak self] item, _ in
             if let url = item as? URL {
-                if url.pathExtension.lowercased() == "gpx" {
-                    self?.stashSharedGpx(url: url)
+                // Content decides (2026-11-11): the extension is
+                // only a hint. A .txt holding GPX XML is stashed
+                // as GPX; a .gpx holding anything else — or
+                // nothing readable — records only its name, for a
+                // rejected entry. Map shares never take this path
+                // — they carry no file attachment at all.
+                let accessing = url.startAccessingSecurityScopedResource()
+                defer {
+                    if accessing { url.stopAccessingSecurityScopedResource() }
+                }
+                if let data = try? Data(contentsOf: url),
+                   let content = String(data: data, encoding: .utf8),
+                   let strongSelf = self,
+                   strongSelf.looksLikeGpxXml(content) {
+                    strongSelf.stashSharedGpx(url: url)
                 } else {
-                    // A non-.gpx file shared into WhereLog (2026-11-11):
-                    // only its filename is recorded, and the app
-                    // turns it into a rejected queue entry (Delete
-                    // only). Map shares never take this path — they
-                    // carry no file attachment at all.
                     self?.stashSharedRejected(url: url)
                 }
             }
@@ -69,6 +78,14 @@ class ShareViewController: RSIShareViewController {
             }
         }
         return nil
+    }
+
+    /// Mirrors Dart's _looksLikeGpxXml (lib/main.dart) — see
+    /// AppDelegate.swift's copy. Content is GPX when it holds a
+    /// <gpx element and opens with <?xml or <gpx.
+    private func looksLikeGpxXml(_ s: String) -> Bool {
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.contains("<gpx") && (t.hasPrefix("<?xml") || t.hasPrefix("<gpx"))
     }
 
     /// Copies a shared .gpx into the App Group container and

@@ -28,6 +28,7 @@ import 'services/incoming_gpx_service.dart';
 import 'services/share_diag_service.dart';
 import 'settings_service.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:geolocator/geolocator.dart';
 import 'screens/poi_map_screen.dart';
@@ -478,10 +479,6 @@ class _HomeScreenState extends State<HomeScreen>
     if (mounted) await _openImportSheet();
   }
 
-  Future<void> _queueGpxPath(String path) async {
-    await _queueGpxList(await PoiImportUtils.importFromGpxPath(path));
-  }
-
   Future<void> _queueGpxContent(String content) async {
     await _queueGpxList(PoiImportUtils.parseGpxContent(content));
   }
@@ -596,22 +593,36 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  /// One shared item, however the plugin delivered it: a .gpx
-  /// path queues its waypoints; GPX XML carried as text (the
-  /// plugin's text branch, once the GPX type is registered) is
-  /// parsed as GPX content; anything else is a Maps link (or
-  /// caption) for the normal share parser.
+  /// One shared item, however the plugin delivered it. Content
+  /// decides (2026-11-11): the extension is only a hint. A file
+  /// path is read and sniffed for GPX XML — a .txt holding GPX
+  /// XML is parsed as GPX, a .gpx holding anything else is a
+  /// rejected entry. Maps URLs still go to the normal share
+  /// parser, untouched.
   Future<void> _handleSharedFile(SharedMediaFile first) async {
-    if (first.path.toLowerCase().endsWith('.gpx')) {
-      ShareDiagService.logEvent('gpx path: ${first.path}');
+    final fsPath = _localFileSystemPath(first.path);
+    if (fsPath != null) {
+      ShareDiagService.logEvent('file path: ${first.path}');
       try {
-        await _queueGpxPath(first.path);
+        final content = await File(fsPath).readAsString();
+        if (_looksLikeGpxXml(content)) {
+          ShareDiagService.logEvent('gpx file content: ${content.length} chars');
+          await _queueGpxContent(content);
+        } else {
+          await _queueRejectedFile(_fileBasename(fsPath));
+        }
       } catch (e) {
-        ShareDiagService.logEvent('gpx path failed: $e');
+        // Unreadable is not GPX either: noise, not silence.
+        ShareDiagService.logEvent('file path failed: $e');
+        await _queueRejectedFile(_fileBasename(fsPath));
       }
       // The extension also saved a native copy in the group
-      // container; discard it so it cannot queue a second time.
+      // container — and may have set a rejected key; discard both
+      // so the same file cannot queue a second time.
       await _drainSharedGpxInbox(queue: false);
+      try {
+        await IncomingGpxService.takePendingSharedRejected();
+      } catch (_) {}
       return;
     }
     final text = _sharePayload(first);
@@ -629,9 +640,40 @@ class _HomeScreenState extends State<HomeScreen>
     await _handleIncomingShare(text);
   }
 
+  /// A plugin path that names a file on disk, as a filesystem
+  /// path — or null for Maps URLs and anything else that is not
+  /// a local file. Only '/'-paths and file:// URLs qualify;
+  /// content:// URIs (Android) keep the old behavior below.
+  String? _localFileSystemPath(String s) {
+    if (s.isEmpty) return null;
+    final lower = s.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      return null;
+    }
+    if (lower.startsWith('file://')) {
+      try {
+        return Uri.parse(s).toFilePath();
+      } catch (_) {
+        return null;
+      }
+    }
+    if (s.startsWith('/')) return s;
+    return null;
+  }
+
+  /// The last segment of a filesystem path — the filename a
+  /// rejected entry is shown under.
+  String _fileBasename(String fsPath) {
+    final parts = fsPath.split('/').where((p) => p.isNotEmpty).toList();
+    return parts.isEmpty ? fsPath : parts.last;
+  }
+
   /// GPX XML carried as share text: the plugin hands the whole
   /// file content over when the .gpx type is registered, and the
   /// link parser would otherwise drop it as a 0-candidate share.
+  /// This is also the shared content test for every file intake
+  /// — the native sides (AppDelegate's mailbox, the Share
+  /// Extension) each carry a small Swift mirror of it.
   bool _looksLikeGpxXml(String s) {
     final t = s.trimLeft();
     return t.contains('<gpx') && (t.startsWith('<?xml') || t.startsWith('<gpx'));
