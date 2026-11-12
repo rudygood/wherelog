@@ -33,6 +33,10 @@
 			<array>
 				<string>com.topografix.gpx</string>
 			</array>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>gpx</string>
+			</array>
 		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
@@ -44,6 +48,11 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>public.text</string>
+			</array>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>txt</string>
+				<string>xml</string>
 			</array>
 		</dict>
 	</array>

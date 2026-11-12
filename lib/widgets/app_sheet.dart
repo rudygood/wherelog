@@ -119,10 +119,9 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                 ),
               ),
               const Divider(height: 1, thickness: 1),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
                   children: [
                     menuTile(icon: Icons.account_tree_outlined, title: 'Location Options', subtitle: 'Generals & Specifics • Storage / Inventory', popValue: 'location'),
                     const Divider(height: 12, thickness: 0.5),
