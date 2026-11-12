@@ -337,12 +337,12 @@ class _HomeScreenState extends State<HomeScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(children: [
-                                Text('Ready to Import (${_pendingImports.length})', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text(_pendingImports.any((p) => !p.rejected) ? 'Ready to Import (${_pendingImports.where((p) => !p.rejected).length})' : 'Not a GPX File (${_pendingImports.length})', style: TextStyle(fontWeight: FontWeight.bold)),
                                 Spacer(),
                                 TextButton(onPressed: () async { setState(() => _pendingImports.clear()); await _savePendingImports(); setSheetState((){}); Navigator.pop(ctx); }, child: Text('Clear All')),
                               ]),
                               SizedBox(height: 8),
-                              Text('Tap to import - stays until saved', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
+                              Text(_pendingImports.any((p) => !p.rejected) ? 'Tap to import - stays until saved' : 'Only Delete is available', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
                               SizedBox(height: 8),
                               ..._pendingImports.asMap().entries.map((entry) {
                                 final idx = entry.key;
@@ -351,20 +351,20 @@ class _HomeScreenState extends State<HomeScreen>
                                   margin: EdgeInsets.only(bottom: 6),
                                   child: ListTile(
                                     dense: true,
-                                    leading: Icon(Icons.place, color: AppColors.alert),
+                                    leading: p.rejected ? Icon(Icons.error_outline, color: AppColors.alert) : Icon(Icons.place, color: AppColors.alert),
                                     title: Text(p.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
                                     subtitle: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         if (p.address.isNotEmpty) Text(p.address, style: TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                        Text('${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)} • ${p.source}', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                        if (!p.rejected) Text('${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)} • ${p.source}', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                       ],
                                     ),
                                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                                      IconButton(icon: Icon(Icons.check_circle, color: AppColors.success), tooltip: 'Import this', onPressed: () { Navigator.pop(ctx); _processImportAt(idx); }),
+                                      if (!p.rejected) IconButton(icon: Icon(Icons.check_circle, color: AppColors.success), tooltip: 'Import this', onPressed: () { Navigator.pop(ctx); _processImportAt(idx); }),
                                       IconButton(icon: Icon(Icons.close, size: 18), tooltip: 'Remove', onPressed: () async { setState(() => _pendingImports.removeAt(idx)); await _savePendingImports(); setSheetState((){}); if (_pendingImports.isEmpty) Navigator.pop(ctx); }),
                                     ]),
-                                    onTap: () { Navigator.pop(ctx); _processImportAt(idx); },
+                                    onTap: p.rejected ? null : () { Navigator.pop(ctx); _processImportAt(idx); },
                                   ),
                                 );
                               }),
@@ -392,6 +392,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _processImportAt(int index) async {
     if (index < 0 || index >= _pendingImports.length) return;
+    // A rejected entry has no coordinates and no verify gate:
+    // Delete (from the queue card) is its only way out.
+    if (_pendingImports[index].rejected) return;
     final data = _pendingImports[index];
     // Every staged import passes the verification gate first:
     // the point is checked on the map (and may be adjusted)
@@ -491,10 +494,19 @@ class _HomeScreenState extends State<HomeScreen>
     IncomingGpxService.setAvailabilityHandler((content) async {
       await _queueGpxContent(content);
     });
+    IncomingGpxService.setRejectedHandler((filename) async {
+      await _queueRejectedFile(filename);
+    });
     final pending = await IncomingGpxService.takePendingGpxContent();
     if (pending != null && pending.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _queueGpxContent(pending);
+      });
+    }
+    final pendingRejected = await IncomingGpxService.takePendingRejected();
+    if (pendingRejected != null && pendingRejected.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _queueRejectedFile(pendingRejected);
       });
     }
   }
@@ -556,6 +568,7 @@ class _HomeScreenState extends State<HomeScreen>
       if (initialMedia.isNotEmpty) {
         await _handleSharedFile(initialMedia.first);
         _consumeShare();
+        await _drainSharedRejected();
       } else {
         // A cold start with an empty plugin list can still carry a
         // GPX the Share Extension handed off natively (see
@@ -563,15 +576,18 @@ class _HomeScreenState extends State<HomeScreen>
         // for files it cannot copy, so the empty list is the
         // trigger, not the absence of a share.
         await _drainSharedGpxInbox(queue: true);
+        await _drainSharedRejected();
       }
       _sharingSub = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> sharedFiles) async {
         ShareDiagService.logEvent('stream: ${sharedFiles.length} item(s)${sharedFiles.isNotEmpty ? ' | first path=${sharedFiles.first.path} | message=${sharedFiles.first.message}' : ''}');
         if (sharedFiles.isEmpty) {
           await _drainSharedGpxInbox(queue: true);
+          await _drainSharedRejected();
           return;
         }
         await _handleSharedFile(sharedFiles.first);
         _consumeShare();
+        await _drainSharedRejected();
       }, onError: (err) {
         debugPrint('Sharing stream error: ' + err.toString());
       });
@@ -650,6 +666,40 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       ShareDiagService.logEvent('sharedGpx inbox failed: $e');
     }
+  }
+
+  /// A non-.gpx file opened or shared into WhereLog (2026-11-11):
+  /// it joins the pending-import queue as a rejected entry —
+  /// filename plus "Not a GPX file", Delete as its only action —
+  /// so the user sees the noise instead of silence. The entry is
+  /// logged to the share diagnostic, like every other intake.
+  Future<void> _queueRejectedFile(String filename) async {
+    ShareDiagService.logEvent('rejected file: $filename');
+    setState(() => _pendingImports.add(PoiImportData(
+      name: filename,
+      lat: 0,
+      lng: 0,
+      address: 'Not a GPX file',
+      source: 'File',
+      rejected: true,
+    )));
+    await _savePendingImports();
+  }
+
+  /// The native side records a rejected file's name under its own
+  /// key (mailbox and Share Extension each have one); take it and
+  /// queue the rejected entry. Only an actual file arrival sets
+  /// the key — Maps link shares never do, so they can never
+  /// produce a rejected entry.
+  Future<void> _drainSharedRejected() async {
+    String? filename;
+    try {
+      filename = await IncomingGpxService.takePendingSharedRejected();
+    } catch (_) {
+      filename = null;
+    }
+    if (filename == null || filename.isEmpty) return;
+    await _queueRejectedFile(filename);
   }
 
   /// The plugin prescribes reset() after consuming shared media,

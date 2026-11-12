@@ -55,6 +55,10 @@ final class WhereLogIosBridge: NSObject, UIDocumentPickerDelegate {
         result(IncomingGpxMailbox.shared.takeContent())
       case "takePendingSharedGpx":
         result(SharedGpxInbox.shared.takeContent())
+      case "takePendingRejected":
+        result(IncomingGpxMailbox.shared.takeRejected())
+      case "takePendingSharedRejected":
+        result(SharedGpxInbox.shared.takeRejected())
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -70,6 +74,9 @@ final class WhereLogIosBridge: NSObject, UIDocumentPickerDelegate {
     let gpxChannel = incomingGpxChannel
     IncomingGpxMailbox.shared.onAvailable = { content in
       gpxChannel.invokeMethod("gpxAvailable", arguments: content)
+    }
+    IncomingGpxMailbox.shared.onRejected = { filename in
+      gpxChannel.invokeMethod("rejectedAvailable", arguments: filename)
     }
     clipboardChannel.setMethodCallHandler { [weak self] call, result in
       guard let self else {
@@ -335,7 +342,14 @@ final class IncomingGpxMailbox {
   }
 
   func store(url: URL) {
-    guard url.isFileURL, url.pathExtension.lowercased() == "gpx" else { return }
+    guard url.isFileURL else { return }
+    // A non-.gpx file opened into WhereLog (2026-11-11): it is
+    // not dropped silently — only its filename is kept, and Dart
+    // turns it into a rejected queue entry (Delete only).
+    if url.pathExtension.lowercased() != "gpx" {
+      storeRejected(url: url)
+      return
+    }
     let accessing = url.startAccessingSecurityScopedResource()
     defer {
       if accessing { url.stopAccessingSecurityScopedResource() }
@@ -360,6 +374,41 @@ final class IncomingGpxMailbox {
     try? FileManager.default.removeItem(at: pendingURL)
     return String(data: data, encoding: .utf8)
   }
+
+  // --- Rejected files (2026-11-11) ---
+  // Only the filename is kept: a rejected entry needs a name
+  // and nothing else, so no file content is ever read.
+  var onRejected: ((String) -> Void)?
+
+  private var pendingRejectedURL: URL {
+    let base = FileManager.default.urls(
+      for: .applicationSupportDirectory,
+      in: .userDomainMask
+    ).first ?? URL(fileURLWithPath: NSTemporaryDirectory())
+    return base.appendingPathComponent("pending-rejected.txt")
+  }
+
+  private func storeRejected(url: URL) {
+    let filename = url.lastPathComponent
+    guard !filename.isEmpty else { return }
+    do {
+      try FileManager.default.createDirectory(
+        at: pendingRejectedURL.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+      )
+      try filename.write(to: pendingRejectedURL, atomically: true, encoding: .utf8)
+      onRejected?(filename)
+    } catch {
+      // A rejected name that cannot be held is simply not queued.
+    }
+  }
+
+  func takeRejected() -> String? {
+    guard let name = try? String(contentsOf: pendingRejectedURL, encoding: .utf8),
+          !name.isEmpty else { return nil }
+    try? FileManager.default.removeItem(at: pendingRejectedURL)
+    return name
+  }
 }
 
 /// The Share Extension's native .gpx hand-off (2026-11-11): the
@@ -372,6 +421,7 @@ final class IncomingGpxMailbox {
 final class SharedGpxInbox {
   static let shared = SharedGpxInbox()
   private let fileKey = "WhereLogSharedGpxFile"
+  private let rejectedFileKey = "WhereLogSharedRejectedFile"
 
   private func groupId() -> String? {
     Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String
@@ -391,6 +441,18 @@ final class SharedGpxInbox {
     defer { try? FileManager.default.removeItem(at: url) }
     guard let data = try? Data(contentsOf: url) else { return nil }
     return String(data: data, encoding: .utf8)
+  }
+
+  /// A non-.gpx file the Share Extension recorded (2026-11-11):
+  /// only its filename was stored, and taking it consumes the
+  /// key, so it cannot queue a second rejected entry later.
+  func takeRejected() -> String? {
+    guard let group = groupId(),
+          let name = UserDefaults(suiteName: group)?.string(forKey: rejectedFileKey),
+          !name.isEmpty
+    else { return nil }
+    UserDefaults(suiteName: group)?.removeObject(forKey: rejectedFileKey)
+    return name
   }
 }
 

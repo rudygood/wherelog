@@ -30,13 +30,58 @@ class IncomingGpxService {
     }
   }
 
+  /// A non-.gpx file the Share Extension recorded (2026-11-11):
+  /// only its filename — the app turns it into a rejected queue
+  /// entry. Returns null when no rejected file is waiting.
+  static Future<String?> takePendingSharedRejected() async {
+    try {
+      return await _channel.invokeMethod<String>('takePendingSharedRejected');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// A non-.gpx file opened into WhereLog ("Open with", 2026-11-11):
+  /// only its filename. Returns null when none is waiting.
+  static Future<String?> takePendingRejected() async {
+    try {
+      return await _channel.invokeMethod<String>('takePendingRejected');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> Function(String content)? _gpxHandler;
+  static Future<void> Function(String filename)? _rejectedHandler;
+  static bool _handlerInstalled = false;
+
+  static void _ensureHandler() {
+    if (_handlerInstalled) return;
+    _handlerInstalled = true;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'gpxAvailable' && call.arguments is String) {
+        final h = _gpxHandler;
+        if (h != null) await h(call.arguments as String);
+      } else if (call.method == 'rejectedAvailable' &&
+          call.arguments is String) {
+        final h = _rejectedHandler;
+        if (h != null) await h(call.arguments as String);
+      }
+    });
+  }
+
   static void setAvailabilityHandler(
     Future<void> Function(String content) handler,
   ) {
-    _channel.setMethodCallHandler((call) async {
-      if (call.method == 'gpxAvailable' && call.arguments is String) {
-        await handler(call.arguments as String);
-      }
-    });
+    _gpxHandler = handler;
+    _ensureHandler();
+  }
+
+  /// Called when a non-.gpx file arrives while the app is running.
+  static void setRejectedHandler(
+    Future<void> Function(String filename) handler,
+  ) {
+    _rejectedHandler = handler;
+    _ensureHandler();
   }
 }

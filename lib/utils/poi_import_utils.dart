@@ -21,6 +21,12 @@ class PoiImportData {
   /// before saving and records 'Unnamed place' instead.
   final bool nameIsPlaceholder;
 
+  /// True when this entry is not an import at all: a non-.gpx
+  /// file opened or shared into WhereLog. It carries the file's
+  /// name and no coordinates, and the queue offers Delete as its
+  /// only action — it can never enter the verify gate.
+  final bool rejected;
+
   /// True when [lat]/[lng] came from a viewport-grade pattern
   /// (the @ / center= camera of a map link) rather than from the
   /// place itself. Such results are approximate by construction
@@ -35,6 +41,7 @@ class PoiImportData {
     this.source = '',
     this.nameIsPlaceholder = false,
     this.coordsAreViewport = false,
+    this.rejected = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -45,6 +52,7 @@ class PoiImportData {
     'source': source,
     'nameIsPlaceholder': nameIsPlaceholder,
     'coordsAreViewport': coordsAreViewport,
+    'rejected': rejected,
   };
 
   factory PoiImportData.fromJson(Map<String, dynamic> j) {
@@ -59,6 +67,7 @@ class PoiImportData {
       // by their generated labels.
       nameIsPlaceholder: j['nameIsPlaceholder'] == true || _legacyPlaceholders.contains(name),
       coordsAreViewport: j['coordsAreViewport'] == true,
+      rejected: j['rejected'] == true,
     );
   }
 

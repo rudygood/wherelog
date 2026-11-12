@@ -34,8 +34,17 @@ class ShareViewController: RSIShareViewController {
             return
         }
         provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { [weak self] item, _ in
-            if let url = item as? URL, url.pathExtension.lowercased() == "gpx" {
-                self?.stashSharedGpx(url: url)
+            if let url = item as? URL {
+                if url.pathExtension.lowercased() == "gpx" {
+                    self?.stashSharedGpx(url: url)
+                } else {
+                    // A non-.gpx file shared into WhereLog (2026-11-11):
+                    // only its filename is recorded, and the app
+                    // turns it into a rejected queue entry (Delete
+                    // only). Map shares never take this path — they
+                    // carry no file attachment at all.
+                    self?.stashSharedRejected(url: url)
+                }
             }
             DispatchQueue.main.async { [weak self] in
                 self?.finishPost()
@@ -84,5 +93,15 @@ class ShareViewController: RSIShareViewController {
             // The copy failed; the plugin path (empty list) and the
             // in-app GPX import remain. Nothing to report from here.
         }
+    }
+
+    /// Records a shared non-.gpx file's name in group UserDefaults,
+    /// so the app can queue it as a rejected entry. Only the name
+    /// is kept — the file itself is never copied or read.
+    private func stashSharedRejected(url: URL) {
+        guard let groupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String,
+              !url.lastPathComponent.isEmpty
+        else { return }
+        UserDefaults(suiteName: groupId)?.set(url.lastPathComponent, forKey: "WhereLogSharedRejectedFile")
     }
 }
