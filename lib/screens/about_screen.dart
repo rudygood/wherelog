@@ -17,14 +17,23 @@ import 'db_inspector_screen.dart';
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
 
+  /// The app version mirrors pubspec.yaml's version line; bump
+  /// both together. Hand-maintained (not read from the package at
+  /// runtime) so the value on screen is exactly the value in the
+  /// built code — that is the whole point of the stamp: proving
+  /// which build is installed.
+  static const String appVersion = '1.0.0';
+  static const String appBuild = '2';
+
+  /// One string, one source of truth: the stamp shown in About
+  /// and at the top of the share diagnostic report.
+  static const String versionLabel = 'WhereLog $appVersion (build $appBuild)';
+
   @override
   State<AboutScreen> createState() => _AboutScreenState();
 }
 
 class _AboutScreenState extends State<AboutScreen> {
-  static const String appVersion = '1.0.0';
-  static const String appBuild = '1';
-
   int _versionTaps = 0;
   String? _dbPath;
   String? _photosPath;
@@ -102,7 +111,7 @@ class _AboutScreenState extends State<AboutScreen> {
               behavior: HitTestBehavior.opaque,
               onTap: _countVersionTap,
               onLongPress: _openInspector,
-              child: _row('App version', '$appVersion (build $appBuild)'),
+              child: _row('App version', '${AboutScreen.appVersion} (build ${AboutScreen.appBuild})'),
             ),
             _row('Database schema', 'Version ${AppDatabase.schemaVersion}'),
             _row('Backup format', 'Version ${DataTransfer.backupFormatVersion}'),

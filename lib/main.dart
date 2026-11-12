@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/storage_add_screen.dart';
+import 'screens/about_screen.dart';
 import 'widgets/app_sheet.dart';
 import 'screens/location_options_screen.dart';
 import 'screens/storage_edit_screen.dart';
@@ -806,7 +807,7 @@ class _HomeScreenState extends State<HomeScreen>
     final log = await ShareDiagService.readLog();
     if (!mounted) return;
     final fullText =
-        'Group container:\n$report\n\nShare intake log:\n${log.isEmpty ? '(nothing recorded)' : log.join('\n')}';
+        '${AboutScreen.versionLabel}\n\nGroup container:\n$report\n\nShare intake log:\n${log.isEmpty ? '(nothing recorded)' : log.join('\n')}';
     // The report sits in a read-only text field so it can be
     // selected and copied (Rudy, 2026-11-10) — screenshots of
     // wrapped group IDs were nobody's friend. Copy all does it in
