@@ -90,7 +90,7 @@ class _DbInspectorScreenState extends State<DbInspectorScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('TABLES — tap to browse', style: AppText.dialogSection),
+                 Text('TABLES — tap to browse', style: AppText.dialogSection),
                 const SizedBox(height: 4),
                 ...DbInspector.tables.map((t) => ListTile(
                       dense: true,
@@ -103,7 +103,7 @@ class _DbInspectorScreenState extends State<DbInspectorScreen> {
                       onTap: _running ? null : () => _run('SELECT * FROM $t ORDER BY id', t),
                     )),
                 const Divider(height: 16),
-                const Text('QUERY — SELECT only', style: AppText.dialogSection),
+                 Text('QUERY — SELECT only', style: AppText.dialogSection),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _queryController,
@@ -125,7 +125,7 @@ class _DbInspectorScreenState extends State<DbInspectorScreen> {
                     hintStyle: AppText.inputHint,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                     filled: true,
-                    fillColor: AppColors.white,
+                    fillColor: AppColors.surface,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     isDense: true,
                   ),
@@ -171,7 +171,7 @@ class _DbInspectorScreenState extends State<DbInspectorScreen> {
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.white,
+                          color: AppColors.surface,
                           border: Border.all(color: AppColors.border, width: AppBorder.width),
                           borderRadius: BorderRadius.circular(AppBorder.radius),
                         ),

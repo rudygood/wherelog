@@ -30,7 +30,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       leadingWidth: 40,
       titleSpacing: 4,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+        icon:  Icon(Icons.arrow_back, color: AppColors.textPrimary),
         onPressed: onBack ?? () => Navigator.pop(context),
       ),
       actions: actions,
@@ -38,11 +38,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         text: TextSpan(
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
           children: [
-            const TextSpan(text: 'Where', style: AppText.logoWhere),
-            const TextSpan(text: 'Log', style: AppText.logoLogAlert),
+             TextSpan(text: 'Where', style: AppText.logoWhere),
+             TextSpan(text: 'Log', style: AppText.logoLogAlert),
             TextSpan(
               text: ' - $screenName',
-              style: const TextStyle(
+              style:  TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,

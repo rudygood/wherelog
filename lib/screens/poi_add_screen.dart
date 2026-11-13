@@ -89,11 +89,11 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
     return showModalTopSheet<void>(
       context: context,
       maxWidth: 360,
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
       builder: (c, _) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.place, size: 48, color: AppColors.notice),
+           Icon(Icons.place, size: 48, color: AppColors.notice),
           const SizedBox(height: 12),
           Text(msg, textAlign: TextAlign.center, style: AppText.dialogNotice),
           const SizedBox(height: 16),
@@ -255,7 +255,7 @@ class _PoiAddScreenState extends State<PoiAddScreen> {
       final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
-        title: const Text('Name this place?', style: AppText.dialogTitle),
+        title:  Text('Name this place?', style: AppText.dialogTitle),
         content: Text('This place still has the label from its import ("${widget.initialName}"). Is it OK to save it as "Unnamed place" for now? You can rename it any time from the edit screen.', style: const TextStyle(fontSize: 12)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Name it now')),

@@ -62,7 +62,7 @@ class _NotesSectionState extends State<NotesSection> {
     final result = await showModalTopSheet<String>(
       context: context,
       maxWidth: 600,
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
       builder: (c, _) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -70,7 +70,7 @@ class _NotesSectionState extends State<NotesSection> {
           children: [
             Row(
               children: [
-                const Text('Edit Notes', style: AppText.dialogTitle),
+                 Text('Edit Notes', style: AppText.dialogTitle),
                 const Spacer(),
                 IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c)),
               ],
@@ -95,7 +95,7 @@ class _NotesSectionState extends State<NotesSection> {
                     isDense: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                     filled: true,
-                    fillColor: AppColors.white,
+                    fillColor: AppColors.surface,
                   ),
                 ),
               ),
@@ -103,12 +103,12 @@ class _NotesSectionState extends State<NotesSection> {
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel', style: AppText.buttonSmall))),
+                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child:  Text('Cancel', style: AppText.buttonSmall))),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(c, tempCtrl.text),
-                    child: const Text('Save', style: AppText.buttonPrimary),
+                    child:  Text('Save', style: AppText.buttonPrimary),
                   ),
                 ),
               ],
@@ -128,7 +128,7 @@ class _NotesSectionState extends State<NotesSection> {
       children: [
         Row(
           children: [
-            const Text('NOTES', style: AppText.dialogSection),
+             Text('NOTES', style: AppText.dialogSection),
             const SizedBox(width: 12),
             InkWell(
               onTap: _handleToggle,
@@ -172,9 +172,9 @@ class _NotesSectionState extends State<NotesSection> {
                 hintStyle: AppText.inputHint,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: AppBorder.side),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: AppBorder.side),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: const BorderSide(color: AppColors.textPrimary, width: 1)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide:  BorderSide(color: AppColors.textPrimary, width: 1)),
                 filled: true,
-                fillColor: AppColors.white,
+                fillColor: AppColors.surface,
                 contentPadding: AppSize.fieldPaddingMulti,
                 isDense: true,
               ),

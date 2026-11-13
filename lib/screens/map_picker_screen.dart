@@ -242,7 +242,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         screenName: 'Pick Location on Map',
         actions: [
           if (_picked != null)
-            IconButton(icon: const Icon(Icons.center_focus_strong, color: AppColors.textPrimary), onPressed: _goToPicked, tooltip: 'Center on pin'),
+            IconButton(icon:  Icon(Icons.center_focus_strong, color: AppColors.textPrimary), onPressed: _goToPicked, tooltip: 'Center on pin'),
         ],
       ),
       body: MapFrame(
@@ -267,7 +267,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                       point: _picked!,
                       width: 50,
                       height: 50,
-                      child: const Icon(Icons.location_pin, size: 48, color: AppColors.alert),
+                      child:  Icon(Icons.location_pin, size: 48, color: AppColors.alert),
                     ),
                   ],
                 ),
@@ -310,7 +310,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           ),
           // Center crosshair when no pin
           if (_picked == null && _searchResults.isEmpty)
-            const Center(
+             Center(
               child: IgnorePointer(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

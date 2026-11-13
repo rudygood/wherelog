@@ -23,7 +23,7 @@ class AboutScreen extends StatefulWidget {
   /// built code — that is the whole point of the stamp: proving
   /// which build is installed.
   static const String appVersion = '1.0.0';
-  static const String appBuild = '5';
+  static const String appBuild = '11';
 
   /// One string, one source of truth: the stamp shown in About
   /// and at the top of the share diagnostic report.
@@ -98,14 +98,14 @@ class _AboutScreenState extends State<AboutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('WhereLog', style: AppText.dialogTitle),
+             Text('WhereLog', style: AppText.dialogTitle),
             const SizedBox(height: 4),
-            const Text(
+             Text(
               'Storage items, home inventory, and places of interest.',
               style: AppText.dialog,
             ),
             const SizedBox(height: 20),
-            const Text('VERSION', style: AppText.dialogSection),
+             Text('VERSION', style: AppText.dialogSection),
             const SizedBox(height: 4),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -116,7 +116,7 @@ class _AboutScreenState extends State<AboutScreen> {
             _row('Database schema', 'Version ${AppDatabase.schemaVersion}'),
             _row('Backup format', 'Version ${DataTransfer.backupFormatVersion}'),
             const SizedBox(height: 16),
-            const Text('DATA PATHS', style: AppText.dialogSection),
+             Text('DATA PATHS', style: AppText.dialogSection),
             const SizedBox(height: 4),
             _row('Database', _dbPath ?? '…', selectable: true),
             _row('Photos', _photosPath ?? '…', selectable: true),

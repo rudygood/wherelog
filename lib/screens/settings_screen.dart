@@ -50,6 +50,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {});
   }
 
+  // Dark mode (2026-11-12): persist the choice AND tell the app, so the
+  // theme changes the moment the button is tapped.
+  void _setTheme(String v) {
+    setState(() => theme = v);
+    svc.setTheme(v);
+    AppTheme.modeNotifier.value = AppTheme.modeFromString(v);
+  }
+
   Widget _buildThemeButton({required String label, required bool selected, required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsets.only(right: 8, bottom: 8),
@@ -83,7 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             duration: const Duration(milliseconds: 120),
             width: 96,
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppBorder.radius),
               border: Border.all(color: isPressed ? AppColors.buttonBg : AppColors.border, width: isPressed ? 1.4 : AppBorder.width),
               boxShadow: isPressed
@@ -98,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           if (showDragHandle) ...[
             const SizedBox(width: 6),
-            const Icon(Icons.drag_handle_rounded, size: 20, color: AppColors.textSecondary),
+             Icon(Icons.drag_handle_rounded, size: 20, color: AppColors.textSecondary),
           ],
         ],
       );
@@ -176,22 +184,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('DISPLAY MODE', style: AppText.dialogSection),
+           Text('DISPLAY MODE', style: AppText.dialogSection),
           const SizedBox(height: 8),
           Wrap(
             alignment: WrapAlignment.start,
             children: [
-              _buildThemeButton(label: 'System', selected: theme=='system', onTap: (){setState(()=>theme='system'); svc.setTheme('system');}),
-              _buildThemeButton(label: 'Light', selected: theme=='light', onTap: (){setState(()=>theme='light'); svc.setTheme('light');}),
-              _buildThemeButton(label: 'Dark', selected: theme=='dark', onTap: (){setState(()=>theme='dark'); svc.setTheme('dark');}),
+              _buildThemeButton(label: 'System', selected: theme=='system', onTap: () => _setTheme('system')),
+              _buildThemeButton(label: 'Light', selected: theme=='light', onTap: () => _setTheme('light')),
+              _buildThemeButton(label: 'Dark', selected: theme=='dark', onTap: () => _setTheme('dark')),
             ],
           ),
 
           AppDivider.horizontal,
 
-          const Text('MAIN SCREEN TAB ORDER', style: AppText.dialogSection),
+           Text('MAIN SCREEN TAB ORDER', style: AppText.dialogSection),
           const SizedBox(height: 4),
-          const Text('Tap "Reorder" and then drag the tabs to your desired order.', style: AppText.dialog),
+           Text('Tap "Reorder" and then drag the tabs to your desired order.', style: AppText.dialog),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -220,8 +228,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           AppDivider.horizontal,
 
           SwitchListTile(
-            title: const Text('CONFIRM DELETES', style: AppText.dialogSection),
-            subtitle: const Text('Ask for confirmation before deleting information', style: AppText.dialog),
+            title:  Text('CONFIRM DELETES', style: AppText.dialogSection),
+            subtitle:  Text('Ask for confirmation before deleting information', style: AppText.dialog),
             value: confirmDelete,
             activeColor: AppColors.white,
             activeTrackColor: AppColors.buttonBg,
@@ -235,8 +243,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   builder: (_) => AlertDialog(
                     backgroundColor: AppColors.card,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
-                    title: const Text('Turn off delete confirmation?', style: AppText.dialogTitle),
-                    content: const Text('If off, items are deleted immediately with no undo.', style: AppText.dialogAlert),
+                    title:  Text('Turn off delete confirmation?', style: AppText.dialogTitle),
+                    content:  Text('If off, items are deleted immediately with no undo.', style: AppText.dialogAlert),
                     actions: [
                       TextButton(onPressed: ()=>Navigator.pop(context,false), child: const Text('Cancel')),
                       ElevatedButton(onPressed: ()=>Navigator.pop(context,true), style: AppButton.primary, child: const Text('Turn Off Anyway')),

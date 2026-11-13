@@ -36,16 +36,53 @@ import 'screens/poi_map_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Dark mode (2026-11-12): load the stored display-mode choice before the
+  // first frame so the app opens in the right mode.
+  AppTheme.modeNotifier.value =
+      AppTheme.modeFromString(await SettingsService().getTheme());
   runApp(WhereLogApp());
 }
 
-class WhereLogApp extends StatelessWidget {
+// Stateful + WidgetsBindingObserver so a phone-level brightness change
+// rebuilds the app while the mode is 'system' (the ValueListenableBuilder
+// below only fires when the stored mode itself changes).
+class WhereLogApp extends StatefulWidget {
+  @override
+  State<WhereLogApp> createState() => _WhereLogAppState();
+}
+
+class _WhereLogAppState extends State<WhereLogApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WhereLog',
-      theme: AppTheme.light(),
-      home: HomeScreen());
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppTheme.modeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'WhereLog',
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: mode,
+          home: HomeScreen());
+      },
+    );
   }
 }
 
@@ -1088,8 +1125,8 @@ class _HomeScreenState extends State<HomeScreen>
             labelColor: AppColors.textPrimary,
             unselectedLabelColor: AppColors.textSecondary,
             indicator: BoxDecoration(
-              color: AppColors.white,
-              border: const Border(
+              color: AppColors.surface,
+              border:  Border(
                 top: BorderSide(color: AppColors.border, width: 1),
                 left: BorderSide(color: AppColors.border, width: 1),
                 right: BorderSide(color: AppColors.border, width: 1),
@@ -1130,7 +1167,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _clearPill(String label, VoidCallback onPressed) => ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.white,
+          backgroundColor: AppColors.surface,
           foregroundColor: AppColors.textSecondary,
           side: BorderSide(color: AppColors.border, width: 1),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
@@ -1176,7 +1213,7 @@ class _HomeScreenState extends State<HomeScreen>
     final fs = _filterSpecificMap[_currentTabName];
     final filterDisplay = (fs == null || fs.isEmpty) ? fg : '$fg/$fs';
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1265,7 +1302,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
     final text = '$count places';
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(children: [
         Expanded(child: Text(text, style: AppText.countBar, overflow: TextOverflow.ellipsis)),
@@ -1315,7 +1352,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         const SizedBox(width: 6),
         IconButton(
-          icon: const Icon(Icons.search, size: 29, color: AppColors.textPrimary),
+          icon:  Icon(Icons.search, size: 29, color: AppColors.textPrimary),
           style: _tabIconBtnStyle(),
               tooltip: 'Search places',
           onPressed: () => setState(() => _searchMode = true),
@@ -1432,7 +1469,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildStorageActionBar() {
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       // Bottom padding 12 -> 2: the tab's buttons sit 10px lower
       // (cosmetics round, item 1). Same change in every action bar.
       padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
@@ -1462,7 +1499,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildInventoryActionBar() {
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                     child: SafeArea(
         child: Row(children: [
@@ -1490,7 +1527,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildPoiActionBar() {
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                     child: SafeArea(
         child: Row(children: [
@@ -1523,7 +1560,7 @@ class _HomeScreenState extends State<HomeScreen>
     Widget _buildSelectActionBarFor(String tabName) {
     final selectedCount = _selectedCountFor(tabName);
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       padding: EdgeInsets.fromLTRB(16, 12, 16, 2),
                                     child: SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1711,7 +1748,7 @@ class _HomeScreenState extends State<HomeScreen>
                         _sortBy = (s == 'Location A-Z') ? 'Location' : s;
                       }),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: sel ? AppColors.buttonBg : AppColors.white,
+                        backgroundColor: sel ? AppColors.buttonBg : AppColors.surface,
                         foregroundColor: sel ? AppColors.white : AppColors.textSecondary,
                         side: BorderSide(color: sel ? AppColors.buttonBg : AppColors.border, width: sel ? AppBorder.sideSelected.width : AppBorder.width),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),

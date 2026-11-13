@@ -98,11 +98,11 @@ class _PoiEditScreenState extends State<PoiEditScreen> {
     return showModalTopSheet<void>(
       context: context,
       maxWidth: 360,
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
       builder: (c, _) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.place, size: 48, color: AppColors.notice),
+           Icon(Icons.place, size: 48, color: AppColors.notice),
           const SizedBox(height: 12),
           Text(msg, textAlign: TextAlign.center, style: AppText.dialogNotice),
           const SizedBox(height: 16),

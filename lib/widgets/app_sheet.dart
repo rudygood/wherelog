@@ -4,6 +4,7 @@ import '../screens/location_options_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/export_import_screen.dart';
 import '../screens/about_screen.dart';
+import '../screens/contact_support_screen.dart';
 
 Future<T?> showModalTopSheet<T>({
   required BuildContext context,
@@ -35,7 +36,7 @@ Future<T?> showModalTopSheet<T>({
               maxWidth: maxWidth ?? double.infinity,
             ),
             decoration: BoxDecoration(
-              color: backgroundColor ?? (maxWidth != null ? AppColors.white : AppColors.cardSelected),
+              color: backgroundColor ?? (maxWidth != null ? AppColors.surface : AppColors.cardSelected),
               borderRadius: BorderRadius.circular(AppRadius.sheet),
             ),
             clipBehavior: Clip.antiAlias,
@@ -74,9 +75,9 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
     pageBuilder: (ctx, a1, a2) {
       return _SwipeableRightSheet(
         child: Builder(builder: (innerCtx) {
-          const textPrimary = AppColors.textPrimary;
-          const textSecondary = AppColors.textSecondary;
-          const textDisabled = AppColors.textDisabled;
+           final textPrimary = AppColors.textPrimary;
+           final textSecondary = AppColors.textSecondary;
+           final textDisabled = AppColors.textDisabled;
 
           Widget menuTile({
             required IconData icon,
@@ -96,7 +97,7 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
               leading: Icon(icon, size: 20, color: color),
               title: Text(title, style: isDestructive ? AppText.menuTileTitleAlert : AppText.menuTileTitle.copyWith(color: color)),
               subtitle: Text(subtitle, style: isDestructive ? AppText.dialogAlert : AppText.dialog.copyWith(color: subColor)),
-              trailing: enabled && !isDestructive ? const Icon(Icons.chevron_right, size: 16, color: textSecondary) : null,
+              trailing: enabled && !isDestructive ? Icon(Icons.chevron_right, size: 16, color: textSecondary) : null,
               onTap: enabled ? () => Navigator.pop(innerCtx, popValue) : null,
             );
           }
@@ -108,7 +109,7 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Menu', style: AppText.cardTitle),
+                     Text('Menu', style: AppText.cardTitle),
                     IconButton(
                       icon: const Icon(Icons.close, size: 20),
                       onPressed: () => Navigator.pop(innerCtx),
@@ -127,7 +128,7 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                     const Divider(height: 12, thickness: 0.5),
                     menuTile(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Preferences, defaults', popValue: 'settings'),
                     menuTile(icon: Icons.import_export_outlined, title: 'Export / Import', subtitle: 'ZIP backup with photos, restore', popValue: 'export_import'),
-                    menuTile(icon: Icons.contact_support_outlined, title: 'Contact / Support', subtitle: 'Feedback, report issue', enabled: false),
+                    menuTile(icon: Icons.contact_support_outlined, title: 'Contact / Support', subtitle: 'Feedback, report issue', popValue: 'contact'),
                     menuTile(icon: Icons.help_outline, title: 'Help', subtitle: 'How to use WhereLog', enabled: false),
                     const Divider(height: 12, thickness: 0.5),
                     menuTile(icon: Icons.info_outline, title: 'About', subtitle: 'Version, data paths', popValue: 'about'),
@@ -162,6 +163,9 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
       return result;
     case 'export_import':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const ExportImportScreen()));
+      return null;
+    case 'contact':
+      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const ContactSupportScreen()));
       return null;
     case 'about':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const AboutScreen()));
@@ -209,7 +213,7 @@ class _SwipeableRightSheetState extends State<_SwipeableRightSheet> {
         child: Transform.translate(
           offset: Offset(_dragDx, 0),
           child: Material(
-            color: AppColors.white,
+            color: AppColors.surface,
             borderRadius: const BorderRadius.horizontal(left: Radius.circular(AppRadius.sheet)),
             clipBehavior: Clip.antiAlias,
             child: SizedBox(
@@ -232,14 +236,14 @@ Future<bool?> showLogoutConfirm(BuildContext context) {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text("Logout?", style: AppText.dialogTitleAlert),
+         Text("Logout?", style: AppText.dialogTitleAlert),
         const SizedBox(height: 8),
         const Text("Are you sure you want to logout?"),
         const SizedBox(height: 20),
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
           const SizedBox(width: 8),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Logout", style: AppText.buttonSmallAlert)),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child:  Text("Logout", style: AppText.buttonSmallAlert)),
         ]),
       ],
     ),

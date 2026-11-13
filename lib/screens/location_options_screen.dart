@@ -150,12 +150,12 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     hintText: hint,
     isDense: true,
     filled: true,
-    fillColor: AppColors.white,
+    fillColor: AppColors.surface,
     contentPadding: AppSize.fieldPadding,
     hintStyle: AppText.inputHint,
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: AppBorder.side),
     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: AppBorder.side),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: const BorderSide(color: AppColors.textPrimary, width: 1)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide:  BorderSide(color: AppColors.textPrimary, width: 1)),
   );
 
   @override
@@ -174,7 +174,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
   Widget _howToBox() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppBorder.radius),
         border: Border.all(color: AppColors.border, width: AppBorder.width),
       ),
@@ -183,18 +183,18 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Text('About this Page', style: AppText.dialogSection),
+             Text('About this Page', style: AppText.dialogSection),
             const Spacer(),
             TextButton(
               onPressed: _toggleHowTo,
               style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              child: Text(_howToOpen ? 'Hide' : 'Show', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+              child: Text(_howToOpen ? 'Hide' : 'Show', style:  TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
             ),
           ]),
           if (_howToOpen) ...[
-            const Text('Location options record the location of Storage Items and Home Inventory. Every entry in these two categories must have a General location and may also have an optional Specific location. There is one shared list of General locations for both; the Specific locations are separate — Storage Items and Home Inventory each have their own Specifics for each General. Locations can also be added or edited while adding or editing items, to accommodate new or changed entries.', style: AppText.dialog),
+             Text('Location options record the location of Storage Items and Home Inventory. Every entry in these two categories must have a General location and may also have an optional Specific location. There is one shared list of General locations for both; the Specific locations are separate — Storage Items and Home Inventory each have their own Specifics for each General. Locations can also be added or edited while adding or editing items, to accommodate new or changed entries.', style: AppText.dialog),
             const SizedBox(height: 6),
-            const Text('This page lets you view and manage location options as a whole — particularly useful for prepopulating them before capturing your Storage and Inventory items. Each General appears as an expandable card; expanded, it shows all its Specific locations, those connected by blue lines belonging to Storage and those by red to Inventory. Add a new General with the entry field at the bottom of the screen. New Specifics are added in the last row of each color\'s list. To edit or delete, tap any entry: a popup lets you update it or delete it — though delete is unavailable while items still use that location.', style: AppText.dialog),
+             Text('This page lets you view and manage location options as a whole — particularly useful for prepopulating them before capturing your Storage and Inventory items. Each General appears as an expandable card; expanded, it shows all its Specific locations, those connected by blue lines belonging to Storage and those by red to Inventory. Add a new General with the entry field at the bottom of the screen. New Specifics are added in the last row of each color\'s list. To edit or delete, tap any entry: a popup lets you update it or delete it — though delete is unavailable while items still use that location.', style: AppText.dialog),
           ],
         ],
       ),
@@ -241,7 +241,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
             child: Row(children: [
               Expanded(child: TextField(controller: addController, textCapitalization: TextCapitalization.words, decoration: _fieldDec(addHint), style: AppText.input, onSubmitted: (v) => _addSpecific(genId, v, kind))),
               const SizedBox(width: 6),
-              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addSpecific(genId, addController.text, kind), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
+              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addSpecific(genId, addController.text, kind), style: AppButton.primary, child:  Text('+ Add', style: AppText.buttonPrimary))),
             ]),
           ),
       ]),
@@ -395,7 +395,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 6),
                 elevation: 0,
-                color: AppColors.white,
+                color: AppColors.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
                 child: Column(children: [
                   // Header line: name and everything-below count at the
@@ -448,7 +448,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
             },
           ),
         ),
-        const Divider(height: 1, color: AppColors.border),
+         Divider(height: 1, color: AppColors.border),
         if (!kIsWeb && _editEnabled) Container(
           color: AppColors.scaffold,
           padding: const EdgeInsets.fromLTRB(6, 6, 6, 10),
@@ -456,7 +456,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
             child: Row(children: [
               Expanded(child: TextField(controller: _newGeneralController, textCapitalization: TextCapitalization.words, decoration: _fieldDec('New General Location'), style: AppText.input, onSubmitted: (v) => _addGeneral(v))),
               const SizedBox(width: 6),
-              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addGeneral(_newGeneralController.text), style: AppButton.primary, child: const Text('+ Add', style: AppText.buttonPrimary))),
+              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addGeneral(_newGeneralController.text), style: AppButton.primary, child:  Text('+ Add', style: AppText.buttonPrimary))),
             ]),
           ),
         ),
@@ -629,7 +629,7 @@ class _EntryEditDialogState extends State<_EntryEditDialog> {
           child: const Text('Delete'),
         ),
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(onPressed: () => Navigator.pop(context, (delete: false, name: _ctrl.text)), style: AppButton.primary, child: const Text('Update', style: AppText.buttonPrimary)),
+        ElevatedButton(onPressed: () => Navigator.pop(context, (delete: false, name: _ctrl.text)), style: AppButton.primary, child:  Text('Update', style: AppText.buttonPrimary)),
       ],
     );
   }

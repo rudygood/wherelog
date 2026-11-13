@@ -122,7 +122,7 @@ class LocationFilterSection extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.border, width: AppBorder.width),
               borderRadius: BorderRadius.circular(AppBorder.radius),
-              color: enabled ? AppColors.white : AppColors.scaffold,
+              color: enabled ? AppColors.surface : AppColors.scaffold,
             ),
             child: Row(
               children: [

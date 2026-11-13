@@ -265,15 +265,15 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
 
   Widget _buildDistinctPlaceholder() {
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Opacity(opacity: 0.68, child: Image.asset('assets/icon/app_icon.png', width: 64, height: 64, fit: BoxFit.contain)),
             const SizedBox(height: 6),
-            const Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 11)),
-            const Text('Tap to add', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+             Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 11)),
+             Text('Tap to add', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -294,7 +294,7 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
       child: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
+        decoration: BoxDecoration(color: AppColors.surface, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(9),
           child: hasPhoto
@@ -318,8 +318,8 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
                         onTap: () {},
                         child: Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border, width: AppBorder.width)),
-                          child: const Icon(Icons.edit, size: 12, color: AppColors.textSecondary),
+                          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border, width: AppBorder.width)),
+                          child:  Icon(Icons.edit, size: 12, color: AppColors.textSecondary),
                         ),
                       ),
                     ),
@@ -338,7 +338,7 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
       child: Container(
         width: double.infinity,
         height: 110,
-        decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
+        decoration: BoxDecoration(color: AppColors.surface, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
         child: photoFile == null
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -417,7 +417,7 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Expanded(child: Text('General / Specific does not reset so you can add multiple items, but you can change it when needed.', style: TextStyle(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600, height: 1.3))),
+                 Expanded(child: Text('General / Specific does not reset so you can add multiple items, but you can change it when needed.', style: TextStyle(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600, height: 1.3))),
                 const SizedBox(width: 12),
                 SizedBox(
                   height: 36,
@@ -431,9 +431,9 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
             ),
             if (addedItemsLog.isNotEmpty) ...[
               const SizedBox(height: 18),
-              const Text('ADDED THIS SESSION', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textPrimary)),
+               Text('ADDED THIS SESSION', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.textPrimary)),
               const SizedBox(height: 6),
-              ...addedItemsLog.map((l) => Padding(padding: const EdgeInsets.only(bottom: 3), child: Text('• $l', style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColors.textPrimary)))),
+              ...addedItemsLog.map((l) => Padding(padding: const EdgeInsets.only(bottom: 3), child: Text('• $l', style:  TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColors.textPrimary)))),
             ],
           ],
         ),

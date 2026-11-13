@@ -24,12 +24,12 @@ class GpsLocationSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('GPS LOCATION (required)', style: AppText.dialogSection),
+         Text('GPS LOCATION (required)', style: AppText.dialogSection),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.white,
+            color: AppColors.surface,
             border: Border.all(color: AppColors.border, width: AppBorder.width),
             borderRadius: BorderRadius.circular(AppBorder.radius),
           ),
@@ -49,7 +49,7 @@ class GpsLocationSection extends StatelessWidget {
                         hintStyle: AppText.inputHint,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                         filled: true,
-                        fillColor: AppColors.white,
+                        fillColor: AppColors.surface,
                         contentPadding: AppSize.fieldPadding,
                         isDense: true,
                       ),
@@ -67,7 +67,7 @@ class GpsLocationSection extends StatelessWidget {
                         hintStyle: AppText.inputHint,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                         filled: true,
-                        fillColor: AppColors.white,
+                        fillColor: AppColors.surface,
                         contentPadding: AppSize.fieldPadding,
                         isDense: true,
                       ),
@@ -112,7 +112,7 @@ class GpsLocationSection extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const Text('PLACE NAME (required)', style: AppText.dialogSection),
+               Text('PLACE NAME (required)', style: AppText.dialogSection),
               const SizedBox(height: 6),
               TextField(
                 controller: nameController,
@@ -123,7 +123,7 @@ class GpsLocationSection extends StatelessWidget {
                   hintStyle: AppText.inputHint,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                   filled: true,
-                  fillColor: AppColors.white,
+                  fillColor: AppColors.surface,
                   contentPadding: AppSize.fieldPadding,
                   isDense: true,
                 ),

@@ -134,7 +134,7 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
                 // action instead of naming the task, Rudy's ruling:
                 // his first wording presumed the user already knew
                 // what verifying entailed and how a pin moves here).
-                const Text(
+                 Text(
                   'If the pin isn\'t on the right spot, zoom in and tap the right spot to move it.',
                   style: TextStyle(
                       fontSize: 13, color: AppColors.textPrimary),
@@ -146,7 +146,7 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
                 if (d.address.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(d.address,
-                      style: const TextStyle(
+                      style:  TextStyle(
                           fontSize: 13, color: AppColors.textSecondary)),
                 ],
                 const SizedBox(height: 4),
@@ -194,7 +194,7 @@ class _PoiImportVerifyScreenState extends State<PoiImportVerifyScreen> {
                             point: _point,
                             width: 50,
                             height: 50,
-                            child: const Icon(Icons.location_pin,
+                            child:  Icon(Icons.location_pin,
                                 size: 48, color: AppColors.alert),
                           ),
                         ],

@@ -186,7 +186,7 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> with WidgetsB
       builder: (c) => AlertDialog(
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
-        title: const Text('Clipboard contents', style: AppText.dialogTitle),
+        title:  Text('Clipboard contents', style: AppText.dialogTitle),
         content: SingleChildScrollView(child: SelectableText(report, style: const TextStyle(fontSize: 12, fontFamily: 'monospace'))),
         actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close'))],
       ),
@@ -249,54 +249,54 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> with WidgetsB
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border, width: 1)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.textPrimary.withOpacity(0.6), width: 1)),
       filled: true,
-      fillColor: AppColors.white,
+      fillColor: AppColors.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       isDense: true,
       prefixIcon: prefix,
     );
     if (widget.variant == PhotoDetailsVariant.storage) {
       return Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Quantity', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.qtyController, keyboardType: TextInputType.number, style: AppText.input, decoration: deco('1')))])),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Quantity', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.qtyController, keyboardType: TextInputType.number, style: AppText.input, decoration: deco('1')))])),
         const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Value (\$)', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.valueController, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: AppText.input, decoration: deco('0.00', prefix: const Icon(Icons.attach_money, size: 18, color: AppColors.textSecondary))))])),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Value (\$)', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.valueController, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: AppText.input, decoration: deco('0.00', prefix:  Icon(Icons.attach_money, size: 18, color: AppColors.textSecondary))))])),
       ]);
     } else if (widget.variant == PhotoDetailsVariant.inventory) {
       return Column(children: [
         Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Brand', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.brandController, textCapitalization: TextCapitalization.words, style: AppText.input, decoration: deco('Optional')))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Brand', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.brandController, textCapitalization: TextCapitalization.words, style: AppText.input, decoration: deco('Optional')))])),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Model', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.modelController, textCapitalization: TextCapitalization.sentences, style: AppText.input, decoration: deco('Optional')))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Model', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.modelController, textCapitalization: TextCapitalization.sentences, style: AppText.input, decoration: deco('Optional')))])),
         ]),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Serial Number', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.serialController, textCapitalization: TextCapitalization.none, style: AppText.input, decoration: deco('Optional')))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Serial Number', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.serialController, textCapitalization: TextCapitalization.none, style: AppText.input, decoration: deco('Optional')))])),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Quantity', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.qtyController, keyboardType: TextInputType.number, style: AppText.input, decoration: deco('1')))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Quantity', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.qtyController, keyboardType: TextInputType.number, style: AppText.input, decoration: deco('1')))])),
         ]),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Purchase Price (\$)', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.purchasePriceController, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: AppText.input, decoration: deco('0.00', prefix: const Icon(Icons.attach_money, size: 18, color: AppColors.textSecondary))))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Purchase Price (\$)', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.purchasePriceController, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: AppText.input, decoration: deco('0.00', prefix:  Icon(Icons.attach_money, size: 18, color: AppColors.textSecondary))))])),
           const SizedBox(width: 12),
           // This is the figure an insurance claim pays on (schema D4) —
           // labelled so it can never be confused with purchase price.
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Replacement Value (\$)', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.valueController, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: AppText.input, decoration: deco('0.00', prefix: const Icon(Icons.attach_money, size: 18, color: AppColors.textSecondary))))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Replacement Value (\$)', style: AppText.dialogSection), const SizedBox(height: 4), SizedBox(height: fieldHeight, child: TextField(controller: widget.valueController, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: AppText.input, decoration: deco('0.00', prefix:  Icon(Icons.attach_money, size: 18, color: AppColors.textSecondary))))])),
         ]),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Acquisition Date', style: AppText.dialogSection), const SizedBox(height: 4), InkWell(onTap: widget.onPickAcquiredDate, borderRadius: BorderRadius.circular(AppRadius.button), child: Container(height: fieldHeight, padding: const EdgeInsets.symmetric(horizontal: 10), decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)), child: Row(children: [Expanded(child: Text(widget.acquiredDate == null ? 'Optional' : '${widget.acquiredDate!.month}/${widget.acquiredDate!.day}/${widget.acquiredDate!.year}', style: TextStyle(color: widget.acquiredDate == null ? AppColors.textDisabled : AppColors.textPrimary, fontSize: 13, fontWeight: widget.acquiredDate == null ? FontWeight.normal : FontWeight.w600))), const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary)])))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [ Text('Acquisition Date', style: AppText.dialogSection), const SizedBox(height: 4), InkWell(onTap: widget.onPickAcquiredDate, borderRadius: BorderRadius.circular(AppRadius.button), child: Container(height: fieldHeight, padding: const EdgeInsets.symmetric(horizontal: 10), decoration: BoxDecoration(color: AppColors.surface, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)), child: Row(children: [Expanded(child: Text(widget.acquiredDate == null ? 'Optional' : '${widget.acquiredDate!.month}/${widget.acquiredDate!.day}/${widget.acquiredDate!.year}', style: TextStyle(color: widget.acquiredDate == null ? AppColors.textDisabled : AppColors.textPrimary, fontSize: 13, fontWeight: widget.acquiredDate == null ? FontWeight.normal : FontWeight.w600))),  Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary)])))])),
           const SizedBox(width: 12),
           const Expanded(child: SizedBox()),
         ]),
       ]);
     } else {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('ADDRESS (optional)', style: AppText.dialogSection),
+         Text('ADDRESS (optional)', style: AppText.dialogSection),
         const SizedBox(height: 4),
-        SizedBox(height: fieldHeight, child: TextField(controller: widget.addressController, textCapitalization: TextCapitalization.words, style: AppText.input, decoration: InputDecoration(hintText: 'Optional address from map', hintStyle: AppText.inputHint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), filled: true, fillColor: AppColors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), isDense: true, suffixIcon: IconButton(icon: const Icon(Icons.map_outlined, color: AppColors.textSecondary), onPressed: widget.onPickMap)))),
+        SizedBox(height: fieldHeight, child: TextField(controller: widget.addressController, textCapitalization: TextCapitalization.words, style: AppText.input, decoration: InputDecoration(hintText: 'Optional address from map', hintStyle: AppText.inputHint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius), borderSide: BorderSide(color: AppColors.border)), filled: true, fillColor: AppColors.surface, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), isDense: true, suffixIcon: IconButton(icon:  Icon(Icons.map_outlined, color: AppColors.textSecondary), onPressed: widget.onPickMap)))),
         const SizedBox(height: 12),
-        const Text('COORDS SOURCE', style: AppText.dialogSection),
+         Text('COORDS SOURCE', style: AppText.dialogSection),
         const SizedBox(height: 4),
-        Container(height: fieldHeight, padding: const EdgeInsets.symmetric(horizontal: 12), decoration: BoxDecoration(color: AppColors.scaffoldDark, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)), alignment: Alignment.centerLeft, child: Text(widget.coordsSource?.isNotEmpty == true ? widget.coordsSource! : 'Not set - will be set on save', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600))),
+        Container(height: fieldHeight, padding: const EdgeInsets.symmetric(horizontal: 12), decoration: BoxDecoration(color: AppColors.scaffoldDark, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)), alignment: Alignment.centerLeft, child: Text(widget.coordsSource?.isNotEmpty == true ? widget.coordsSource! : 'Not set - will be set on save', style:  TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600))),
       ]);
     }
   }
@@ -337,7 +337,7 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> with WidgetsB
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.white, border: photoBorder, borderRadius: BorderRadius.circular(AppRadius.button)),
+      decoration: BoxDecoration(color: AppColors.surface, border: photoBorder, borderRadius: BorderRadius.circular(AppRadius.button)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -378,10 +378,10 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> with WidgetsB
           Container(
             width: thumbSize,
             height: thumbSize,
-            decoration: BoxDecoration(color: AppColors.white, border: photoBorder, borderRadius: BorderRadius.circular(AppRadius.button)),
+            decoration: BoxDecoration(color: AppColors.surface, border: photoBorder, borderRadius: BorderRadius.circular(AppRadius.button)),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.button - 1),
-              child: hasApp && widget.photoFile != null ? Image.file(widget.photoFile!, fit: BoxFit.cover) : Container(color: AppColors.scaffoldDark, child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.image_outlined, size: 32, color: AppColors.textDisabled), SizedBox(height: 4), Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 10))])),
+              child: hasApp && widget.photoFile != null ? Image.file(widget.photoFile!, fit: BoxFit.cover) : Container(color: AppColors.scaffoldDark, child:  Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.image_outlined, size: 32, color: AppColors.textDisabled), SizedBox(height: 4), Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 10))])),
             ),
           ),
           const SizedBox(width: 12),
@@ -412,7 +412,7 @@ class _PhotoDetailsSectionState extends State<PhotoDetailsSection> with WidgetsB
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove Photo?', style: AppText.dialogTitleAlert),
+        title:  Text('Remove Photo?', style: AppText.dialogTitleAlert),
         content: const Text('This will delete the photo from this entry. This cannot be undone.'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
         actions: [

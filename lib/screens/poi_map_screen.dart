@@ -176,7 +176,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                 DropdownButton<double>(
                   value: _radiusMiles,
                   isDense: true,
-                  style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                  style:  TextStyle(fontSize: 13, color: AppColors.textPrimary),
                   items: _radiusOptions.map((r) => DropdownMenuItem<double>(
                     value: r,
                     child: Text(r == 0 ? 'All' : '${r.toInt()} mi'),
@@ -235,7 +235,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                         width: 30,
                         height: 30,
                         point: ll.LatLng(_currentPos!.latitude, _currentPos!.longitude),
-                        child: const Icon(Icons.my_location, color: AppColors.mapAccent, size: 28),
+                        child:  Icon(Icons.my_location, color: AppColors.mapAccent, size: 28),
                       ),
                     // POI pins
                     for (final poi in _filteredPois)
@@ -250,7 +250,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: AppColors.white,
+                                  color: AppColors.surface,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(color: AppColors.border, width: AppBorder.width),
                                   boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 2)],
@@ -264,7 +264,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const Icon(Icons.location_on, color: AppColors.alert, size: 28),
+                               Icon(Icons.location_on, color: AppColors.alert, size: 28),
                             ],
                           ),
                         ),
@@ -345,7 +345,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                       width: 180,
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(AppRadius.button),
                         border: Border.all(color: AppColors.border, width: AppBorder.width),
                       ),
@@ -354,13 +354,13 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
                         children: [
                           Text(poi['name']?.toString() ?? 'POI', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           if (poi['address'] != null && poi['address'].toString().isNotEmpty)
-                            Text(poi['address'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: AppColors.textDisabled)),
+                            Text(poi['address'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style:  TextStyle(fontSize: 10, color: AppColors.textDisabled)),
                           const Spacer(),
                           Row(
                             children: [
-                              if (distStr.isNotEmpty) Text(distStr, style: const TextStyle(fontSize: 10, color: AppColors.mapAccent, fontWeight: FontWeight.w600)),
+                              if (distStr.isNotEmpty) Text(distStr, style:  TextStyle(fontSize: 10, color: AppColors.mapAccent, fontWeight: FontWeight.w600)),
                               const Spacer(),
-                              const Icon(Icons.map, size: 14, color: AppColors.textDisabled),
+                               Icon(Icons.map, size: 14, color: AppColors.textDisabled),
                             ],
                           ),
                         ],
@@ -394,11 +394,11 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
             Text(poi['name']?.toString() ?? 'POI', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             if (poi['address'] != null && poi['address'].toString().isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(poi['address'].toString(), style: const TextStyle(color: AppColors.textDisabled)),
+              Text(poi['address'].toString(), style:  TextStyle(color: AppColors.textDisabled)),
             ],
             if (distStr.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(distStr, style: const TextStyle(color: AppColors.mapAccent, fontWeight: FontWeight.w600)),
+              Text(distStr, style:  TextStyle(color: AppColors.mapAccent, fontWeight: FontWeight.w600)),
             ],
             const SizedBox(height: 12),
             Row(
@@ -409,7 +409,7 @@ class _PoiMapScreenState extends State<PoiMapScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Text('${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}', style: const TextStyle(fontSize: 11, color: AppColors.textDisabled)),
+            Text('${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}', style:  TextStyle(fontSize: 11, color: AppColors.textDisabled)),
           ],
         ),
       ),

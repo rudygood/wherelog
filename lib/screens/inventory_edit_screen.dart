@@ -390,15 +390,15 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
 
   Widget _buildDistinctPlaceholder() {
     return Container(
-      color: AppColors.white,
+      color: AppColors.surface,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Opacity(opacity: 0.68, child: Image.asset('assets/icon/app_icon.png', width: 64, height: 64, fit: BoxFit.contain)),
             const SizedBox(height: 6),
-            const Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 11)),
-            const Text('Tap to add', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+             Text('No Photo', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 11)),
+             Text('Tap to add', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -422,7 +422,7 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
       child: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(color: AppColors.white, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
+        decoration: BoxDecoration(color: AppColors.surface, border: Border.all(color: AppColors.border, width: AppBorder.width), borderRadius: BorderRadius.circular(AppRadius.button)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(9),
           child: hasPhoto
@@ -455,8 +455,8 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
                         onTap: () {},
                         child: Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border, width: AppBorder.width)),
-                          child: const Icon(Icons.edit, size: 12, color: AppColors.textSecondary),
+                          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(5), border: Border.all(color: AppColors.border, width: AppBorder.width)),
+                          child:  Icon(Icons.edit, size: 12, color: AppColors.textSecondary),
                         ),
                       ),
                     ),

@@ -95,7 +95,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
     return ExpansionTile(
       title: Text('$title (${rows.length})', style: AppText.dialogSection),
       children: rows.isEmpty
-          ? const [
+          ?  [
               ListTile(
                 dense: true,
                 title: Text('None', style: AppText.dialog),
@@ -143,7 +143,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppBorder.radius),
               border: Border.all(color: AppColors.border, width: AppBorder.width),
             ),

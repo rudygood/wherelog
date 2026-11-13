@@ -26,7 +26,7 @@ class DirectionsIcon extends StatelessWidget {
       child: CustomPaint(
         painter: DirectionsIconPainter(
           color: color ?? AppColors.textPrimary,
-          backgroundColor: backgroundColor ?? AppColors.white,
+          backgroundColor: backgroundColor ?? AppColors.surface,
         ),
       ),
     );

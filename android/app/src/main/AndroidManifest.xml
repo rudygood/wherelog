@@ -5,6 +5,27 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Android 11+ package visibility: without this block, canLaunchUrl()
+         cannot see any app that handles these intents and wrongly reports
+         that none exists. That is why the Contact page said no mail app is
+         set up even with Outlook/Gmail installed — and why Directions'
+         geo: check was blind too (it only worked by falling through to a
+         direct launch). Declaring the intents makes the check truthful. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:label="WhereLog"
         android:name="${applicationName}"

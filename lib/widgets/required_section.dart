@@ -328,7 +328,7 @@ class _RequiredSectionState extends State<RequiredSection> {
     return showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Capitalization differs', style: AppText.dialogTitle),
+        title:  Text('Capitalization differs', style: AppText.dialogTitle),
         content: Text('"$typed" matches the existing "$stored" except for capitalization.',
             style: AppText.dialog),
         actions: [
@@ -347,7 +347,7 @@ class _RequiredSectionState extends State<RequiredSection> {
     return showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Change capitalization', style: AppText.dialogTitle),
+        title:  Text('Change capitalization', style: AppText.dialogTitle),
         content: Text(
             'Change "$anchor" to "$text"? Only the capitalization is different; every item filed under it keeps the new spelling.',
             style: AppText.dialog),
@@ -371,7 +371,7 @@ class _RequiredSectionState extends State<RequiredSection> {
     return showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Rename or add?', style: AppText.dialogTitle),
+        title:  Text('Rename or add?', style: AppText.dialogTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -442,7 +442,7 @@ class _RequiredSectionState extends State<RequiredSection> {
                     hintStyle: AppText.inputHint,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                     filled: true,
-                    fillColor: enabled ? AppColors.white : AppColors.scaffoldDark,
+                    fillColor: enabled ? AppColors.surface : AppColors.scaffoldDark,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     isDense: true,
                   ),
@@ -483,10 +483,10 @@ class _RequiredSectionState extends State<RequiredSection> {
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.surface,
               border: Border.all(color: AppColors.border, width: AppBorder.width),
               borderRadius: BorderRadius.circular(AppBorder.radius),
-              boxShadow: const [BoxShadow(color: AppColors.border, blurRadius: 4, offset: Offset(0, 2))],
+              boxShadow:  [BoxShadow(color: AppColors.border, blurRadius: 4, offset: Offset(0, 2))],
             ),
             constraints: const BoxConstraints(maxHeight: 180),
             child: ListView.builder(
@@ -513,7 +513,7 @@ class _RequiredSectionState extends State<RequiredSection> {
                   child: ListTile(
                     dense: true,
                     title: Text(e, style: TextStyle(fontWeight: isExact ? FontWeight.bold : FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
-                    trailing: isExact ? const Icon(Icons.check, size: 16, color: AppColors.textPrimary) : null,
+                    trailing: isExact ?  Icon(Icons.check, size: 16, color: AppColors.textPrimary) : null,
                   ),
                 );
               },
@@ -546,7 +546,7 @@ class _RequiredSectionState extends State<RequiredSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('LOCATION', style: AppText.dialogSection),
+         Text('LOCATION', style: AppText.dialogSection),
         const SizedBox(height: 2),
         SizedBox(
           height: 48,
@@ -559,7 +559,7 @@ class _RequiredSectionState extends State<RequiredSection> {
           ),
         ),
         const SizedBox(height: 10),
-        const Text('General Area (required)', style: AppText.dialogSection),
+         Text('General Area (required)', style: AppText.dialogSection),
         const SizedBox(height: 4),
         buildLocationField(
           controller: widget.generalController,
@@ -597,7 +597,7 @@ class _RequiredSectionState extends State<RequiredSection> {
               hintStyle: AppText.inputHint,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
               filled: true,
-              fillColor: AppColors.white,
+              fillColor: AppColors.surface,
               contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               isDense: true,
             ),
@@ -649,12 +649,12 @@ class _GeneralSpecificPickerSheetState extends State<_GeneralSpecificPickerSheet
             controller: searchController,
             decoration: InputDecoration(
               hintText: widget.hint,
-              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+              prefixIcon:  Icon(Icons.search, color: AppColors.textSecondary),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
             ),
           ),
           const SizedBox(height: 8),
-          if (widget.allowBlank) ListTile(title: const Text('(None)', style: AppText.dialogItem), onTap: () => Navigator.pop(context, '')),
+          if (widget.allowBlank) ListTile(title:  Text('(None)', style: AppText.dialogItem), onTap: () => Navigator.pop(context, '')),
           Expanded(
             child: ListView.builder(
               controller: scroll,

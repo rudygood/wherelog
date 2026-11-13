@@ -247,7 +247,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     final chosen = await showDialog<File>(context: context, builder: (c) => AlertDialog(
       backgroundColor: AppColors.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
-      title: const Text('Auto-Backups', style: AppText.dialogTitle),
+      title:  Text('Auto-Backups', style: AppText.dialogTitle),
       content: SizedBox(
         width: double.maxFinite,
         child: ConstrainedBox(
@@ -268,9 +268,9 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
               return ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.history, size: 20, color: AppColors.textSecondary),
-                title: Text(_fmtStamp(when.toLocal()), style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-                subtitle: size.isEmpty ? null : Text(size, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                leading:  Icon(Icons.history, size: 20, color: AppColors.textSecondary),
+                title: Text(_fmtStamp(when.toLocal()), style:  TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                subtitle: size.isEmpty ? null : Text(size, style:  TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                 onTap: () => Navigator.pop(c, f),
               );
             },
@@ -335,7 +335,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     final confirm = await showDialog<bool>(context: context, builder: (c)=>AlertDialog(
       backgroundColor: AppColors.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
-      title: const Text('Confirm Restore - Overwrite', style: AppText.dialogTitleAlert),
+      title:  Text('Confirm Restore - Overwrite', style: AppText.dialogTitleAlert),
       content: Text('Restore will DELETE current:\nStorage Item: $_cStorageItems, Home Inventory: $_cInventoryItems, Place of Interest: $_cPoiItems, General Location: $_cGenerals\n\nAnd REPLACE with this backup:\n${sel.fileName}\nExported: ${_fmtExported(sel)}\nStorage Item: ${sel.countOf('storageItems')}, Home Inventory: ${sel.countOf('inventoryItems')}, Place of Interest: ${sel.countOf('poiItems')}, General Location: ${sel.countOf('generals')}, Photos: ${sel.photoCount}\n\n$autoNote', style: const TextStyle(fontSize: 12)),
       actions: [TextButton(onPressed: ()=>Navigator.pop(c,false), child: const Text('Cancel')), ElevatedButton(onPressed: ()=>Navigator.pop(c,true), style: AppButton.primary.copyWith(backgroundColor: WidgetStateProperty.all(AppColors.alert)), child: const Text('Yes, Restore'))],
     ));
@@ -386,7 +386,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
           width: double.infinity,
           margin: const EdgeInsets.only(top: 9),
           padding: const EdgeInsets.fromLTRB(6, 15, 6, 6),
-          decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
           child: child,
         ),
         Positioned(
@@ -398,7 +398,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 4),
             color: AppColors.scaffold,
-            child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            child: Text(label, style:  TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
           ),
         ),
       ],
@@ -414,21 +414,21 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
-      decoration: BoxDecoration(color: AppColors.white, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppBorder.radius), border: Border.all(color: AppColors.border, width: AppBorder.width)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Text('Important information', style: AppText.dialogSection),
+             Text('Important information', style: AppText.dialogSection),
             const Spacer(),
             TextButton(
               onPressed: _toggleInfo,
               style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              child: Text(_infoExpanded ? 'Hide' : 'Show', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+              child: Text(_infoExpanded ? 'Hide' : 'Show', style:  TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
             ),
           ]),
           if (_infoExpanded)
-            const Text('Imports and Exports utilize a ZIP file that stores the app\'s data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open — navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.', style: AppText.dialog),
+             Text('Imports and Exports utilize a ZIP file that stores the app\'s data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open — navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.', style: AppText.dialog),
         ],
       ),
     );
@@ -438,7 +438,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
     showDialog<void>(context: context, builder: (c) => AlertDialog(
       backgroundColor: AppColors.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
-      title: const Text('More Information', style: AppText.dialogTitle),
+      title:  Text('More Information', style: AppText.dialogTitle),
       content: const SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Export', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         SizedBox(height: 4),
@@ -453,8 +453,8 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   }
 
   Widget _countHeaderRow() {
-    const style = TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary);
-    return const Padding(
+     final style = TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary);
+    return  Padding(
       padding: EdgeInsets.only(left: 4, right: 4, bottom: 3),
       child: Row(children: [
         Expanded(child: SizedBox()),
@@ -468,12 +468,12 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   // (Rudy, 2026-11-10).
   Widget _countRow(String label, int count, {int? backup, bool alt = false}) {
     return Container(
-      decoration: BoxDecoration(color: alt ? AppColors.card : AppColors.white, borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: alt ? AppColors.card : AppColors.surface, borderRadius: BorderRadius.circular(4)),
       padding: const EdgeInsets.symmetric(vertical: 2.5, horizontal: 4),
       child: Row(children: [
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary))),
-        SizedBox(width: 56, child: Text(count.toString(), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
-        SizedBox(width: 56, child: Text(backup?.toString() ?? '\u2013', textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: AppColors.alert))),
+        Expanded(child: Text(label, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary))),
+        SizedBox(width: 56, child: Text(count.toString(), textAlign: TextAlign.right, style:  TextStyle(fontSize: 13, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
+        SizedBox(width: 56, child: Text(backup?.toString() ?? '\u2013', textAlign: TextAlign.right, style:  TextStyle(fontSize: 13, fontFamily: 'monospace', color: AppColors.alert))),
       ]),
     );
   }
@@ -558,14 +558,14 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
               label: 'Selected Backup',
               labelRight: true,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_selection!.fileName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(_selection!.fileName, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 4),
                 Row(children: [
-                  Expanded(child: Text('Exported: ${_fmtExported(_selection!)}', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary))),
-                  Text('Format version ${_selection!.formatVersion}', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                  Expanded(child: Text('Exported: ${_fmtExported(_selection!)}', style:  TextStyle(fontSize: 12, color: AppColors.textPrimary))),
+                  Text('Format version ${_selection!.formatVersion}', style:  TextStyle(fontSize: 12, color: AppColors.textPrimary)),
                 ]),
                 const SizedBox(height: 6),
-                const Text('Current database record counts are shown below beside the backup record counts.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                 Text('Current database record counts are shown below beside the backup record counts.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
               ]),
             ),
             const SizedBox(height: 10),
@@ -600,12 +600,12 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
-              child: Text(_status, style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: AppColors.textPrimary)),
+              child: Text(_status, style:  TextStyle(fontSize: 12, fontFamily: 'monospace', color: AppColors.textPrimary)),
             ),
           if (_lastExportPath.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text('Last export:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            Text(_lastExportPath, style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: AppColors.textSecondary)),
+             Text('Last export:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text(_lastExportPath, style:  TextStyle(fontSize: 10, fontFamily: 'monospace', color: AppColors.textSecondary)),
           ],
         ]),
       ),
