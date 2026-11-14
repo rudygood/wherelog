@@ -13,7 +13,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String theme = 'system';
   List<String> tabOrder = ['Storage Items', 'Home Inventory', 'Places of Interest'];
   bool confirmDelete = true;
-  bool _isReordering = false;
   int _pressedIndex = -1;
 
   static const List<String> kTabDisplayNames = [
@@ -70,111 +69,116 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildReorderableArea() {
-    Widget buildBox(String label, int idx, bool showDragHandle) {
+    // Horizontal tab row (2026-11-13): the three tabs imitate the main
+    // page's tab tops — rounded top corners, square bottom corners —
+    // laid out horizontally and dragged left or right to reorder. All
+    // three wear a border, which is what marks them as movable pieces
+    // rather than an active tab set (there only the selected tab has
+    // one). The two-headed arrow underneath is the sliding cue. No
+    // Reorder mode, no numbers, no drag handles: the row is the
+    // control, always draggable.
+    //
+    // The row sits in a fixed-height box on purpose: a horizontal
+    // reorderable list inside a vertically scrolling page has no
+    // height of its own to take, and without the bound the page
+    // comes up blank (2026-11-13).
+    Widget buildTab(String label, int idx) {
       final isPressed = _pressedIndex == idx;
-      // The boxes imitate the main page's tab tops (evaluation fix
-      // E7): the name broken into two lines where the tab breaks
-      // (before the last word), one fixed box width sized for the
-      // widest name, and the drag handle OUTSIDE the box — a tab
-      // top holds nothing but its name.
       final twoLine = label.replaceFirstMapped(
           RegExp(r' (\S+)$'), (m) => '\n${m[1]}');
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 22,
-            child: Text('${idx + 1}', style: AppText.input),
-          ),
-          const SizedBox(width: 6),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            width: 96,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppBorder.radius),
-              border: Border.all(color: isPressed ? AppColors.buttonBg : AppColors.border, width: isPressed ? 1.4 : AppBorder.width),
-              boxShadow: isPressed
-                  ? [BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: const Offset(0, 3))]
-                  : [],
+      final tabWidth = (MediaQuery.of(context).size.width - 32 - 12) / 3;
+      return SizedBox(
+        width: tabWidth,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
             ),
-            transform: isPressed ? (Matrix4.identity()..translate(0.0, -1.5, 0.0)..scale(1.02)) : Matrix4.identity(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Text(twoLine, style: AppText.input, textAlign: TextAlign.center),
-            ),
+            border: Border.all(
+                color: isPressed ? AppColors.buttonBg : AppColors.border,
+                width: isPressed ? 1.4 : AppBorder.width),
+            boxShadow: isPressed
+                ? [BoxShadow(color: AppColors.shadowSoft, blurRadius: 8, offset: const Offset(0, 3))]
+                : [],
           ),
-          if (showDragHandle) ...[
-            const SizedBox(width: 6),
-             Icon(Icons.drag_handle_rounded, size: 20, color: AppColors.textSecondary),
-          ],
-        ],
+          transform: isPressed ? (Matrix4.identity()..translate(0.0, -1.5, 0.0)..scale(1.02)) : Matrix4.identity(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Text(twoLine, style: AppText.input, textAlign: TextAlign.center),
+          ),
+        ),
       );
     }
 
-    if (_isReordering) {
-      return ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        buildDefaultDragHandles: false,
-        proxyDecorator: (child, index, animation) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, _) {
-              final t = Curves.easeOut.transform(animation.value);
-              return Transform.scale(
-                scale: 1.0 + (t * 0.05),
-                child: Material(
-                  elevation: 12 + (t * 8),
-                  shadowColor: AppColors.shadowMedium,
-                  borderRadius: BorderRadius.circular(AppBorder.radius),
-                  child: child,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 64,
+          child: ReorderableListView.builder(
+          shrinkWrap: true,
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          proxyDecorator: (child, index, animation) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, _) {
+                final t = Curves.easeOut.transform(animation.value);
+                return Transform.scale(
+                  scale: 1.0 + (t * 0.05),
+                  child: Material(
+                    elevation: 12 + (t * 8),
+                    shadowColor: AppColors.shadowMedium,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                    child: child,
+                  ),
+                );
+              },
+              child: child,
+            );
+          },
+          itemCount: tabOrder.length,
+          onReorder: (oldIndex, newIndex) {
+            setState(() {
+              if (newIndex > oldIndex) newIndex--;
+              final item = tabOrder.removeAt(oldIndex);
+              tabOrder.insert(newIndex, item);
+              _pressedIndex = -1;
+            });
+            svc.setTabOrder(tabOrder);
+          },
+          itemBuilder: (context, index) {
+            final label = tabOrder[index];
+            return Padding(
+              key: ValueKey(label),
+              padding: EdgeInsets.only(right: index < tabOrder.length - 1 ? 6 : 0),
+              child: Listener(
+                onPointerDown: (_) => setState(() => _pressedIndex = index),
+                onPointerUp: (_) => setState(() => _pressedIndex = -1),
+                onPointerCancel: (_) => setState(() => _pressedIndex = -1),
+                child: ReorderableDragStartListener(
+                  index: index,
+                  child: buildTab(label, index),
                 ),
-              );
-            },
-            child: child,
-          );
-        },
-        itemCount: tabOrder.length,
-        onReorder: (oldIndex, newIndex) {
-          setState(() {
-            if (newIndex > oldIndex) newIndex--;
-            final item = tabOrder.removeAt(oldIndex);
-            tabOrder.insert(newIndex, item);
-            _pressedIndex = -1;
-          });
-          svc.setTabOrder(tabOrder);
-        },
-        itemBuilder: (context, index) {
-          final label = tabOrder[index];
-          return Padding(
-            key: ValueKey(label),
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Listener(
-              onPointerDown: (_) => setState(() => _pressedIndex = index),
-              onPointerUp: (_) => setState(() => _pressedIndex = -1),
-              onPointerCancel: (_) => setState(() => _pressedIndex = -1),
-              child: ReorderableDragStartListener(
-                index: index,
-                child: buildBox(label, index, true),
               ),
-            ),
-          );
-        },
-      );
-    } else {
-      return Column(
-        children: tabOrder.asMap().entries.map((entry) {
-          final idx = entry.key;
-          final label = entry.value;
-          return Padding(
-            key: ValueKey(label),
-            padding: const EdgeInsets.only(bottom: 8),
-            child: buildBox(label, idx, false),
-          );
-        }).toList(),
-      );
-    }
+            );
+          },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Icon(Icons.swap_horiz, size: 22, color: AppColors.textSecondary),
+        ),
+      ],
+    );
   }
 
   @override Widget build(BuildContext context) {
@@ -199,31 +203,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
            Text('MAIN SCREEN TAB ORDER', style: AppText.dialogSection),
           const SizedBox(height: 4),
-           Text('Tap "Reorder" and then drag the tabs to your desired order.', style: AppText.dialog),
+           Text('Drag the tabs left or right to change their order.', style: AppText.dialog),
           const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.5,
-                child: _buildReorderableArea(),
-              ),
-              const Spacer(),
-              Align(
-                alignment: Alignment.center,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() => _isReordering = !_isReordering);
-                    if (!_isReordering) {
-                      svc.setTabOrder(tabOrder);
-                    }
-                  },
-                  style: _isReordering ? AppButton.whiteSmall : AppButton.primarySmall,
-                  child: Text(_isReordering ? 'Done' : 'Reorder'),
-                ),
-              ),
-            ],
-          ),
+          _buildReorderableArea(),
 
           AppDivider.horizontal,
 

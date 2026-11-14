@@ -1127,9 +1127,9 @@ class _HomeScreenState extends State<HomeScreen>
             indicator: BoxDecoration(
               color: AppColors.surface,
               border:  Border(
-                top: BorderSide(color: AppColors.border, width: 1),
-                left: BorderSide(color: AppColors.border, width: 1),
-                right: BorderSide(color: AppColors.border, width: 1),
+                top: AppBorder.sideStrong,
+                left: AppBorder.sideStrong,
+                right: AppBorder.sideStrong,
               ),
               borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(12), topRight: Radius.circular(12))),

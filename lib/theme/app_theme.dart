@@ -40,6 +40,9 @@ class AppColors {
   static const white = Colors.white;
   // Single source of truth for all borders
   static Color get border => isDark ? const Color(0x33FFFFFF) : const Color(0x61000000);
+  // A stronger border for the main page's selected tab: the standard
+  // 20% white border is too faint to read in dark mode (2026-11-13).
+  static Color get borderStrong => isDark ? const Color(0x80FFFFFF) : const Color(0x61000000);
   static Color get textPrimary => isDark ? const Color(0xFFF2EEE6) : const Color(0xFF1A1A1A);
   static Color get textSecondary => isDark ? const Color(0xFFB8B0A4) : const Color(0xFF444444);
   static Color get textDisabled => isDark ? const Color(0xFF8A8378) : const Color(0xFF6B6B6B);
@@ -100,6 +103,7 @@ class AppBorder {
   // Borders resolve live like the colours do (AppColors.border is a getter),
   // so these are getters, not consts.
   static BorderSide get side => BorderSide(color: AppColors.border, width: 1.0);
+  static BorderSide get sideStrong => BorderSide(color: AppColors.borderStrong, width: 1.0);
   static BorderSide get sideLight => BorderSide(color: AppColors.border, width: 1.0); // same, but semantic
   // For selection pills - selected vs unselected
   static BorderSide get sideSelected => BorderSide(color: AppColors.buttonBg, width: 1.8);

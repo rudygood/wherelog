@@ -3,6 +3,8 @@ import '../theme/app_theme.dart';
 import '../screens/location_options_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/export_import_screen.dart';
+import '../screens/help_screen.dart';
+import '../screens/reports_screen.dart';
 import '../screens/about_screen.dart';
 import '../screens/contact_support_screen.dart';
 
@@ -128,8 +130,9 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                     const Divider(height: 12, thickness: 0.5),
                     menuTile(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Preferences, defaults', popValue: 'settings'),
                     menuTile(icon: Icons.import_export_outlined, title: 'Export / Import', subtitle: 'ZIP backup with photos, restore', popValue: 'export_import'),
+                    menuTile(icon: Icons.assessment_outlined, title: 'Reports', subtitle: 'Insurance report, location CSVs', popValue: 'reports'),
                     menuTile(icon: Icons.contact_support_outlined, title: 'Contact / Support', subtitle: 'Feedback, report issue', popValue: 'contact'),
-                    menuTile(icon: Icons.help_outline, title: 'Help', subtitle: 'How to use WhereLog', enabled: false),
+                    menuTile(icon: Icons.help_outline, title: 'Help', subtitle: 'How to use WhereLog', popValue: 'help'),
                     const Divider(height: 12, thickness: 0.5),
                     menuTile(icon: Icons.info_outline, title: 'About', subtitle: 'Version, data paths', popValue: 'about'),
                   ],
@@ -164,8 +167,14 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
     case 'export_import':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const ExportImportScreen()));
       return null;
+    case 'reports':
+      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const ReportsScreen()));
+      return null;
     case 'contact':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const ContactSupportScreen()));
+      return null;
+    case 'help':
+      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
       return null;
     case 'about':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const AboutScreen()));

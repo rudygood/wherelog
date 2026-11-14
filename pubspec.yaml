@@ -1,7 +1,7 @@
 name: wherelog
 description: WhereLog - track storage and inventory with 2-tier locations
 publish_to: 'none'
-version: 1.0.0+11
+version: 1.0.0+20
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -12,6 +12,7 @@ dependencies:
   geolocator: ^10.1.1
   geocoding: 5.0.0
   permission_handler: ^11.3.0
+  printing: ^5.14.0
   path_provider: ^2.1.2
   image_picker: ^1.0.7
   url_launcher: ^6.2.2
@@ -21,10 +22,11 @@ dependencies:
   archive: ^4.3.0
   crypto: ^3.0.3
   path: ^1.9.0
+  pdf: ^3.11.0
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   receive_sharing_intent: ^1.9.0
-  xml: ^6.5.0
+  xml: ^7.0.0
   http: ^1.2.2
 
 dev_dependencies:
