@@ -4,6 +4,7 @@ import '../screens/location_options_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/export_import_screen.dart';
 import '../screens/help_screen.dart';
+import '../screens/privacy_screen.dart';
 import '../screens/reports_screen.dart';
 import '../screens/about_screen.dart';
 import '../screens/contact_support_screen.dart';
@@ -84,7 +85,7 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
           Widget menuTile({
             required IconData icon,
             required String title,
-            required String subtitle,
+            String? subtitle,
             String? popValue,
             bool enabled = true,
             bool isDestructive = false,
@@ -98,13 +99,14 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               leading: Icon(icon, size: 20, color: color),
               title: Text(title, style: isDestructive ? AppText.menuTileTitleAlert : AppText.menuTileTitle.copyWith(color: color)),
-              subtitle: Text(subtitle, style: isDestructive ? AppText.dialogAlert : AppText.dialog.copyWith(color: subColor)),
+              subtitle: subtitle != null ? Text(subtitle, style: isDestructive ? AppText.dialogAlert : AppText.dialog.copyWith(color: subColor)) : null,
               trailing: enabled && !isDestructive ? Icon(Icons.chevron_right, size: 16, color: textSecondary) : null,
               onTap: enabled ? () => Navigator.pop(innerCtx, popValue) : null,
             );
           }
 
           return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 4, 0),
@@ -126,22 +128,19 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Column(
                   children: [
-                    menuTile(icon: Icons.account_tree_outlined, title: 'Location Options', subtitle: 'Generals & Specifics • Storage / Inventory', popValue: 'location'),
+                    menuTile(icon: Icons.account_tree_outlined, title: 'Location Options', popValue: 'location'),
                     const Divider(height: 12, thickness: 0.5),
-                    menuTile(icon: Icons.settings_outlined, title: 'Settings', subtitle: 'Preferences, defaults', popValue: 'settings'),
-                    menuTile(icon: Icons.import_export_outlined, title: 'Export / Import', subtitle: 'ZIP backup with photos, restore', popValue: 'export_import'),
-                    menuTile(icon: Icons.assessment_outlined, title: 'Reports', subtitle: 'Insurance report, location CSVs', popValue: 'reports'),
-                    menuTile(icon: Icons.contact_support_outlined, title: 'Contact / Support', subtitle: 'Feedback, report issue', popValue: 'contact'),
-                    menuTile(icon: Icons.help_outline, title: 'Help', subtitle: 'How to use WhereLog', popValue: 'help'),
+                    menuTile(icon: Icons.import_export_outlined, title: 'Export / Import (Backup)', popValue: 'export_import'),
+                    menuTile(icon: Icons.assessment_outlined, title: 'Reports', popValue: 'reports'),
+                    menuTile(icon: Icons.settings_outlined, title: 'Settings', popValue: 'settings'),
+                    menuTile(icon: Icons.help_outline, title: 'Help', popValue: 'help'),
+                    menuTile(icon: Icons.contact_support_outlined, title: 'Contact / Support', popValue: 'contact'),
+                    menuTile(icon: Icons.privacy_tip_outlined, title: 'Privacy Policy', popValue: 'privacy'),
                     const Divider(height: 12, thickness: 0.5),
-                    menuTile(icon: Icons.info_outline, title: 'About', subtitle: 'Version, data paths', popValue: 'about'),
+                    menuTile(icon: Icons.info_outline, title: 'About', popValue: 'about'),
                   ],
                 ),
               ),
-              const Spacer(),
-              const Divider(height: 1, thickness: 1),
-              menuTile(icon: Icons.logout, title: 'Logout', subtitle: 'Sign out of WhereLog', isDestructive: true, popValue: 'logout'),
-              const SizedBox(height: 8),
             ],
           );
         }),
@@ -176,13 +175,12 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
     case 'help':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
       return null;
+    case 'privacy':
+      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const PrivacyScreen()));
+      return null;
     case 'about':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const AboutScreen()));
       return null;
-    case 'logout':
-      final confirmed = await showLogoutConfirm(outerContext);
-      if (confirmed == true) {}
-      return confirmed;
     default:
       return null;
   }
@@ -201,7 +199,7 @@ class _SwipeableRightSheetState extends State<_SwipeableRightSheet> {
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.centerRight,
+      alignment: Alignment.topRight,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onHorizontalDragUpdate: (details) {
@@ -223,11 +221,10 @@ class _SwipeableRightSheetState extends State<_SwipeableRightSheet> {
           offset: Offset(_dragDx, 0),
           child: Material(
             color: AppColors.surface,
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(AppRadius.sheet)),
+            borderRadius: BorderRadius.circular(AppRadius.sheet),
             clipBehavior: Clip.antiAlias,
             child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.78,
-              height: double.infinity,
               child: SafeArea(child: widget.child),
             ),
           ),
@@ -237,25 +234,4 @@ class _SwipeableRightSheetState extends State<_SwipeableRightSheet> {
   }
 }
 
-Future<bool?> showLogoutConfirm(BuildContext context) {
-  return showModalTopSheet<bool>(
-    context: context,
-    maxWidth: 360,
-    builder: (ctx, _) => Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-         Text("Logout?", style: AppText.dialogTitleAlert),
-        const SizedBox(height: 8),
-        const Text("Are you sure you want to logout?"),
-        const SizedBox(height: 20),
-        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
-          const SizedBox(width: 8),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child:  Text("Logout", style: AppText.buttonSmallAlert)),
-        ]),
-      ],
-    ),
-  );
-}
 
