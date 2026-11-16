@@ -2,23 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// First-run introduction (build 25, 2026-11-15): seven screens, one idea
+/// First-run introduction (build 26, 2026-11-16): seven screens, one idea
 /// each, shown once on first launch. Screen 1 is Rudy's splash design
 /// (blue field, app icon, "Where is your stuff?", wordmark, SolutionWise
-/// signature). Screens 2-7 are the reworked tour, built from Rudy's two
-/// draft screens of 2026-11-15 plus the finding screen he asked for:
-/// the three tabs, General and Specific locations, the details an item
-/// can hold, places with no address (GPS), finding things again, and
-/// your data staying yours. The tour teaches the app's model — the
-/// things the store page doesn't — one idea per screen, each with a
-/// widget visual (tab bar, location rows, detail chips, mini map,
-/// search bar) rather than a paragraph. Shown again from Help ("See the
-/// introduction again") — then the last button says Done instead of Get
-/// started, and nothing is re-recorded. No location permission is asked
-/// here: that comes in context, the first time someone adds a place.
-/// Naming: the inventory tab is "Personal Inventory" here, per Rudy's
-/// 2026-11-15 decision — the rename exception for onboarding references
-/// (the rest of the app takes the new name with the Help round).
+/// signature). Screens 2-7 are the reworked tour, second pass: the texts
+/// teach the app's model and rules instead of describing it, and the
+/// visuals are faithful copies of the real UI — the actual tab bar, the
+/// actual search/filter bar, the map screen with its real buttons —
+/// rather than generic illustrations. The location example is Rudy's
+/// own: General Attic, Specific Red & Green Bin #1, holding the
+/// Christmas lights (a General must narrow the search; a Specific must
+/// pick out one spot — name the container and the spot). Shown again
+/// from Help ("See the introduction again") — then the last button says
+/// Done instead of Get started, and nothing is re-recorded. No location
+/// permission is asked here: that comes in context, the first time
+/// someone adds a place. Naming: the inventory tab is "Personal
+/// Inventory" here, per Rudy's 2026-11-15 decision — the rename
+/// exception for onboarding references (the rest of the app takes the
+/// new name with the Help round).
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onDone, this.isFirstRun = true});
 
@@ -113,18 +114,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const _SplashPage(),
                   _ContentPage(
                     visual: _TabBarMock(),
-                    title: 'Three tabs to track your stuff',
-                    body: 'Storage Items and Personal Inventory hold what you own. Places of Interest holds the places.',
+                    title: 'Two kinds of things',
+                    body: 'Storage Items and Personal Inventory hold things you own \u2014 each one lives at a location. Places of Interest holds spots you want to find again \u2014 each one lives at GPS coordinates.',
                   ),
                   _ContentPage(
                     visual: _LocationMock(),
-                    title: 'A place for everything',
-                    body: 'Every item has a General area \u2014 a room, a building, a property \u2014 and an optional Specific spot, like a shelf, a closet, or a bin. Add locations as you add items, or manage them all from the menu.',
+                    title: 'Narrow it down, then pin it down',
+                    body: 'A General narrows the search \u2014 a room, a building, a property. A Specific picks out one spot inside it. Add locations as you add items, or manage them all from the menu.',
                   ),
                   _ContentPage(
                     visual: _DetailChips(),
-                    title: 'Track the details that matter',
-                    body: 'If you choose, each item can hold more than a name and a place:',
+                    title: 'Add what matters, skip the rest',
+                    body: 'If you choose, each item can hold more than a name and a place. For insurance, the value, the photo, and the serial number are the ones that count.',
                   ),
                   _ContentPage(
                     visual: _MapMock(),
@@ -134,7 +135,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _ContentPage(
                     visual: _SearchMock(),
                     title: 'Finding it again is the payoff',
-                    body: 'Tap the magnifier to search by name, or the filter button to show only one place \u2014 a room, a building, a shelf. The list narrows as you type.',
+                    body: 'Tap the magnifier to search by name \u2014 the list narrows as you type. Tap the filter button to show only one place: a room, a building, a shelf.',
                   ),
                   _ContentPage(
                     visual: _IconDisc(
@@ -336,18 +337,15 @@ class _ContentPage extends StatelessWidget {
   }
 }
 
-/// The three tabs as the user will see them — Storage Items active.
-/// Screen 2's visual: the names themselves are the orientation.
+/// The real tab bar, as built in main.dart: a scaffoldDark strip, the
+/// selected tab a surface "folder tab" with a strong three-side border
+/// and rounded top corners, two-line labels. Screen 2's visual.
 class _TabBarMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(6),
+      color: AppColors.scaffoldDark,
+      padding: const EdgeInsets.only(top: 8),
       child: Row(
         children: [
           _tabCell('Storage\nItems', true),
@@ -361,19 +359,30 @@ class _TabBarMock extends StatelessWidget {
   Widget _tabCell(String label, bool active) {
     return Expanded(
       child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? AppColors.logoBlue.withOpacity(0.12) : null,
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: active
+            ? BoxDecoration(
+                color: AppColors.surface,
+                border: Border(
+                  top: AppBorder.sideStrong,
+                  left: AppBorder.sideStrong,
+                  right: AppBorder.sideStrong,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              )
+            : null,
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontWeight: active ? FontWeight.w800 : FontWeight.w600,
             fontSize: 12,
-            height: 1.25,
-            color: active ? AppColors.logoBlue : AppColors.textSecondary,
+            height: 1.0,
+            color: active ? AppColors.textPrimary : AppColors.textSecondary,
           ),
         ),
       ),
@@ -381,7 +390,9 @@ class _TabBarMock extends StatelessWidget {
   }
 }
 
-/// General and Specific as a two-row hierarchy. Screen 3's visual.
+/// General and Specific, with Rudy's own example: the Christmas lights
+/// live in Red & Green Bin #1, in the Attic. Screen 3's visual — the
+/// container names the spot, so the Specific distinguishes.
 class _LocationMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -398,11 +409,10 @@ class _LocationMock extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.home_outlined,
-                  size: 20, color: AppColors.logoBlue),
+              Icon(Icons.home_outlined, size: 20, color: AppColors.logoBlue),
               const SizedBox(width: 8),
               Text(
-                'General: House',
+                'General: Attic',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
@@ -415,16 +425,32 @@ class _LocationMock extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 28),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.inventory_2_outlined,
                     size: 20, color: AppColors.alert),
                 const SizedBox(width: 8),
-                Text(
-                  'Specific: Kitchen \u00b7 top shelf',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: AppColors.textPrimary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Specific: Red & Green Bin #1',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Christmas Lights',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -437,7 +463,9 @@ class _LocationMock extends StatelessWidget {
 }
 
 /// The details an item can hold, as chips — scannable, not a sentence.
-/// Screen 4's visual.
+/// Screen 4's visual. The fields are the real ones from the item
+/// record: photo, notes, quantity, value (replacement), brand, model,
+/// serial number, price (what was paid), acquisition date.
 class _DetailChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -478,9 +506,10 @@ class _DetailChips extends StatelessWidget {
   }
 }
 
-/// A stylised map: river, roads, a pin, its label. Screen 5's visual —
-/// the Fishing Spot from Rudy's draft, drawn with widgets.
-/// (Maps stay light in dark mode too, like the real map.)
+/// The POI map screen as it really looks: the control strip at the top
+/// right — zoom in, zoom out, recenter, satellite toggle — and a pin
+/// with its label chip, the Fishing Spot from Rudy's draft. Screen 5's
+/// visual. (Maps stay light in dark mode too, like the real map.)
 class _MapMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -529,33 +558,52 @@ class _MapMock extends StatelessWidget {
                 ),
               ),
             ),
-            // The pin and its label.
+            // The pin and its label, as the real markers draw them:
+            // a surface chip with a border above an alert-red pin.
             const Align(
-              alignment: Alignment(0.15, 0.1),
+              alignment: Alignment(0.15, 0.15),
               child: Icon(
                 Icons.location_on,
-                size: 40,
+                size: 28,
                 color: Color(0xFFC62828),
               ),
             ),
             Align(
-              alignment: const Alignment(0.15, -0.45),
+              alignment: const Alignment(0.15, -0.4),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF9E9E9E)),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0x61000000)),
                 ),
                 child: const Text(
                   'Fishing Spot',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
+              ),
+            ),
+            // The real control strip: zoom in, zoom out, recenter,
+            // satellite toggle, top right.
+            Positioned(
+              right: 12,
+              top: 12,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _mapBtn(const Icon(Icons.add), 40, false),
+                  const SizedBox(width: 8),
+                  _mapBtn(const Icon(Icons.remove), 40, false),
+                  const SizedBox(width: 12),
+                  _mapBtn(const Icon(Icons.my_location), 56, true),
+                  const SizedBox(width: 8),
+                  _mapBtn(const Icon(Icons.satellite_alt), 40, false),
+                ],
               ),
             ),
           ],
@@ -563,51 +611,61 @@ class _MapMock extends StatelessWidget {
       ),
     );
   }
+
+  Widget _mapBtn(Widget icon, double size, bool primary) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: primary ? AppColors.buttonBg : AppColors.surface,
+        border: primary ? null : Border.all(color: AppColors.border),
+      ),
+      child: IconTheme(
+        data: IconThemeData(
+          color: primary ? AppColors.white : AppColors.textPrimary,
+          size: primary ? 24 : 20,
+        ),
+        child: Center(child: icon),
+      ),
+    );
+  }
 }
 
-/// The search field and filter button as they appear on the item lists.
-/// Screen 6's visual: the payoff, shown the way the user will meet it.
+/// The search/filter bar as it really appears on the item lists: the
+/// count, then the tune square and the search square, both in the
+/// scaffoldDark style with a light border. Screen 6's visual.
 class _SearchMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                Icon(Icons.search, color: AppColors.textSecondary),
-                const SizedBox(width: 8),
-                Text(
-                  'Search items\u2026',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(Icons.tune, color: AppColors.textPrimary),
-        ),
-      ],
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Text('12 storage items', style: AppText.countBar),
+          const Spacer(),
+          _squareBtn(const Icon(Icons.tune, size: 29)),
+          const SizedBox(width: 6),
+          _squareBtn(const Icon(Icons.search)),
+        ],
+      ),
+    );
+  }
+
+  Widget _squareBtn(Widget icon) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.scaffoldDark,
+        borderRadius: BorderRadius.circular(AppRadius.button),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: IconTheme(
+        data: IconThemeData(color: AppColors.textPrimary),
+        child: Center(child: icon),
+      ),
     );
   }
 }
