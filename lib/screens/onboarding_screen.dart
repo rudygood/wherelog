@@ -2,24 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// First-run introduction (build 26, 2026-11-16): seven screens, one idea
-/// each, shown once on first launch. Screen 1 is Rudy's splash design
-/// (blue field, app icon, "Where is your stuff?", wordmark, SolutionWise
-/// signature). Screens 2-7 are the reworked tour, second pass: the texts
-/// teach the app's model and rules instead of describing it, and the
-/// visuals are faithful copies of the real UI — the actual tab bar, the
-/// actual search/filter bar, the map screen with its real buttons —
-/// rather than generic illustrations. The location example is Rudy's
-/// own: General Attic, Specific Red & Green Bin #1, holding the
-/// Christmas lights (a General must narrow the search; a Specific must
-/// pick out one spot — name the container and the spot). Shown again
-/// from Help ("See the introduction again") — then the last button says
-/// Done instead of Get started, and nothing is re-recorded. No location
-/// permission is asked here: that comes in context, the first time
-/// someone adds a place. Naming: the inventory tab is "Personal
-/// Inventory" here, per Rudy's 2026-11-15 decision — the rename
-/// exception for onboarding references (the rest of the app takes the
-/// new name with the Help round).
+/// First-run introduction (build 31, 2026-11-16): seven screens, one idea
+/// each, shown once on first launch. Format, per Rudy 2026-11-16
+/// (corrected that day — builds 28-30 had misread it as white top over
+/// a blue bottom): every slide is white — imagery on top, instructive
+/// text below — with a blue band at the bottom holding only the dots
+/// and the Next button. The splash's top blue was removed because on
+/// Android it made the status-bar info (battery, time) hard to read;
+/// the top stays white. The splash is NOT inverted: icon on top, text
+/// below, as originally designed. Screen 2 is the tabs slide, its text
+/// Rudy's own: the headline breaks after TELL YOU, with an em dash
+/// after THREE TABS, then three sections, each a bold tab title with
+/// regular text, over a rendering of the main page's top — app header
+/// with the hamburger, and the tabs, in the app's own shades (scaffold
+/// behind the header, scaffoldDark strip, surface selected tab). Shown
+/// again from Help ("See the introduction again") — then the last
+/// button says Done instead of Get started, and nothing is re-recorded.
+/// No location permission is asked here: that comes in context, the
+/// first time someone adds a place. Naming: the inventory tab is
+/// "Personal Inventory" here, per Rudy's 2026-11-15 decision.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onDone, this.isFirstRun = true});
 
@@ -33,6 +34,19 @@ class OnboardingScreen extends StatefulWidget {
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
+
+// The tour is light in both modes (like the splash was): fixed light
+// values, never the brightness-aware AppColors getters. (logoBlue,
+// white, whiteDim and buttonBg are mode-independent already, so they
+// are used as-is.)
+const _kInk = Color(0xFF1A1A1A);
+const _kInkSoft = Color(0xFF444444);
+const _kCard = Color(0xFFFAF6F0);
+const _kLine = Color(0x61000000);
+const _kStrip = Color(0xFFEDE8DF);
+const _kScaffold = Color(0xFFF5F3EE);
+const _kAlert = Color(0xFFC62828);
+const _kTaglineGrey = Color(0xFF6B6B6B);
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
@@ -57,129 +71,116 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _skip() => widget.onDone();
 
-  // Dots sit on the splash page's blue on page 0, on the scaffold
-  // everywhere else — the active dot follows the page's accent.
-  Color get _activeDot {
-    switch (_page) {
-      case 0:
-        return AppColors.white;
-      case 1:
-        return AppColors.logoBlue;
-      case 2:
-        return AppColors.alert;
-      case 3:
-        return AppColors.buttonBg;
-      case 4:
-        return AppColors.notice;
-      case 5:
-        return AppColors.logoBlue;
-      default:
-        return AppColors.buttonBg;
-    }
-  }
-
-  Color get _inactiveDot =>
-      _page == 0 ? AppColors.whiteDim : AppColors.border;
-
   @override
   Widget build(BuildContext context) {
     final isLast = _page == 6;
-    final onSplash = _page == 0;
     return Scaffold(
-      backgroundColor: onSplash ? AppColors.logoBlue : AppColors.scaffold,
+      // The blue band at the bottom, behind the dots and the button.
+      backgroundColor: AppColors.logoBlue,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // Skip / Close, top right. White on the splash page's blue,
-            // secondary text everywhere else.
-            Align(
-              alignment: Alignment.centerRight,
+            Column(
+              children: [
+                Expanded(
+                  child: PageView(
+                    controller: _controller,
+                    onPageChanged: (i) => setState(() => _page = i),
+                    children: [
+                      const _SplashPage(),
+                      const _TabsPage(),
+                      const _ContentPage(
+                        visual: _LocationMock(),
+                        title: 'Narrow it down, then pin it down',
+                        body: 'A General narrows the search \u2014 a room, a building, a property. A Specific picks out one spot inside it. Add locations as you add items, or manage them all from the menu.',
+                      ),
+                      const _ContentPage(
+                        visual: _DetailChips(),
+                        title: 'Add what matters, skip the rest',
+                        body: 'If you choose, each item can hold more than a name and a place. For insurance, the value, the photo, and the serial number are the ones that count.',
+                      ),
+                      const _ContentPage(
+                        visual: _MapMock(),
+                        title: 'Places with no address',
+                        body: 'Record a place by its GPS coordinates \u2014 from your device, from a map, or from another source. Then see it on the map or get directions back to it. And if it has an address, you can store that too.',
+                      ),
+                      const _ContentPage(
+                        visual: _SearchMock(),
+                        title: 'Finding it again is the payoff',
+                        body: 'Tap the magnifier to search by name \u2014 the list narrows as you type. Tap the filter button to show only one place: a room, a building, a shelf.',
+                      ),
+                      const _ContentPage(
+                        visual: _IconDisc(
+                          icon: Icons.shield_outlined,
+                          accent: AppColors.buttonBg,
+                        ),
+                        title: 'Your data stays yours',
+                        body: 'Everything lives on your device. No account, no subscription. Export or back it up any time \u2014 your data is never locked inside the app.',
+                      ),
+                    ],
+                  ),
+                ),
+                // Dots + action button, on the blue band.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(7, (i) {
+                          final active = i == _page;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: active ? 20 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? AppColors.white
+                                  : AppColors.whiteDim,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _next,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.white,
+                            foregroundColor: AppColors.logoBlue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(isLast
+                              ? (widget.isFirstRun ? 'Get started' : 'Done')
+                              : 'Next'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Skip / Close, top right, over the white top.
+            Positioned(
+              top: 8,
+              right: 16,
               child: TextButton(
                 onPressed: _skip,
+                style: TextButton.styleFrom(
+                  foregroundColor: _kInkSoft,
+                ),
                 child: Text(
                   widget.isFirstRun ? 'Skip' : 'Close',
-                  style: TextStyle(
-                    color: onSplash ? AppColors.white : AppColors.textSecondary,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _controller,
-                onPageChanged: (i) => setState(() => _page = i),
-                children: [
-                  const _SplashPage(),
-                  _ContentPage(
-                    visual: _TabBarMock(),
-                    title: 'Two kinds of things',
-                    body: 'Storage Items and Personal Inventory hold things you own \u2014 each one lives at a location. Places of Interest holds spots you want to find again \u2014 each one lives at GPS coordinates.',
-                  ),
-                  _ContentPage(
-                    visual: _LocationMock(),
-                    title: 'Narrow it down, then pin it down',
-                    body: 'A General narrows the search \u2014 a room, a building, a property. A Specific picks out one spot inside it. Add locations as you add items, or manage them all from the menu.',
-                  ),
-                  _ContentPage(
-                    visual: _DetailChips(),
-                    title: 'Add what matters, skip the rest',
-                    body: 'If you choose, each item can hold more than a name and a place. For insurance, the value, the photo, and the serial number are the ones that count.',
-                  ),
-                  _ContentPage(
-                    visual: _MapMock(),
-                    title: 'Places with no address',
-                    body: 'Record a place by its GPS coordinates \u2014 from your device, from a map, or from another source. Then see it on the map or get directions back to it. And if it has an address, you can store that too.',
-                  ),
-                  _ContentPage(
-                    visual: _SearchMock(),
-                    title: 'Finding it again is the payoff',
-                    body: 'Tap the magnifier to search by name \u2014 the list narrows as you type. Tap the filter button to show only one place: a room, a building, a shelf.',
-                  ),
-                  _ContentPage(
-                    visual: _IconDisc(
-                      icon: Icons.shield_outlined,
-                      accent: AppColors.buttonBg,
-                    ),
-                    title: 'Your data stays yours',
-                    body: 'Everything lives on your device. No account, no subscription. Export or back it up any time \u2014 your data is never locked inside the app.',
-                  ),
-                ],
-              ),
-            ),
-            // Dots + action button.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(7, (i) {
-                      final active = i == _page;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: active ? 20 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: active ? _activeDot : _inactiveDot,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _next,
-                      child: Text(isLast
-                          ? (widget.isFirstRun ? 'Get started' : 'Done')
-                          : 'Next'),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
@@ -189,10 +190,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-/// Screen 1: Rudy's splash as designed (2026-11-11) — blue field with the
-/// app icon, then the tagline, the wordmark in the brand split, and the
-/// SolutionWise signature. Deliberately mode-independent: it is his
-/// design as drawn, light in both modes.
+/// Screen 1: Rudy's splash as designed (2026-11-11) — icon on top, the
+/// tagline, the wordmark in the brand split, and the SolutionWise
+/// signature below — all on white; the blue at the top is gone (it made
+/// the Android status-bar info hard to read). The blue lives only in
+/// the band at the bottom, with the dots and the button.
 class _SplashPage extends StatelessWidget {
   const _SplashPage();
 
@@ -204,27 +206,16 @@ class _SplashPage extends StatelessWidget {
           flex: 4,
           child: Container(
             width: double.infinity,
-            color: AppColors.logoBlue,
+            color: AppColors.white,
             child: Center(
-              child: Container(
-                decoration: const BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x66FFFFFF),
-                      blurRadius: 32,
-                      spreadRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Image.asset(
-                  'assets/icon/app_icon.png',
-                  width: 170,
-                  height: 170,
-                  errorBuilder: (c, e, s) => const Icon(
-                    Icons.inventory_2,
-                    size: 120,
-                    color: AppColors.white,
-                  ),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 170,
+                height: 170,
+                errorBuilder: (c, e, s) => const Icon(
+                  Icons.inventory_2,
+                  size: 120,
+                  color: _kInkSoft,
                 ),
               ),
             ),
@@ -242,7 +233,7 @@ class _SplashPage extends StatelessWidget {
                   'Where is your stuff?\nKeep track of it with',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Color(0xFF6B6B6B),
+                    color: _kTaglineGrey,
                     fontWeight: FontWeight.w800,
                     fontSize: 24,
                     height: 1.25,
@@ -250,19 +241,17 @@ class _SplashPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 RichText(
-                  text: TextSpan(
-                    style: const TextStyle(
+                  text: const TextSpan(
+                    style: TextStyle(
                         fontWeight: FontWeight.w900, fontSize: 34),
                     children: [
-                      const TextSpan(
+                      TextSpan(
                         text: 'Where',
                         style: TextStyle(color: AppColors.logoBlue),
                       ),
                       TextSpan(
                         text: 'Log',
-                        // AppColors.alert is a getter (brightness-aware),
-                        // not a const, so this span cannot be const.
-                        style: TextStyle(color: AppColors.alert),
+                        style: TextStyle(color: _kAlert),
                       ),
                     ],
                   ),
@@ -274,7 +263,7 @@ class _SplashPage extends StatelessWidget {
                   errorBuilder: (c, e, s) => const Text(
                     'SolutionWise',
                     style: TextStyle(
-                      color: Color(0xFF6B6B6B),
+                      color: _kTaglineGrey,
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
@@ -289,62 +278,241 @@ class _SplashPage extends StatelessWidget {
   }
 }
 
-/// Screens 2-7: one idea each — a widget visual, a title, and one or
-/// two short sentences. Nothing more; the idea is the page.
-class _ContentPage extends StatelessWidget {
-  const _ContentPage({
-    required this.visual,
-    required this.title,
-    required this.body,
-  });
+/// Screen 2: the three tabs, in Rudy's own words (2026-11-16). Top: the
+/// main page's top, reconstructed — app header with the hamburger, and
+/// the tabs — in the app's own shades. Below: the headline (break after
+/// TELL YOU, em dash after THREE TABS), then three sections, each a
+/// bold tab title with regular text.
+class _TabsPage extends StatelessWidget {
+  const _TabsPage();
 
-  final Widget visual;
-  final String title;
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Container(
+            width: double.infinity,
+            color: _kScaffold,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _MainHeaderMock(),
+                _TabBarMock(),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 8,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: const Padding(
+              padding: EdgeInsets.fromLTRB(32, 24, 32, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'THREE TABS \u2014 TELL YOU\nWHERE YOUR THINGS ARE LOCATED',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      height: 1.25,
+                      color: _kInk,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  _TabsSection(
+                    label: 'Storage Items',
+                    body: 'Log where you have stored items so you can easily locate them even if they are in boxes and bins, on shelves, under tarps.',
+                  ),
+                  SizedBox(height: 14),
+                  _TabsSection(
+                    label: 'Personal Inventory',
+                    body: 'Log where your assets are located. Record details you might need. Create a Personal Inventory report suitable for insurance purposes.',
+                  ),
+                  SizedBox(height: 14),
+                  _TabsSection(
+                    label: 'Places of Interest',
+                    body: 'Log where places you want to find again are located using GPS coordinates. Places with or without addresses such as camp sites, trail heads, fishing holes or a favorite pizza stop.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One section of the tabs slide: a bold tab title, then regular text.
+class _TabsSection extends StatelessWidget {
+  const _TabsSection({required this.label, required this.body});
+
+  final String label;
   final String body;
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: _kInk,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          body,
+          style: const TextStyle(
+            fontWeight: FontWeight.w400,
+            fontSize: 14,
+            height: 1.35,
+            color: _kInkSoft,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The main page's header as it really is: the app icon, the wordmark,
+/// and the hamburger menu at the right. (The import badge button only
+/// appears while an import is pending, so it is not shown here.)
+class _MainHeaderMock extends StatelessWidget {
+  const _MainHeaderMock();
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
         children: [
-          visual,
-          const SizedBox(height: 24),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 22,
-              color: AppColors.textPrimary,
+          Image.asset(
+            'assets/icon/app_icon.png',
+            width: 48,
+            height: 48,
+            errorBuilder: (c, e, s) => const Icon(Icons.inventory_2),
+          ),
+          const SizedBox(width: 8),
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5),
+              children: [
+                TextSpan(
+                  text: 'Where',
+                  style: TextStyle(color: AppColors.logoBlue),
+                ),
+                TextSpan(
+                  text: 'Log',
+                  style: TextStyle(color: _kAlert),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w400,
-              fontSize: 15,
-              height: 1.4,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          const Spacer(),
+          const Icon(Icons.menu, color: _kInk),
         ],
       ),
     );
   }
 }
 
+/// Screens 3-7: one idea each — a widget visual on top, a title and
+/// one or two short sentences below, all on white.
+class _ContentPage extends StatelessWidget {
+  const _ContentPage({
+    required this.visual,
+    required this.title,
+    required this.body,
+    this.flexTop = 4,
+    this.flexBottom = 6,
+  });
+
+  final Widget visual;
+  final String title;
+  final String body;
+  final int flexTop;
+  final int flexBottom;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          flex: flexTop,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: visual,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: flexBottom,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                      color: _kInk,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    body,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w400,
+                      fontSize: 15,
+                      height: 1.4,
+                      color: _kInkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// The real tab bar, as built in main.dart: a scaffoldDark strip, the
 /// selected tab a surface "folder tab" with a strong three-side border
-/// and rounded top corners, two-line labels. Screen 2's visual.
+/// and rounded top corners, two-line labels.
 class _TabBarMock extends StatelessWidget {
+  const _TabBarMock();
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.scaffoldDark,
+      color: _kStrip,
       padding: const EdgeInsets.only(top: 8),
       child: Row(
         children: [
@@ -363,11 +531,11 @@ class _TabBarMock extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: active
             ? BoxDecoration(
-                color: AppColors.surface,
-                border: Border(
-                  top: AppBorder.sideStrong,
-                  left: AppBorder.sideStrong,
-                  right: AppBorder.sideStrong,
+                color: AppColors.white,
+                border: const Border(
+                  top: BorderSide(color: _kLine),
+                  left: BorderSide(color: _kLine),
+                  right: BorderSide(color: _kLine),
                 ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
@@ -382,7 +550,7 @@ class _TabBarMock extends StatelessWidget {
             fontWeight: active ? FontWeight.w800 : FontWeight.w600,
             fontSize: 12,
             height: 1.0,
-            color: active ? AppColors.textPrimary : AppColors.textSecondary,
+            color: active ? _kInk : _kInkSoft,
           ),
         ),
       ),
@@ -391,16 +559,18 @@ class _TabBarMock extends StatelessWidget {
 }
 
 /// General and Specific, with Rudy's own example: the Christmas lights
-/// live in Red & Green Bin #1, in the Attic. Screen 3's visual — the
-/// container names the spot, so the Specific distinguishes.
+/// live in Red & Green Bin #1, in the Attic. The container names the
+/// spot, so the Specific distinguishes.
 class _LocationMock extends StatelessWidget {
+  const _LocationMock();
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.card,
-        border: Border.all(color: AppColors.border),
+        color: _kCard,
+        border: Border.all(color: _kLine),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(14),
@@ -416,7 +586,7 @@ class _LocationMock extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
-                  color: AppColors.textPrimary,
+                  color: _kInk,
                 ),
               ),
             ],
@@ -427,8 +597,7 @@ class _LocationMock extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.inventory_2_outlined,
-                    size: 20, color: AppColors.alert),
+                Icon(Icons.inventory_2_outlined, size: 20, color: _kAlert),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -439,7 +608,7 @@ class _LocationMock extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: AppColors.textPrimary,
+                          color: _kInk,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -447,7 +616,7 @@ class _LocationMock extends StatelessWidget {
                         'Christmas Lights',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
+                          color: _kInkSoft,
                         ),
                       ),
                     ],
@@ -463,10 +632,12 @@ class _LocationMock extends StatelessWidget {
 }
 
 /// The details an item can hold, as chips — scannable, not a sentence.
-/// Screen 4's visual. The fields are the real ones from the item
-/// record: photo, notes, quantity, value (replacement), brand, model,
-/// serial number, price (what was paid), acquisition date.
+/// The fields are the real ones from the item record: photo, notes,
+/// quantity, value (replacement), brand, model, serial number, price
+/// (what was paid), acquisition date.
 class _DetailChips extends StatelessWidget {
+  const _DetailChips();
+
   @override
   Widget build(BuildContext context) {
     const details = [
@@ -488,8 +659,8 @@ class _DetailChips extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.card,
-            border: Border.all(color: AppColors.border),
+            color: _kCard,
+            border: Border.all(color: _kLine),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
@@ -497,7 +668,7 @@ class _DetailChips extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: _kInk,
             ),
           ),
         );
@@ -508,9 +679,11 @@ class _DetailChips extends StatelessWidget {
 
 /// The POI map screen as it really looks: the control strip at the top
 /// right — zoom in, zoom out, recenter, satellite toggle — and a pin
-/// with its label chip, the Fishing Spot from Rudy's draft. Screen 5's
-/// visual. (Maps stay light in dark mode too, like the real map.)
+/// with its label chip, the Fishing Spot from Rudy's draft.
+/// (Maps stay light in dark mode too, like the real map.)
 class _MapMock extends StatelessWidget {
+  const _MapMock();
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -618,12 +791,12 @@ class _MapMock extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: primary ? AppColors.buttonBg : AppColors.surface,
-        border: primary ? null : Border.all(color: AppColors.border),
+        color: primary ? AppColors.buttonBg : AppColors.white,
+        border: primary ? null : Border.all(color: _kLine),
       ),
       child: IconTheme(
         data: IconThemeData(
-          color: primary ? AppColors.white : AppColors.textPrimary,
+          color: primary ? AppColors.white : _kInk,
           size: primary ? 24 : 20,
         ),
         child: Center(child: icon),
@@ -634,16 +807,25 @@ class _MapMock extends StatelessWidget {
 
 /// The search/filter bar as it really appears on the item lists: the
 /// count, then the tune square and the search square, both in the
-/// scaffoldDark style with a light border. Screen 6's visual.
+/// scaffoldDark style with a light border.
 class _SearchMock extends StatelessWidget {
+  const _SearchMock();
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.surface,
+      color: AppColors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Text('12 storage items', style: AppText.countBar),
+          Text(
+            '12 storage items',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: _kInkSoft,
+            ),
+          ),
           const Spacer(),
           _squareBtn(const Icon(Icons.tune, size: 29)),
           const SizedBox(width: 6),
@@ -658,12 +840,12 @@ class _SearchMock extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.scaffoldDark,
-        borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: AppColors.border),
+        color: _kStrip,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kLine),
       ),
       child: IconTheme(
-        data: IconThemeData(color: AppColors.textPrimary),
+        data: IconThemeData(color: _kInk),
         child: Center(child: icon),
       ),
     );
@@ -671,7 +853,7 @@ class _SearchMock extends StatelessWidget {
 }
 
 /// An icon in the page's accent colour, for pages whose visual is
-/// simply an idea. Screen 7's visual.
+/// simply an idea.
 class _IconDisc extends StatelessWidget {
   const _IconDisc({required this.icon, required this.accent});
 
