@@ -230,7 +230,7 @@ class _SplashPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  'Where is your stuff?\nKeep track of it with',
+                  'Where are your things?\nKeep track of them with',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _kTaglineGrey,
