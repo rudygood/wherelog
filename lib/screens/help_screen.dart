@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
+import 'onboarding_screen.dart';
 
 /// Help page (2026-11-13, first draft): a how-to guide for WhereLog.
 /// Written to be read top to bottom once, then dipped into by
@@ -90,6 +91,21 @@ class HelpScreen extends StatelessWidget {
             'GETTING HELP',
             'If something goes wrong, Menu > Contact / Support sends an email to the developer. Menu > About shows the version, the database and photo locations, and — behind a long-press on the version row — a database inspector.\n'
             'If a share into WhereLog misbehaves, long-press the WhereLog title on the main screen for a copyable diagnostics report to send with your message.',
+          ),
+          AppDivider.horizontal,
+          // Onboarding replay (2026-11-15, build 24): the four first-run
+          // screens, for anyone who skipped through too fast. Opens as a
+          // replay — the last button says Done, and nothing is re-recorded.
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => OnboardingScreen(
+                  isFirstRun: false,
+                  onDone: () => Navigator.of(context).pop(),
+                ),
+              ));
+            },
+            child: const Text('See the introduction again'),
           ),
           const SizedBox(height: 24),
         ],

@@ -6,6 +6,7 @@ class SettingsService {
   static const String _kTabOrder = 'tabOrder';
   static const String _kConfirmDelete = 'confirmDelete';
   static const String _kPendingImports = 'pendingImports';
+  static const String _kOnboardingSeen = 'onboardingSeen';
 
   // New canonical order - Storage Items, Home Inventory, Places of Interest
   static const List<String> defaultTabOrder = [
@@ -93,5 +94,17 @@ class SettingsService {
   Future<void> clearPendingImports() async {
     final pref = await _prefs;
     await pref.remove(_kPendingImports);
+  }
+
+  // Onboarding (2026-11-15, build 24): whether the four first-run
+  // screens have been seen. Absent (existing installs) reads false,
+  // so they see the tour once after this update.
+  Future<bool> getOnboardingSeen() async {
+    final p = await _prefs;
+    return p.getBool(_kOnboardingSeen) ?? false;
+  }
+  Future<void> setOnboardingSeen(bool v) async {
+    final p = await _prefs;
+    await p.setBool(_kOnboardingSeen, v);
   }
 }

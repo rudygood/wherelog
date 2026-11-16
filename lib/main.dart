@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/storage_add_screen.dart';
 import 'screens/about_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'widgets/app_sheet.dart';
 import 'screens/location_options_screen.dart';
 import 'screens/storage_edit_screen.dart';
@@ -40,23 +41,46 @@ void main() async {
   // first frame so the app opens in the right mode.
   AppTheme.modeNotifier.value =
       AppTheme.modeFromString(await SettingsService().getTheme());
-  runApp(WhereLogApp());
+  // Onboarding (2026-11-15, build 24): first launch shows the four
+  // introduction screens. Existing installs have no flag stored, so
+  // they see the tour once after this update — that is how Rudy
+  // reviews the screens on his own devices.
+  final seenOnboarding = await SettingsService().getOnboardingSeen();
+  runApp(WhereLogApp(showOnboarding: !seenOnboarding));
 }
 
 // Stateful + WidgetsBindingObserver so a phone-level brightness change
 // rebuilds the app while the mode is 'system' (the ValueListenableBuilder
 // below only fires when the stored mode itself changes).
 class WhereLogApp extends StatefulWidget {
+  const WhereLogApp({super.key, this.showOnboarding = false});
+
+  /// True on first launch: the introduction shows instead of the home
+  /// screen until the user finishes or skips it.
+  final bool showOnboarding;
+
   @override
   State<WhereLogApp> createState() => _WhereLogAppState();
 }
 
 class _WhereLogAppState extends State<WhereLogApp>
     with WidgetsBindingObserver {
+  late bool _showOnboarding;
+
   @override
   void initState() {
     super.initState();
+    _showOnboarding = widget.showOnboarding;
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// The introduction is done (finished or skipped): record it so it
+  /// never shows on launch again, then show the home screen.
+  Future<void> _finishOnboarding() async {
+    try {
+      await SettingsService().setOnboardingSeen(true);
+    } catch (_) {}
+    if (mounted) setState(() => _showOnboarding = false);
   }
 
   @override
@@ -80,7 +104,9 @@ class _WhereLogAppState extends State<WhereLogApp>
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: mode,
-          home: HomeScreen());
+          home: _showOnboarding
+              ? OnboardingScreen(onDone: _finishOnboarding)
+              : HomeScreen());
       },
     );
   }
