@@ -23,7 +23,7 @@ class AboutScreen extends StatefulWidget {
   /// built code — that is the whole point of the stamp: proving
   /// which build is installed.
   static const String appVersion = '1.0.0';
-  static const String appBuild = '26';
+  static const String appBuild = '27';
 
   /// One string, one source of truth: the stamp shown in About
   /// and at the top of the share diagnostic report.
@@ -101,7 +101,7 @@ class _AboutScreenState extends State<AboutScreen> {
              Text('WhereLog', style: AppText.dialogTitle),
             const SizedBox(height: 4),
              Text(
-              'Storage items, home inventory, and places of interest.',
+              'Storage items, personal inventory, and places of interest.',
               style: AppText.dialog,
             ),
             const SizedBox(height: 20),

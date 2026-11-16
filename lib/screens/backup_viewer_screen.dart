@@ -162,7 +162,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
                 _compareRow('Storage Specific', _sel.countOf('storageSpecifics'), _current?.storageSpecifics),
                 _compareRow('Inventory Specific', _sel.countOf('inventorySpecifics'), _current?.inventorySpecifics),
                 _compareRow('Storage Item', _sel.countOf('storageItems'), _current?.storageItems),
-                _compareRow('Home Inventory', _sel.countOf('inventoryItems'), _current?.inventoryItems),
+                _compareRow('Personal Inventory', _sel.countOf('inventoryItems'), _current?.inventoryItems),
                 _compareRow('Place of Interest', _sel.countOf('poiItems'), _current?.poiItems),
                 _compareRow('Photos in backup', _sel.photoCount, _current?.imagesLinked),
               ],
@@ -202,7 +202,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
             },
           ),
           _section(
-            'Home Inventory',
+            'Personal Inventory',
             _sel.rows('inventoryItems'),
             (r) => r['name'] as String,
             (r) {

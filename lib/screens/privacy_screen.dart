@@ -44,7 +44,7 @@ class PrivacyScreen extends StatelessWidget {
           AppDivider.horizontal,
           _section(
             'WHAT WHERELOG STORES',
-            'Everything you enter in WhereLog \u2014 your storage items and home inventory, '
+            'Everything you enter in WhereLog \u2014 your storage items and personal inventory, '
             'your General and Specific locations, your Places of Interest with their GPS '
             'coordinates, your photos and notes \u2014 is stored in a database on your device '
             'only. It is never uploaded to a server.',

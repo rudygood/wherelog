@@ -910,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen>
 
 
   // Tab names come in two forms: short ('Storage','Inventory','POI') used
-  // throughout main.dart, and long ('Storage Items','Home Inventory',
+  // throughout main.dart, and long ('Storage Items','Personal Inventory',
   // 'Places of Interest') returned by SettingsService.getTabOrder().
   // Normalizing to short here is what makes the per-tab top bars appear:
   // the search/filter bar is only shown when _currentTabName is 'Storage'
@@ -918,7 +918,7 @@ class _HomeScreenState extends State<HomeScreen>
   // with long names the bars vanished (and POI fell back to Storage).
   static String _shortTabName(String name) {
     if (name == 'Storage Items' || name == 'Stored Items') return 'Storage';
-    if (name == 'Home Inventory') return 'Inventory';
+    if (name == 'Home Inventory' || name == 'Personal Inventory') return 'Inventory';
     if (name == 'Places of Interest') return 'POI';
     return name;
   }
@@ -938,16 +938,16 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Tab _tabForName(String name) {
-    // Two-line labels as requested: Storage = Storage Items, Inventory = Home Inventory, POI = Places of Interest
+    // Two-line labels as requested: Storage = Storage Items, Inventory = Personal Inventory, POI = Places of Interest
     if (name == 'Storage' || name == 'Storage Items' || name == 'Stored Items') {
       return const Tab(
         child: Text('Storage\nItems',
             textAlign: TextAlign.center,
             style: TextStyle(height: 1.0)));
     }
-    if (name == 'Inventory' || name == 'Home Inventory') {
+    if (name == 'Inventory' || name == 'Home Inventory' || name == 'Personal Inventory') {
       return const Tab(
-        child: Text('Home\nInventory',
+        child: Text('Personal\nInventory',
             textAlign: TextAlign.center,
             style: TextStyle(height: 1.0)));
     }

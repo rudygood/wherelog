@@ -11,22 +11,23 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final svc = SettingsService();
   String theme = 'system';
-  List<String> tabOrder = ['Storage Items', 'Home Inventory', 'Places of Interest'];
+  List<String> tabOrder = ['Storage Items', 'Personal Inventory', 'Places of Interest'];
   bool confirmDelete = true;
   int _pressedIndex = -1;
 
   static const List<String> kTabDisplayNames = [
     'Storage Items',
-    'Home Inventory',
+    'Personal Inventory',
     'Places of Interest',
   ];
 
   static const Map<String, String> _legacyToDisplay = {
     'Storage': 'Storage Items',
-    'Inventory': 'Home Inventory',
+    'Inventory': 'Personal Inventory',
     'POI': 'Places of Interest',
     'Storage Items': 'Storage Items',
-    'Home Inventory': 'Home Inventory',
+    'Home Inventory': 'Personal Inventory',
+    'Personal Inventory': 'Personal Inventory',
     'Places of Interest': 'Places of Interest',
   };
 

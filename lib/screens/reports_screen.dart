@@ -20,7 +20,7 @@ import 'report_preview_screen.dart';
 /// Reports menu page (2026-11-13): the printable, shareable outputs.
 /// Two jobs, both about the data leaving the app in a usable form:
 ///
-/// 1. A Home Inventory Report — an itemized PDF, grouped by General
+/// 1. A Personal Inventory Report — an itemized PDF, grouped by General
 ///    location with the Specific location as a column, serial numbers,
 ///    dates, values and a total. It opens as a preview with print and
 ///    share built in; sharing to Files is how a saved copy is made.
@@ -101,7 +101,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       MaterialPageRoute(
         builder: (_) => ReportPreviewScreen(
           buildPdf: _buildInsurancePdf,
-          fileName: 'WhereLog-Home-Inventory-Report-$stamp.pdf',
+          fileName: 'WhereLog-Personal-Inventory-Report-$stamp.pdf',
         ),
       ),
     );
@@ -234,7 +234,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           style: pw.TextStyle(font: pw.Font.helveticaBold(), fontSize: 13)));
       sections.add(pw.SizedBox(height: 4));
       if (gItems.isEmpty) {
-        sections.add(pw.Text('No home inventory items recorded here.',
+        sections.add(pw.Text('No personal inventory items recorded here.',
             style: pw.TextStyle(fontSize: 9.5, color: PdfColors.grey700)));
         sections.add(pw.SizedBox(height: 10));
         continue;
@@ -308,7 +308,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         pageFormat: format,
         margin: const pw.EdgeInsets.all(36),
         build: (pw.Context context) => [
-          pw.Text('Home Inventory Report',
+          pw.Text('Personal Inventory Report',
               style: pw.TextStyle(font: pw.Font.helveticaBold(), fontSize: 18)),
           pw.SizedBox(height: 2),
           pw.Text('WhereLog - prepared for insurance records · Generated $stamp',
@@ -408,10 +408,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         children: [
-          Text('HOME INVENTORY REPORT', style: AppText.dialogSection),
+          Text('PERSONAL INVENTORY REPORT', style: AppText.dialogSection),
           const SizedBox(height: 4),
           Text(
-            'An itemized list of your Home Inventory, grouped by General location with serial '
+            'An itemized list of your Personal Inventory, grouped by General location with serial '
             'numbers, acquisition dates, values and a total. It opens as a print-ready PDF '
             'preview — print it, or share it to Files when you want a saved copy. Items with '
             'a photo on file are marked with a check in the Photo column. Suitable as an '

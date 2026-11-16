@@ -8,20 +8,22 @@ class SettingsService {
   static const String _kPendingImports = 'pendingImports';
   static const String _kOnboardingSeen = 'onboardingSeen';
 
-  // New canonical order - Storage Items, Home Inventory, Places of Interest
+  // New canonical order - Storage Items, Personal Inventory, Places of Interest
   static const List<String> defaultTabOrder = [
     'Storage Items',
-    'Home Inventory',
+    'Personal Inventory',
     'Places of Interest',
   ];
 
-  // Legacy mapping for backward compat
+  // Legacy mapping for backward compat — 'Home Inventory' is the
+  // pre-rename name; stored orders carrying it still resolve.
   static const Map<String, String> legacyToCanonical = {
     'Storage': 'Storage Items',
-    'Inventory': 'Home Inventory',
+    'Inventory': 'Personal Inventory',
     'POI': 'Places of Interest',
     'Storage Items': 'Storage Items',
-    'Home Inventory': 'Home Inventory',
+    'Home Inventory': 'Personal Inventory',
+    'Personal Inventory': 'Personal Inventory',
     'Places of Interest': 'Places of Interest',
   };
 

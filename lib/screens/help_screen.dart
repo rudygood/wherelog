@@ -40,7 +40,7 @@ class HelpScreen extends StatelessWidget {
           _section(
             'THE THREE TABS',
             'Storage Items: things put away in boxes, bins, and sheds — where they are, so you can find them again.\n'
-            'Home Inventory: what you own at home, with values — the basis for the insurance report.\n'
+            'Personal Inventory: what you own, with values — the basis for the insurance report.\n'
             'Places of Interest: spots on the map — trailheads, overlooks, rural places with no street address, or any address you want to return to.',
           ),
           AppDivider.horizontal,
@@ -53,7 +53,7 @@ class HelpScreen extends StatelessWidget {
           AppDivider.horizontal,
           _section(
             'LOCATIONS',
-            'Every Storage and Home Inventory item has a General location (a room, a building, a property) and may also have a Specific location (a shelf, a closet, a box). One shared list of Generals serves both tabs; each tab has its own Specifics under each General.\n'
+            'Every Storage and Personal Inventory item has a General location (a room, a building, a property) and may also have a Specific location (a shelf, a closet, a box). One shared list of Generals serves both tabs; each tab has its own Specifics under each General.\n'
             'Manage them all on the Location Options page (menu > Location Options). Each General is a card you can expand: Storage Specifics run on blue lines, Inventory Specifics on red. Add a new General with the entry field at the bottom of the screen; new Specifics are added in the last row of each color\u2019s list.\n'
             'Tap any entry to rename it or delete it — delete is not offered while items still use that location. The pencil switch at the top turns the page read-only, hiding all the add controls.',
           ),
@@ -79,7 +79,7 @@ class HelpScreen extends StatelessWidget {
           AppDivider.horizontal,
           _section(
             'REPORTS',
-            'Menu > Reports has two things: the Home Inventory Report, a print-ready PDF for insurance records — it opens as a preview you can print or share to Files — and the three location lists as spreadsheet (CSV) files, so your location data is never locked inside the app.',
+            'Menu > Reports has two things: the Personal Inventory Report, a print-ready PDF for insurance records — it opens as a preview you can print or share to Files — and the three location lists as spreadsheet (CSV) files, so your location data is never locked inside the app.',
           ),
           AppDivider.horizontal,
           _section(
