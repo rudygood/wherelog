@@ -90,7 +90,7 @@ class GpsLocationSection extends StatelessWidget {
                         ),
                         child: isGettingLocation
                             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
-                            : const Text('Device GPS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            : const Text('Device GPS', style: TextStyle(fontFamily: 'RobotoCondensed', fontWeight: FontWeight.w700, fontSize: 16)),
                       ),
                     ),
                   ),
@@ -105,7 +105,7 @@ class GpsLocationSection extends StatelessWidget {
                           foregroundColor: AppColors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                         ),
-                        child: const Text('Map GPS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: const Text('Map GPS', style: TextStyle(fontFamily: 'RobotoCondensed', fontWeight: FontWeight.w700, fontSize: 16)),
                       ),
                     ),
                   ),

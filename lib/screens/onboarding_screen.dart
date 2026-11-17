@@ -150,10 +150,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final isLast = _page == 6;
+    // Bottom clearance below the band (the home-indicator room),
+    // 10px less than the system inset: the room below the
+    // Skip-intro row absorbs the 10px gap between the rows, so the
+    // band adds no height and the pages keep their room.
+    final bottomPad = MediaQuery.of(context).padding.bottom - 10;
+    final bottomPadding = bottomPad < 0 ? 0.0 : bottomPad;
     return Scaffold(
       // The blue band at the bottom, behind the dots and the button.
       backgroundColor: AppColors.logoBlue,
       body: SafeArea(
+        // No bottom inset here: the band carries its own bottom
+        // clearance (above), 10px less than the system inset.
+        bottom: false,
         child: Stack(
           children: [
             Column(
@@ -194,12 +203,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 // Two rows on the blue band: Back | dots | Next, then
                 // the two ways to end the intro side by side (first
-                // run) or a single Close (replay). Shortened again
-                // (build 37, another ~20px) to give the pages room
-                // on a phone: 2px top padding, no bottom padding,
-                // no gap between the rows, 28px / 20px buttons.
+                // run) or a single Close (replay). Next is a plain
+                // text button like Back (build 39) — the white
+                // ElevatedButton crowded the right edge — and a
+                // 10px gap sits between the rows (build 39). The
+                // gap adds no height (build 40): the band's bottom
+                // clearance is 10px less than the system inset, so
+                // the room below the Skip-intro row absorbs it.
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+                  padding: EdgeInsets.fromLTRB(16, 2, 16, bottomPadding),
                   child: Column(
                     children: [
                       Row(
@@ -239,17 +251,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               }),
                             ),
                           ),
-                          ElevatedButton(
+                          TextButton(
                             onPressed: _next,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.white,
-                              foregroundColor: AppColors.logoBlue,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.white,
                               minimumSize: const Size(0, 28),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 0),
+                                  horizontal: 8, vertical: 0),
                               tapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
                             ),
@@ -259,6 +267,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: widget.isFirstRun
@@ -429,7 +438,7 @@ class _TabsPage extends StatelessWidget {
                         fontFamily: 'RobotoCondensed',
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
-                        height: 0.8,
+                        height: 1.0,
                         color: _kInk,
                       ),
                     ),
@@ -437,17 +446,17 @@ class _TabsPage extends StatelessWidget {
                   SizedBox(height: 10),
                   _TabsSection(
                     label: 'Storage Items',
-                    body: 'Log where you have stored items so you can easily locate them even if they are in boxes and bins, on shelves, under tarps.',
+                    body: 'Log where you stored items so you can easily locate them even if they are in boxes and bins, on shelves, or under tarps.',
                   ),
                   SizedBox(height: 8),
                   _TabsSection(
                     label: 'Personal Inventory',
-                    body: 'Log where your assets are located. Record details you might need. Create a Personal Inventory report suitable for insurance purposes.',
+                    body: 'Log where your assets are located. Add details for an insurance inventory report.',
                   ),
                   SizedBox(height: 8),
                   _TabsSection(
                     label: 'Places of Interest',
-                    body: 'Log where places you want to find again are located using GPS coordinates. Places with or without addresses such as camp sites, trail heads, fishing holes or a favorite pizza stop.',
+                    body: 'Log where places of interest are located with GPS coordinates. You will be able to easily return to camp sites, fishing holes, trail heads, and pizza stops without an address.',
                   ),
                 ],
               ),
@@ -548,7 +557,7 @@ class _AddStoragePage extends StatelessWidget {
                           fontFamily: 'RobotoCondensed',
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
-                          height: 0.8,
+                          height: 1.0,
                           color: _kInk,
                         ),
                       ),
@@ -812,7 +821,7 @@ class _ContentPage extends StatelessWidget {
                       fontFamily: 'RobotoCondensed',
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
-                      height: 0.8,
+                      height: 1.0,
                       color: _kInk,
                     ),
                   ),
