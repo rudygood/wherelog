@@ -184,11 +184,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         body2: 'A hierarchical editing tool is useful for creating and maintaining Location Options. See the menu.',
                       ),
                       const _PoiPage(),
-                      const _ContentPage(
-                        visual: _SearchMock(),
-                        title: 'Finding it again is the payoff',
-                        body: 'Tap the magnifier to search by name \u2014 the list narrows as you type. Tap the filter button to show only one place: a room, a building, a shelf.',
-                      ),
+                      const _FindPage(),
                       const _ContentPage(
                         visual: _IconDisc(
                           icon: Icons.shield_outlined,
@@ -484,7 +480,7 @@ class _TabsSection extends StatelessWidget {
           style: const TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 15,
-            color: _kInk,
+            color: AppColors.logoBlue,
           ),
         ),
         const SizedBox(height: 2),
@@ -520,7 +516,7 @@ class _AddStoragePage extends StatelessWidget {
     return Column(
       children: [
         Expanded(
-          flex: 3,
+          flex: 4,
           child: Container(
             width: double.infinity,
             color: AppColors.white,
@@ -534,7 +530,7 @@ class _AddStoragePage extends StatelessWidget {
           ),
         ),
         Expanded(
-          flex: 7,
+          flex: 6,
           child: Container(
             width: double.infinity,
             color: AppColors.white,
@@ -548,7 +544,7 @@ class _AddStoragePage extends StatelessWidget {
                     // Room above the heading so the text sits just
                     // below the form's name field instead of
                     // crowding (or overlapping) it.
-                    SizedBox(height: 32),
+                    SizedBox(height: 12),
                     // Centered on the page: this column is left-aligned
                     // for the blocks, so the heading needs its own
                     // centering, or it hugs the left edge.
@@ -815,7 +811,7 @@ class _ContentPage extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     body,
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                     style: const TextStyle(
                       fontWeight: FontWeight.w400,
                       fontSize: 15,
@@ -839,7 +835,7 @@ class _ContentPage extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       body2!,
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.left,
                       style: const TextStyle(
                         fontWeight: FontWeight.w400,
                         fontSize: 15,
@@ -1044,12 +1040,7 @@ class _PoiAddMock extends StatelessWidget {
         _sectionLabel('GPS LOCATION (required)'),
         const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            border: Border.all(color: _kLine),
-            borderRadius: BorderRadius.circular(AppBorder.radius),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1197,7 +1188,7 @@ class _PoiPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     _bulletItem('type the coordinates'),
-                    _bulletItem('the device GPS coordinates'),
+                    _bulletItem('get device GPS coordinates'),
                     _bulletItem('drop a pin on a map'),
                     _bulletItem('import coordinates'),
                     Padding(
@@ -1403,6 +1394,165 @@ class _SearchMock extends StatelessWidget {
         data: IconThemeData(color: _kInk),
         child: Center(child: icon),
       ),
+    );
+  }
+}
+
+/// The Places tab's top bar, as it really is: the places count, then
+/// the distance, import, map and search buttons. Shown on page 6 below
+/// the Storage/Inventory search bar, so the tour can point at the
+/// Places-only icons. Light-locked like the rest of the tour.
+class _PoiTopBarMock extends StatelessWidget {
+  const _PoiTopBarMock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Text(
+            '12 places',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: _kInkSoft,
+            ),
+          ),
+          const Spacer(),
+          _squareBtn(ImageIcon(
+              const AssetImage('assets/icon/calc_distance_icon.png'),
+              size: 29,
+              color: _kInk)),
+          const SizedBox(width: 6),
+          _squareBtn(ImageIcon(
+              const AssetImage('assets/icon/poi_import_icon.png'),
+              size: 29,
+              color: _kInk)),
+          const SizedBox(width: 6),
+          _squareBtn(ImageIcon(
+              const AssetImage('assets/icon/poi_map_icon.png'),
+              size: 29,
+              color: _kInk)),
+          const SizedBox(width: 6),
+          _squareBtn(const Icon(Icons.search, size: 29)),
+        ],
+      ),
+    );
+  }
+
+  Widget _squareBtn(Widget icon) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: _kStrip,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kLine),
+      ),
+      child: IconTheme(
+        data: IconThemeData(color: _kInk),
+        child: Center(child: icon),
+      ),
+    );
+  }
+}
+
+/// Page 6: the two search bars on top — the Storage/Inventory search
+/// bar, then the Places tab's top bar below it — then the payoff
+/// headline and the "Find & Use Your Items" section. A dedicated page
+/// (not _ContentPage) because the visual is two bars and the text is
+/// a labeled section with two paragraphs.
+class _FindPage extends StatelessWidget {
+  const _FindPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          flex: 4,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Center(
+              child: Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    _SearchMock(),
+                    SizedBox(height: 8),
+                    _PoiTopBarMock(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Padding(
+              padding:
+                  EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Center(
+                      child: Text(
+                        'YOUR LOCATION DATA PAYOFF\nFIND YOUR THING & PLACES',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'RobotoCondensed',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          height: 1.0,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Find & Use Your Items',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: _kInk,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'At the top of the three tabs are icons that help you find and use your location information. Storage & Inventory tabs have a sort/filter and a search button. The Places of interest also has a search. The search allows you to search name for the entries.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'The icons for Places of interest add a distance to the list, allow you to display the POIs on a Map, and import POIs (shares & clipboard)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
