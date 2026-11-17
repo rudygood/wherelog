@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../settings_service.dart';
 import '../theme/app_theme.dart';
 
-/// First-run introduction (build 33, 2026-11-16): seven screens, one idea
+/// First-run introduction (build 37, 2026-11-16): seven screens, one idea
 /// each. Format, per Rudy 2026-11-16 (corrected that day — builds 28-30
 /// had misread it as white top over a blue bottom): every slide is
 /// white — imagery on top, instructive text below — with a blue band
@@ -11,12 +11,23 @@ import '../theme/app_theme.dart';
 /// removed because on Android it made the status-bar info (battery,
 /// time) hard to read; the top stays white. The splash is NOT
 /// inverted: icon on top, text below, as originally designed. The
-/// band is short (build 36: tight padding, 36px Next/Back, 24px
-/// Skip/Turn-off, to give the pages room on a phone). Headlines use
-/// Roboto Condensed Bold (build 36, bundled as an asset), the
-/// condensed cut of the same Roboto the app uses, at 20px (18px on
-/// the tabs slide), so the long headlines stay on two lines; the
-/// text sits just under the visual rather than floating centered.
+/// band is short (build 37: 2px top padding, no bottom padding, no
+/// gap between the rows, 28px Next/Back, 20px Skip/Turn-off — a
+/// further ~20px off build 36, to give the pages room on a phone).
+/// Headlines (build 37) all use Roboto Condensed Bold (bundled as an
+/// asset, the condensed cut of the same Roboto the app uses) at one
+/// size, 16px, with a tight 0.8 line height so the two lines sit
+/// ~6px closer — page 2's "WHERE YOUR THINGS ARE LOCATED" now fits
+/// on one line, so LOCATED is on line 2. The text sits just under
+/// the visual rather than floating centered: pages 3-7 use a 3/7
+/// flex split, and the content pages carry no top padding. The tabs
+/// slide (build 38) uses a 5/15 split — its visual (header 56px +
+/// tabs 48px = 104px) sits in a ~180px area, so the headline sits
+/// ~17px higher than build 37's 3/8 split and the ~46px of white
+/// space that sat below the tab bar is mostly reclaimed. Screen 3's
+/// form (build 38) has 6px after the General field and 8px after
+/// the Specific field — 6px cut after each of the two location
+/// fields, 12px gained in all.
 /// Screen 2 is the tabs slide, its text Rudy's own: the headline breaks after
 /// TELL YOU, with an em dash after THREE TABS, then three sections,
 /// each a bold tab title with regular text, over a rendering of the
@@ -120,7 +131,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       style: TextButton.styleFrom(
         foregroundColor: AppColors.white,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-        minimumSize: const Size(0, 24),
+        minimumSize: const Size(0, 20),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       child: Text(label),
@@ -183,11 +194,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 // Two rows on the blue band: Back | dots | Next, then
                 // the two ways to end the intro side by side (first
-                // run) or a single Close (replay). Shortened (build
-                // 36) to give the pages room on a phone: tight
-                // padding, a 2px gap, and 36px / 24px buttons.
+                // run) or a single Close (replay). Shortened again
+                // (build 37, another ~20px) to give the pages room
+                // on a phone: 2px top padding, no bottom padding,
+                // no gap between the rows, 28px / 20px buttons.
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
                   child: Column(
                     children: [
                       Row(
@@ -197,7 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.white,
                               disabledForegroundColor: AppColors.whiteDim,
-                              minimumSize: const Size(0, 36),
+                              minimumSize: const Size(0, 28),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 0),
                               tapTargetSize:
@@ -235,7 +247,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              minimumSize: const Size(0, 36),
+                              minimumSize: const Size(0, 28),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 0),
                               tapTargetSize:
@@ -247,7 +259,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: widget.isFirstRun
@@ -383,7 +394,7 @@ class _TabsPage extends StatelessWidget {
     return Column(
       children: [
         Expanded(
-          flex: 3,
+          flex: 5,
           child: Container(
             width: double.infinity,
             color: _kScaffold,
@@ -397,7 +408,7 @@ class _TabsPage extends StatelessWidget {
           ),
         ),
         Expanded(
-          flex: 8,
+          flex: 15,
           child: Container(
             width: double.infinity,
             color: AppColors.white,
@@ -417,8 +428,8 @@ class _TabsPage extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: 'RobotoCondensed',
                         fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        height: 1.25,
+                        fontSize: 16,
+                        height: 0.8,
                         color: _kInk,
                       ),
                     ),
@@ -501,7 +512,7 @@ class _AddStoragePage extends StatelessWidget {
     return Column(
       children: [
         Expanded(
-          flex: 4,
+          flex: 3,
           child: Container(
             width: double.infinity,
             color: AppColors.white,
@@ -515,7 +526,7 @@ class _AddStoragePage extends StatelessWidget {
           ),
         ),
         Expanded(
-          flex: 6,
+          flex: 7,
           child: Container(
             width: double.infinity,
             color: AppColors.white,
@@ -536,7 +547,8 @@ class _AddStoragePage extends StatelessWidget {
                         style: TextStyle(
                           fontFamily: 'RobotoCondensed',
                           fontWeight: FontWeight.w700,
-                          fontSize: 20,
+                          fontSize: 16,
+                          height: 0.8,
                           color: _kInk,
                         ),
                       ),
@@ -544,7 +556,7 @@ class _AddStoragePage extends StatelessWidget {
                     SizedBox(height: 10),
                     _TourTextBlock(
                       label: 'Location',
-                      body: 'Adding a new Storage or Inventory Item begins with supplying the location information. Every item must have a General Area and you can also add a Specific area. See the example above. The Add screen allows you to add new Location Options if needed to log your item.',
+                      body: 'Adding a new Storage or Inventory Item begins with the location; Every item must have a General Area and you can also add a Specific area. See the example above.',
                     ),
                     SizedBox(height: 10),
                     _TourTextBlock(
@@ -658,9 +670,9 @@ class _AddFormMock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _field('General Area (required)', 'Garage', true),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         _field('Storage Specific Area (optional)', 'Hardware Bin', true),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
         _field('Storage Item (required)', 'Replacement Door Hinges', false),
       ],
     );
@@ -754,8 +766,8 @@ class _ContentPage extends StatelessWidget {
     required this.visual,
     required this.title,
     required this.body,
-    this.flexTop = 4,
-    this.flexBottom = 6,
+    this.flexTop = 3,
+    this.flexBottom = 7,
   });
 
   final Widget visual;
@@ -789,7 +801,7 @@ class _ContentPage extends StatelessWidget {
             color: AppColors.white,
             child: Padding(
               padding:
-                  EdgeInsets.fromLTRB(_contentHPad(context), 8, _contentHPad(context), 0),
+                  EdgeInsets.fromLTRB(_contentHPad(context), 0, _contentHPad(context), 0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -799,7 +811,8 @@ class _ContentPage extends StatelessWidget {
                     style: const TextStyle(
                       fontFamily: 'RobotoCondensed',
                       fontWeight: FontWeight.w700,
-                      fontSize: 20,
+                      fontSize: 16,
+                      height: 0.8,
                       color: _kInk,
                     ),
                   ),
