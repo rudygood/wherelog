@@ -10,8 +10,14 @@ import '../theme/app_theme.dart';
 /// at the bottom holding the controls. The splash's top blue was
 /// removed because on Android it made the status-bar info (battery,
 /// time) hard to read; the top stays white. The splash is NOT
-/// inverted: icon on top, text below, as originally designed. Screen 2
-/// is the tabs slide, its text Rudy's own: the headline breaks after
+/// inverted: icon on top, text below, as originally designed. The
+/// band is short (build 36: tight padding, 36px Next/Back, 24px
+/// Skip/Turn-off, to give the pages room on a phone). Headlines use
+/// Roboto Condensed Bold (build 36, bundled as an asset), the
+/// condensed cut of the same Roboto the app uses, at 20px (18px on
+/// the tabs slide), so the long headlines stay on two lines; the
+/// text sits just under the visual rather than floating centered.
+/// Screen 2 is the tabs slide, its text Rudy's own: the headline breaks after
 /// TELL YOU, with an em dash after THREE TABS, then three sections,
 /// each a bold tab title with regular text, over a rendering of the
 /// main page's top — app header with the hamburger, and the tabs, in
@@ -113,8 +119,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       onPressed: onPressed,
       style: TextButton.styleFrom(
         foregroundColor: AppColors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        minimumSize: const Size(0, 28),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        minimumSize: const Size(0, 24),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       child: Text(label),
@@ -177,9 +183,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 // Two rows on the blue band: Back | dots | Next, then
                 // the two ways to end the intro side by side (first
-                // run) or a single Close (replay).
+                // run) or a single Close (replay). Shortened (build
+                // 36) to give the pages room on a phone: tight
+                // padding, a 2px gap, and 36px / 24px buttons.
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                   child: Column(
                     children: [
                       Row(
@@ -189,6 +197,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.white,
                               disabledForegroundColor: AppColors.whiteDim,
+                              minimumSize: const Size(0, 36),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 0),
+                              tapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: const Text('Back'),
                           ),
@@ -222,6 +235,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
+                              minimumSize: const Size(0, 36),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 0),
+                              tapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(isLast
                                 ? (widget.isFirstRun ? 'Get started' : 'Done')
@@ -229,7 +247,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: widget.isFirstRun
@@ -385,7 +403,7 @@ class _TabsPage extends StatelessWidget {
             color: AppColors.white,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                  _contentHPad(context), 12, _contentHPad(context), 8),
+                  _contentHPad(context), 0, _contentHPad(context), 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -397,7 +415,8 @@ class _TabsPage extends StatelessWidget {
                       'THREE TABS \u2014 TELL YOU\nWHERE YOUR THINGS ARE LOCATED',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontWeight: FontWeight.w800,
+                        fontFamily: 'RobotoCondensed',
+                        fontWeight: FontWeight.w700,
                         fontSize: 18,
                         height: 1.25,
                         color: _kInk,
@@ -515,8 +534,9 @@ class _AddStoragePage extends StatelessWidget {
                         'LOG STORAGE & INVENTORY\nWITH LOCATION & NAME',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 22,
+                          fontFamily: 'RobotoCondensed',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20,
                           color: _kInk,
                         ),
                       ),
@@ -769,16 +789,17 @@ class _ContentPage extends StatelessWidget {
             color: AppColors.white,
             child: Padding(
               padding:
-                  EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+                  EdgeInsets.fromLTRB(_contentHPad(context), 8, _contentHPad(context), 0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Text(
                     title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22,
+                      fontFamily: 'RobotoCondensed',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
                       color: _kInk,
                     ),
                   ),

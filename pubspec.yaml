@@ -1,7 +1,7 @@
 name: wherelog
 description: WhereLog - track storage and inventory with 2-tier locations
 publish_to: 'none'
-version: 1.0.0+35
+version: 1.0.0+36
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -48,6 +48,16 @@ flutter:
     - assets/icon/distance_dots.png
     - assets/icon/wherelog_launcher.png
     - assets/icon/directions_diamond.png
+
+  # Roboto Condensed Bold (build 36): the tour headlines use the
+  # condensed cut of the same Roboto the app already uses, so the
+  # long headlines fit on two lines on a phone. Static instance
+  # pinned at wght 700 from the Google Fonts variable font.
+  fonts:
+    - family: RobotoCondensed
+      fonts:
+        - asset: assets/fonts/RobotoCondensed-Bold.ttf
+          weight: 700
 
 flutter_launcher_icons:
   android: "launcher_icon"
