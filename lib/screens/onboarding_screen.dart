@@ -179,9 +179,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         visual: _DetailChips(),
                         visualTopPad: 24,
                         title: 'ADD USEFUL ITEM DETAILS\nCREATE AN INVENTORY REPORT',
-                        body: 'You can log an item using only location and name, but the app allows you to add other details. Adding details to Personal Inventory allows you to generate a report that you can use for insurance purposes. There is a Reports option on the menu.',
+                        body: 'The optional details can be useful especially those that allow you to generate a Personal Inventory Report for insurance purpose. See the menu.',
                         title2: 'MAINTAIN YOUR LOCATION OPTIONS',
-                        body2: 'You can view and maintain your Location Options in a hierarchical view. This feature is available on the menu and allows you to establish your location options before entering Storage and Inventory Items.',
+                        body2: 'A hierarchical editing tool is useful for creating and maintaining Location Options. See the menu.',
                       ),
                       const _PoiPage(),
                       const _ContentPage(
@@ -548,7 +548,7 @@ class _AddStoragePage extends StatelessWidget {
                     // Room above the heading so the text sits just
                     // below the form's name field instead of
                     // crowding (or overlapping) it.
-                    SizedBox(height: 16),
+                    SizedBox(height: 32),
                     // Centered on the page: this column is left-aligned
                     // for the blocks, so the heading needs its own
                     // centering, or it hugs the left edge.
@@ -566,14 +566,24 @@ class _AddStoragePage extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 10),
-                    _TourTextBlock(
-                      label: 'Location',
-                      body: 'Adding a new Storage or Inventory Item begins with the location; Every item must have a General Area and you can also add a Specific area. See the example above.',
+                    Text(
+                      'Adding a new Storage or Inventory Item begins with the location; Every item must have a General Area and you can also add a Specific area. See the example above.',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
+                      ),
                     ),
                     SizedBox(height: 10),
-                    _TourTextBlock(
-                      label: 'Storage Item & Inventory Item',
-                      body: 'You should name the item you are logging carefully so it is not easily confused with other items when you search for it later.',
+                    Text(
+                      'Name the item you are logging carefully so it is not easily confused with other items when you search for it later.',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
+                      ),
                     ),
                   ],
                 ),
@@ -691,40 +701,6 @@ class _AddFormMock extends StatelessWidget {
   }
 }
 
-/// One labeled block of tour text: a bold label, then regular text.
-class _TourTextBlock extends StatelessWidget {
-  const _TourTextBlock({required this.label, required this.body});
-
-  final String label;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
-            color: _kInk,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          body,
-          style: const TextStyle(
-            fontWeight: FontWeight.w400,
-            fontSize: 14,
-            height: 1.35,
-            color: _kInkSoft,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 /// The main page's header as it really is: the app icon, the wordmark,
 /// and the hamburger menu at the right. (The import badge button only
@@ -963,7 +939,7 @@ class _DetailChips extends StatelessWidget {
       alignment: WrapAlignment.center,
       children: details.map((d) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
           decoration: BoxDecoration(
             color: _kCard,
             border: Border.all(color: _kLine),
@@ -1200,22 +1176,28 @@ class _PoiPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const _TourTextBlock(
-                      label: 'Add a POI',
-                      body: 'Log any Place of Interest. Select GPS coordinates and give the place a name. Find the place quickly anytime even if it has no address.',
+                    const Text(
+                      'Log a Place of Interest with coordinates and a name. Add an address if needed.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
                       'Add GPS Coordinates',
                       style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: _kInk,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
                       ),
                     ),
                     const SizedBox(height: 2),
                     _bulletItem('type the coordinates'),
-                    _bulletItem('use the device GPS coordinates'),
+                    _bulletItem('the device GPS coordinates'),
                     _bulletItem('drop a pin on a map'),
                     _bulletItem('import coordinates'),
                     Padding(
