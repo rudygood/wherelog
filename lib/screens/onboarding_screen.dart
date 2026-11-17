@@ -183,11 +183,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         title2: 'MAINTAIN YOUR LOCATION OPTIONS',
                         body2: 'You can view and maintain your Location Options in a hierarchical view. This feature is available on the menu and allows you to establish your location options before entering Storage and Inventory Items.',
                       ),
-                      const _ContentPage(
-                        visual: _MapMock(),
-                        title: 'Places with no address',
-                        body: 'Record a place by its GPS coordinates \u2014 from your device, from a map, or from another source. Then see it on the map or get directions back to it. And if it has an address, you can store that too.',
-                      ),
+                      const _PoiPage(),
                       const _ContentPage(
                         visual: _SearchMock(),
                         title: 'Finding it again is the payoff',
@@ -991,6 +987,273 @@ class _DetailChips extends StatelessWidget {
 /// right — zoom in, zoom out, recenter, satellite toggle — and a pin
 /// with its label chip, the Fishing Spot from Rudy's draft.
 /// (Maps stay light in dark mode too, like the real map.)
+/// The top of the POI Add screen, rebuilt as widgets that mimic the
+/// real form — the GPS LOCATION section (Latitude/Longitude fields and
+/// the Device GPS / Map GPS buttons) and the PLACE NAME field, all
+/// inside the section's bordered card. A display copy only: the fields
+/// show the real labels and hint, the buttons do nothing. The real
+/// Longitude label reads "Longitude" but truncates to "Longitu..." on
+/// the phone (as in Rudy's reference), so the mock shows it that way.
+/// Light-locked like the rest of the tour: fixed light consts
+/// throughout, never the brightness-aware AppColors/AppText getters.
+class _PoiAddMock extends StatelessWidget {
+  const _PoiAddMock();
+
+  /// A section label, as the real form's dialogSection style.
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 11,
+        color: _kInkSoft,
+        letterSpacing: 0.6,
+      ),
+    );
+  }
+
+  /// One field box, as the real form's fields: white, bordered,
+  /// rounded, with its label (or hint) text inside.
+  Widget _fieldBox(String text, {bool isHint = false}) {
+    return Container(
+      height: AppSize.fieldHeight,
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        border: Border.all(color: _kLine),
+        borderRadius: BorderRadius.circular(AppBorder.radius),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontWeight: isHint ? FontWeight.w400 : FontWeight.w700,
+          fontSize: isHint ? 12 : 16,
+          color: isHint ? _kTaglineGrey : _kInk,
+        ),
+      ),
+    );
+  }
+
+  /// One of the grey GPS buttons, as the real form's: 50px tall,
+  /// buttonBg grey, white condensed-bold label.
+  Widget _gpsButton(String label) {
+    return Container(
+      height: 50,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.buttonBg,
+        borderRadius: BorderRadius.circular(AppBorder.radius),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontFamily: 'RobotoCondensed',
+          fontWeight: FontWeight.w700,
+          fontSize: 16,
+          color: AppColors.white,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel('GPS LOCATION (required)'),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            border: Border.all(color: _kLine),
+            borderRadius: BorderRadius.circular(AppBorder.radius),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: _fieldBox('Latitude')),
+                  const SizedBox(width: 8),
+                  Expanded(child: _fieldBox('Longitu...')),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: _gpsButton('Device GPS')),
+                  const SizedBox(width: 8),
+                  Expanded(child: _gpsButton('Map GPS')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _sectionLabel('PLACE NAME (required)'),
+              const SizedBox(height: 6),
+              _fieldBox('e.g. Great campsite', isHint: true),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Page 5: the POI Add form mock on top, then the POI story below —
+/// a headline, an "Add a POI" block, and an "Add GPS Coordinates"
+/// block listing the ways to get coordinates, with the POI Import
+/// icon beside the import options. A dedicated page (not _ContentPage)
+/// because the second block is a nested list, not a paragraph.
+class _PoiPage extends StatelessWidget {
+  const _PoiPage();
+
+  Widget _bulletItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('•  ',
+              style: TextStyle(
+                  fontSize: 14, height: 1.35, color: _kInkSoft)),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 14,
+                    height: 1.35,
+                    color: _kInkSoft)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _subItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('–  ',
+              style: TextStyle(
+                  fontSize: 14, height: 1.35, color: _kInkSoft)),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 14,
+                    height: 1.35,
+                    color: _kInkSoft)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          flex: 4,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Center(
+              child: Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+                child: const _PoiAddMock(),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Padding(
+              padding:
+                  EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Text(
+                        'LOG PLACES OF INTEREST (POI)\nRETURN TO THEM ANYTIME',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'RobotoCondensed',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          height: 1.0,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const _TourTextBlock(
+                      label: 'Add a POI',
+                      body: 'Log any Place of Interest. Select GPS coordinates and give the place a name. Find the place quickly anytime even if it has no address.',
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Add GPS Coordinates',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: _kInk,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    _bulletItem('type the coordinates'),
+                    _bulletItem('use the device GPS coordinates'),
+                    _bulletItem('drop a pin on a map'),
+                    _bulletItem('import coordinates'),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, top: 2),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          ImageIcon(
+                            const AssetImage(
+                                'assets/icon/poi_import_icon.png'),
+                            size: 29,
+                            color: _kInk,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _subItem('share from device map'),
+                                _subItem('share a GPX'),
+                                _subItem('use clipboard coordinates'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _MapMock extends StatelessWidget {
   const _MapMock();
 
