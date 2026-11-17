@@ -6,7 +6,7 @@ class SettingsService {
   static const String _kTabOrder = 'tabOrder';
   static const String _kConfirmDelete = 'confirmDelete';
   static const String _kPendingImports = 'pendingImports';
-  static const String _kOnboardingSeen = 'onboardingSeen';
+  static const String _kShowIntro = 'showIntro';
 
   // New canonical order - Storage Items, Personal Inventory, Places of Interest
   static const List<String> defaultTabOrder = [
@@ -98,15 +98,18 @@ class SettingsService {
     await pref.remove(_kPendingImports);
   }
 
-  // Onboarding (2026-11-15, build 24): whether the four first-run
-  // screens have been seen. Absent (existing installs) reads false,
-  // so they see the tour once after this update.
-  Future<bool> getOnboardingSeen() async {
+  // Intro (2026-11-16, build 33): whether the introduction shows on
+  // launch. On until the user turns it off — from the tour's own
+  // "Turn off intro" button or from the Intro toggle in Settings.
+  // Default true, so fresh installs and existing installs alike see
+  // the tour on launch until they opt out. (Replaces the build-24
+  // one-shot onboardingSeen flag, which is no longer read.)
+  Future<bool> getShowIntro() async {
     final p = await _prefs;
-    return p.getBool(_kOnboardingSeen) ?? false;
+    return p.getBool(_kShowIntro) ?? true;
   }
-  Future<void> setOnboardingSeen(bool v) async {
+  Future<void> setShowIntro(bool v) async {
     final p = await _prefs;
-    await p.setBool(_kOnboardingSeen, v);
+    await p.setBool(_kShowIntro, v);
   }
 }

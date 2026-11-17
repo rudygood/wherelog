@@ -41,12 +41,15 @@ void main() async {
   // first frame so the app opens in the right mode.
   AppTheme.modeNotifier.value =
       AppTheme.modeFromString(await SettingsService().getTheme());
-  // Onboarding (2026-11-15, build 24): first launch shows the four
-  // introduction screens. Existing installs have no flag stored, so
-  // they see the tour once after this update — that is how Rudy
-  // reviews the screens on his own devices.
-  final seenOnboarding = await SettingsService().getOnboardingSeen();
-  runApp(WhereLogApp(showOnboarding: !seenOnboarding));
+  // Intro (2026-11-16, build 33): the introduction shows on launch
+  // while the Intro setting is on. Default on, so fresh installs and
+  // existing installs alike see the tour on launch until the user
+  // turns it off — from the tour's own "Turn off intro" button or
+  // from the Intro toggle in Settings. (Replaces the build-24
+  // one-shot seen flag: finishing or skipping the tour no longer
+  // switches it off.)
+  final showIntro = await SettingsService().getShowIntro();
+  runApp(WhereLogApp(showOnboarding: showIntro));
 }
 
 // Stateful + WidgetsBindingObserver so a phone-level brightness change
@@ -55,8 +58,8 @@ void main() async {
 class WhereLogApp extends StatefulWidget {
   const WhereLogApp({super.key, this.showOnboarding = false});
 
-  /// True on first launch: the introduction shows instead of the home
-  /// screen until the user finishes or skips it.
+  /// True while the Intro setting is on: the introduction shows
+  /// instead of the home screen until the user closes it.
   final bool showOnboarding;
 
   @override
@@ -74,12 +77,11 @@ class _WhereLogAppState extends State<WhereLogApp>
     WidgetsBinding.instance.addObserver(this);
   }
 
-  /// The introduction is done (finished or skipped): record it so it
-  /// never shows on launch again, then show the home screen.
+  /// The introduction is closed (finished, skipped, or turned off):
+  /// show the home screen. The Intro setting is untouched here —
+  /// only "Turn off intro" or the Settings toggle switches it off,
+  /// so the tour stays available for another review.
   Future<void> _finishOnboarding() async {
-    try {
-      await SettingsService().setOnboardingSeen(true);
-    } catch (_) {}
     if (mounted) setState(() => _showOnboarding = false);
   }
 

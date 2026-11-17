@@ -1,7 +1,7 @@
 name: wherelog
 description: WhereLog - track storage and inventory with 2-tier locations
 publish_to: 'none'
-version: 1.0.0+32
+version: 1.0.0+35
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -43,7 +43,7 @@ flutter:
     - assets/icon/calc_distance_icon.png
     - assets/data/wherelog_data.json
     - assets/icon/app_icon.png
-    - assets/icon/solutionwise_logo.png
+    - assets/icon/solutionwise_icon_mobile_apps.PNG
     - assets/icon/wingback_line.png
     - assets/icon/distance_dots.png
     - assets/icon/wherelog_launcher.png

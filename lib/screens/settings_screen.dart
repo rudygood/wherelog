@@ -13,6 +13,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String theme = 'system';
   List<String> tabOrder = ['Storage Items', 'Personal Inventory', 'Places of Interest'];
   bool confirmDelete = true;
+  bool showIntro = true;
   int _pressedIndex = -1;
 
   static const List<String> kTabDisplayNames = [
@@ -47,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final stored = await svc.getTabOrder();
     tabOrder = _normalize(stored);
     confirmDelete = await svc.getConfirmDelete();
+    showIntro = await svc.getShowIntro();
     setState(() {});
   }
 
@@ -238,6 +240,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
               setState(()=>confirmDelete=v);
               svc.setConfirmDelete(v);
+            },
+          ),
+
+          // Intro (2026-11-16, build 33): the introduction shows on
+          // launch while this is on. Turning it off here is the way
+          // back on after "Turn off intro" in the tour itself.
+          SwitchListTile(
+            title:  Text('INTRO', style: AppText.dialogSection),
+            subtitle:  Text('Show the introduction when WhereLog opens', style: AppText.dialog),
+            value: showIntro,
+            activeColor: AppColors.white,
+            activeTrackColor: AppColors.buttonBg,
+            inactiveThumbColor: AppColors.white,
+            inactiveTrackColor: AppColors.border,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (v) async {
+              setState(()=>showIntro=v);
+              svc.setShowIntro(v);
             },
           ),
           const SizedBox(height: 24),

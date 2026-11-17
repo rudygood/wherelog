@@ -93,7 +93,7 @@ class HelpScreen extends StatelessWidget {
             'If a share into WhereLog misbehaves, long-press the WhereLog title on the main screen for a copyable diagnostics report to send with your message.',
           ),
           AppDivider.horizontal,
-          // Onboarding replay (2026-11-15, build 24): the four first-run
+          // Onboarding replay (2026-11-15, build 24): the seven first-run
           // screens, for anyone who skipped through too fast. Opens as a
           // replay — the last button says Done, and nothing is re-recorded.
           TextButton(

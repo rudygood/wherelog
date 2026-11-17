@@ -1,31 +1,51 @@
 import 'package:flutter/material.dart';
 
+import '../settings_service.dart';
 import '../theme/app_theme.dart';
 
-/// First-run introduction (build 31, 2026-11-16): seven screens, one idea
-/// each, shown once on first launch. Format, per Rudy 2026-11-16
-/// (corrected that day — builds 28-30 had misread it as white top over
-/// a blue bottom): every slide is white — imagery on top, instructive
-/// text below — with a blue band at the bottom holding only the dots
-/// and the Next button. The splash's top blue was removed because on
-/// Android it made the status-bar info (battery, time) hard to read;
-/// the top stays white. The splash is NOT inverted: icon on top, text
-/// below, as originally designed. Screen 2 is the tabs slide, its text
-/// Rudy's own: the headline breaks after TELL YOU, with an em dash
-/// after THREE TABS, then three sections, each a bold tab title with
-/// regular text, over a rendering of the main page's top — app header
-/// with the hamburger, and the tabs, in the app's own shades (scaffold
-/// behind the header, scaffoldDark strip, surface selected tab). Shown
-/// again from Help ("See the introduction again") — then the last
-/// button says Done instead of Get started, and nothing is re-recorded.
+/// First-run introduction (build 33, 2026-11-16): seven screens, one idea
+/// each. Format, per Rudy 2026-11-16 (corrected that day — builds 28-30
+/// had misread it as white top over a blue bottom): every slide is
+/// white — imagery on top, instructive text below — with a blue band
+/// at the bottom holding the controls. The splash's top blue was
+/// removed because on Android it made the status-bar info (battery,
+/// time) hard to read; the top stays white. The splash is NOT
+/// inverted: icon on top, text below, as originally designed. Screen 2
+/// is the tabs slide, its text Rudy's own: the headline breaks after
+/// TELL YOU, with an em dash after THREE TABS, then three sections,
+/// each a bold tab title with regular text, over a rendering of the
+/// main page's top — app header with the hamburger, and the tabs, in
+/// the app's own shades (scaffold behind the header, scaffoldDark
+/// strip, surface selected tab). Screen 3 is the real Add Storage
+/// screen (build 35): the Add Storage form rebuilt as widgets that
+/// mimic the real add page's fields, with Rudy's values — Garage /
+/// Hardware Bin / Replacement Door Hinges — and his own text on
+/// location and naming. The concatenated summary line is not
+/// reproduced, and the Note now opens screen 4, where the details
+/// live. Shown again from Help ("See the introduction again") — then
+/// the last button says Done instead of Get started, and nothing is
+/// re-recorded.
 /// No location permission is asked here: that comes in context, the
 /// first time someone adds a place. Naming: the inventory tab is
 /// "Personal Inventory" here, per Rudy's 2026-11-15 decision.
+///
+/// Intro on/off (build 33): the tour shows on launch while the Intro
+/// setting is on, and stays on until the user turns it off — from the
+/// tour's own "Turn off intro" button or the Intro toggle in
+/// Settings. Finishing (Get started) or skipping does NOT turn it
+/// off, so the tour stays available for another review. The band
+/// holds two rows: Back | dots | Next, then "Skip intro" and
+/// "Turn off intro" side by side (first run only); in replay the
+/// second row is a single Close button. Back is greyed out on the
+/// first page; swiping still works. Pages 2-7 use the app's usual
+/// 6px side margins on phones, squeezed vertically.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onDone, this.isFirstRun = true});
 
-  /// First run: the caller records the seen flag and moves on to the
-  /// home screen. Replay (from Help): the caller just closes this page.
+  /// First run: the caller just moves on to the home screen. The
+  /// Intro setting is untouched by finishing or skipping — only
+  /// "Turn off intro" (or the Settings toggle) switches it off.
+  /// Replay (from Help): the caller just closes this page.
   final VoidCallback onDone;
 
   /// True on first launch; false when re-shown from Help.
@@ -48,6 +68,11 @@ const _kScaffold = Color(0xFFF5F3EE);
 const _kAlert = Color(0xFFC62828);
 const _kTaglineGrey = Color(0xFF6B6B6B);
 
+/// The tour's side margins: the app's usual 6px on phones, roomier
+/// 32px on wider screens so the text does not run edge to edge.
+double _contentHPad(BuildContext context) =>
+    MediaQuery.of(context).size.width < 600 ? 6.0 : 32.0;
+
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   int _page = 0;
@@ -69,7 +94,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _back() {
+    if (_page > 0) {
+      _controller.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  /// Skip this showing only: the tour comes back next launch, because
+  /// the Intro setting is untouched.
   void _skip() => widget.onDone();
+
+  /// Compact white text button for the band's second row.
+  Widget _bandTextButton(String label, VoidCallback onPressed) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        minimumSize: const Size(0, 28),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(label),
+    );
+  }
+
+  /// Turn the tour off for good (until re-enabled in Settings), then
+  /// close it.
+  Future<void> _turnOff() async {
+    try {
+      await SettingsService().setShowIntro(false);
+    } catch (_) {}
+    widget.onDone();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,15 +148,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     children: [
                       const _SplashPage(),
                       const _TabsPage(),
-                      const _ContentPage(
-                        visual: _LocationMock(),
-                        title: 'Narrow it down, then pin it down',
-                        body: 'A General narrows the search \u2014 a room, a building, a property. A Specific picks out one spot inside it. Add locations as you add items, or manage them all from the menu.',
-                      ),
+                      const _AddStoragePage(),
                       const _ContentPage(
                         visual: _DetailChips(),
                         title: 'Add what matters, skip the rest',
-                        body: 'If you choose, each item can hold more than a name and a place. For insurance, the value, the photo, and the serial number are the ones that count.',
+                        body: 'The location and name are all that is needed to log an item. But, the system allows you to capture other details that you may want especially for creating an Inventory report. You can add the additional information at any time. If you choose, each item can hold more than a name and a place. For insurance, the value, the photo, and the serial number are the ones that count.',
                       ),
                       const _ContentPage(
                         visual: _MapMock(),
@@ -120,68 +175,77 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ],
                   ),
                 ),
-                // Dots + action button, on the blue band.
+                // Two rows on the blue band: Back | dots | Next, then
+                // the two ways to end the intro side by side (first
+                // run) or a single Close (replay).
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(7, (i) {
-                          final active = i == _page;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: active ? 20 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? AppColors.white
-                                  : AppColors.whiteDim,
-                              borderRadius: BorderRadius.circular(4),
+                        children: [
+                          TextButton(
+                            onPressed: _page > 0 ? _back : null,
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.white,
+                              disabledForegroundColor: AppColors.whiteDim,
                             ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _next,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.white,
-                            foregroundColor: AppColors.logoBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                            child: const Text('Back'),
+                          ),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(7, (i) {
+                                final active = i == _page;
+                                return AnimatedContainer(
+                                  duration:
+                                      const Duration(milliseconds: 200),
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 4),
+                                  width: active ? 20 : 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: active
+                                        ? AppColors.white
+                                        : AppColors.whiteDim,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                );
+                              }),
                             ),
                           ),
-                          child: Text(isLast
-                              ? (widget.isFirstRun ? 'Get started' : 'Done')
-                              : 'Next'),
-                        ),
+                          ElevatedButton(
+                            onPressed: _next,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.white,
+                              foregroundColor: AppColors.logoBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(isLast
+                                ? (widget.isFirstRun ? 'Get started' : 'Done')
+                                : 'Next'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: widget.isFirstRun
+                            ? [
+                                _bandTextButton('Skip intro', _skip),
+                                const SizedBox(width: 24),
+                                _bandTextButton('Turn off intro', _turnOff),
+                              ]
+                            : [
+                                _bandTextButton('Close', _skip),
+                              ],
                       ),
                     ],
                   ),
                 ),
               ],
-            ),
-            // Skip / Close, top right, over the white top.
-            Positioned(
-              top: 8,
-              right: 16,
-              child: TextButton(
-                onPressed: _skip,
-                style: TextButton.styleFrom(
-                  foregroundColor: _kInkSoft,
-                ),
-                child: Text(
-                  widget.isFirstRun ? 'Skip' : 'Close',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
             ),
           ],
         ),
@@ -227,45 +291,55 @@ class _SplashPage extends StatelessWidget {
             width: double.infinity,
             color: AppColors.white,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  'Where are your things?\nKeep track of them with',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _kTaglineGrey,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 24,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                RichText(
-                  text: const TextSpan(
-                    style: TextStyle(
-                        fontWeight: FontWeight.w900, fontSize: 34),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      TextSpan(
-                        text: 'Where',
-                        style: TextStyle(color: AppColors.logoBlue),
+                      const Text(
+                        'Where are your things?\nKeep track of them with',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _kTaglineGrey,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 24,
+                          height: 1.25,
+                        ),
                       ),
-                      TextSpan(
-                        text: 'Log',
-                        style: TextStyle(color: _kAlert),
+                      const SizedBox(height: 12),
+                      RichText(
+                        text: const TextSpan(
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900, fontSize: 34),
+                          children: [
+                            TextSpan(
+                              text: 'Where',
+                              style: TextStyle(color: AppColors.logoBlue),
+                            ),
+                            TextSpan(
+                              text: 'Log',
+                              style: TextStyle(color: _kAlert),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                Image.asset(
-                  'assets/icon/solutionwise_logo.png',
-                  width: 170,
-                  errorBuilder: (c, e, s) => const Text(
-                    'SolutionWise',
-                    style: TextStyle(
-                      color: _kTaglineGrey,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                // The SolutionWise Mobile Apps lockup, at the bottom
+                // of the white portion, clear of the main message.
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Image.asset(
+                    'assets/icon/solutionwise_icon_mobile_apps.PNG',
+                    width: 260,
+                    errorBuilder: (c, e, s) => const Text(
+                      'SolutionWise',
+                      style: TextStyle(
+                        color: _kTaglineGrey,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
@@ -309,32 +383,38 @@ class _TabsPage extends StatelessWidget {
           child: Container(
             width: double.infinity,
             color: AppColors.white,
-            child: const Padding(
-              padding: EdgeInsets.fromLTRB(32, 24, 32, 12),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                  _contentHPad(context), 12, _contentHPad(context), 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'THREE TABS \u2014 TELL YOU\nWHERE YOUR THINGS ARE LOCATED',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                      height: 1.25,
-                      color: _kInk,
+                  // Centered on the page: this column is left-aligned
+                  // for the sections, so the heading needs its own
+                  // centering, or it hugs the left edge.
+                  const Center(
+                    child: Text(
+                      'THREE TABS \u2014 TELL YOU\nWHERE YOUR THINGS ARE LOCATED',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        height: 1.25,
+                        color: _kInk,
+                      ),
                     ),
                   ),
-                  SizedBox(height: 16),
+                  SizedBox(height: 10),
                   _TabsSection(
                     label: 'Storage Items',
                     body: 'Log where you have stored items so you can easily locate them even if they are in boxes and bins, on shelves, under tarps.',
                   ),
-                  SizedBox(height: 14),
+                  SizedBox(height: 8),
                   _TabsSection(
                     label: 'Personal Inventory',
                     body: 'Log where your assets are located. Record details you might need. Create a Personal Inventory report suitable for insurance purposes.',
                   ),
-                  SizedBox(height: 14),
+                  SizedBox(height: 8),
                   _TabsSection(
                     label: 'Places of Interest',
                     body: 'Log where places you want to find again are located using GPS coordinates. Places with or without addresses such as camp sites, trail heads, fishing holes or a favorite pizza stop.',
@@ -369,7 +449,225 @@ class _TabsSection extends StatelessWidget {
             color: _kInk,
           ),
         ),
+        const SizedBox(height: 2),
+        Text(
+          body,
+          style: const TextStyle(
+            fontWeight: FontWeight.w400,
+            fontSize: 14,
+            height: 1.2,
+            color: _kInkSoft,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Screen 3 (build 35, 2026-11-16): the Add Storage form, rebuilt as
+/// widgets that mimic the real add page — the three fields as they
+/// really are, with Rudy's values (Garage / Hardware Bin /
+/// Replacement Door Hinges). The real form's summary line — the
+/// concatenated "Replacement Door Hinges @ Garage / Hardware Bin" —
+/// is NOT reproduced here; the fields carry the example, and leaving
+/// it out gains the room the page needed. The Note moved to screen 4,
+/// where the details live. (Build 34 showed the real screenshot
+/// instead; a widget rebuild fits the page and keeps the field text
+/// at a readable size.)
+class _AddStoragePage extends StatelessWidget {
+  const _AddStoragePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          flex: 4,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Center(
+              child: Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+                child: const _AddFormMock(),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Padding(
+              padding:
+                  EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    // Centered on the page: this column is left-aligned
+                    // for the blocks, so the heading needs its own
+                    // centering, or it hugs the left edge.
+                    Center(
+                      child: Text(
+                        'LOG STORAGE & INVENTORY\nWITH LOCATION & NAME',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 22,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    _TourTextBlock(
+                      label: 'Location',
+                      body: 'Adding a new Storage or Inventory Item begins with supplying the location information. Every item must have a General Area and you can also add a Specific area. See the example above. The Add screen allows you to add new Location Options if needed to log your item.',
+                    ),
+                    SizedBox(height: 10),
+                    _TourTextBlock(
+                      label: 'Storage Item & Inventory Item',
+                      body: 'You should name the item you are logging carefully so it is not easily confused with other items when you search for it later.',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The Add Storage form's three fields, rebuilt as widgets that mimic
+/// the real add page — same labels, same field height, same buttons.
+/// A display copy only: the fields show Rudy's values and the buttons
+/// do nothing. The real form's summary line (the concatenated
+/// "item @ location") is deliberately not reproduced. Light-locked
+/// like the rest of the tour: fixed light consts throughout, never
+/// the brightness-aware AppColors/AppText getters, so the fields stay
+/// white-on-white-readable in dark mode too.
+class _AddFormMock extends StatelessWidget {
+  const _AddFormMock();
+
+  /// One field row: the label above, then the field box with its value
+  /// and, for the location fields, the picker's dropdown and action
+  /// buttons as they really are.
+  Widget _field(String label, String value, bool hasButtons) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            color: _kInkSoft,
+            letterSpacing: 0.6,
+          ),
+        ),
         const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: AppSize.fieldHeight,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  border: Border.all(color: _kLine),
+                  borderRadius:
+                      BorderRadius.circular(AppBorder.radius),
+                ),
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: _kInk,
+                  ),
+                ),
+              ),
+            ),
+            if (hasButtons) ...[
+              const SizedBox(width: 6),
+              Container(
+                width: 36,
+                height: AppSize.fieldHeight,
+                decoration: BoxDecoration(
+                  color: AppColors.buttonBg,
+                  borderRadius:
+                      BorderRadius.circular(AppRadius.button),
+                ),
+                child: const Icon(
+                  Icons.arrow_drop_down,
+                  size: 20,
+                  color: AppColors.white,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                width: 36,
+                height: AppSize.fieldHeight,
+                decoration: BoxDecoration(
+                  color: AppColors.buttonBg,
+                  borderRadius:
+                      BorderRadius.circular(AppRadius.button),
+                ),
+                child: const Icon(
+                  Icons.check,
+                  size: 18,
+                  color: AppColors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _field('General Area (required)', 'Garage', true),
+        const SizedBox(height: 12),
+        _field('Storage Specific Area (optional)', 'Hardware Bin', true),
+        const SizedBox(height: 14),
+        _field('Storage Item (required)', 'Replacement Door Hinges', false),
+      ],
+    );
+  }
+}
+
+/// One labeled block of tour text: a bold label, then regular text.
+class _TourTextBlock extends StatelessWidget {
+  const _TourTextBlock({required this.label, required this.body});
+
+  final String label;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: _kInk,
+          ),
+        ),
+        const SizedBox(height: 2),
         Text(
           body,
           style: const TextStyle(
@@ -393,7 +691,7 @@ class _MainHeaderMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
           Image.asset(
@@ -429,7 +727,7 @@ class _MainHeaderMock extends StatelessWidget {
   }
 }
 
-/// Screens 3-7: one idea each — a widget visual on top, a title and
+/// Screens 4-7: one idea each — a widget visual on top, a title and
 /// one or two short sentences below, all on white.
 class _ContentPage extends StatelessWidget {
   const _ContentPage({
@@ -457,7 +755,8 @@ class _ContentPage extends StatelessWidget {
             color: AppColors.white,
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
+                padding:
+                    EdgeInsets.symmetric(horizontal: _contentHPad(context)),
                 child: visual,
               ),
             ),
@@ -469,7 +768,8 @@ class _ContentPage extends StatelessWidget {
             width: double.infinity,
             color: AppColors.white,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding:
+                  EdgeInsets.symmetric(horizontal: _contentHPad(context)),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -482,7 +782,7 @@ class _ContentPage extends StatelessWidget {
                       color: _kInk,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Text(
                     body,
                     textAlign: TextAlign.center,
@@ -513,7 +813,7 @@ class _TabBarMock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: _kStrip,
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: [
           _tabCell('Storage\nItems', true),
@@ -553,79 +853,6 @@ class _TabBarMock extends StatelessWidget {
             color: active ? _kInk : _kInkSoft,
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// General and Specific, with Rudy's own example: the Christmas lights
-/// live in Red & Green Bin #1, in the Attic. The container names the
-/// spot, so the Specific distinguishes.
-class _LocationMock extends StatelessWidget {
-  const _LocationMock();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: _kCard,
-        border: Border.all(color: _kLine),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.home_outlined, size: 20, color: AppColors.logoBlue),
-              const SizedBox(width: 8),
-              Text(
-                'General: Attic',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: _kInk,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.only(left: 28),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.inventory_2_outlined, size: 20, color: _kAlert),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Specific: Red & Green Bin #1',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: _kInk,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Christmas Lights',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _kInkSoft,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
