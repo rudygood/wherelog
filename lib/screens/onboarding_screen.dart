@@ -1087,13 +1087,13 @@ class _PoiPage extends StatelessWidget {
         children: [
           const Text('•  ',
               style: TextStyle(
-                  fontSize: 14, height: 1.35, color: _kInkSoft)),
+                  fontSize: 14, height: 1.2, color: _kInkSoft)),
           Expanded(
             child: Text(text,
                 style: const TextStyle(
                     fontWeight: FontWeight.w400,
                     fontSize: 14,
-                    height: 1.35,
+                    height: 1.2,
                     color: _kInkSoft)),
           ),
         ],
@@ -1109,13 +1109,13 @@ class _PoiPage extends StatelessWidget {
         children: [
           const Text('–  ',
               style: TextStyle(
-                  fontSize: 14, height: 1.35, color: _kInkSoft)),
+                  fontSize: 14, height: 1.2, color: _kInkSoft)),
           Expanded(
             child: Text(text,
                 style: const TextStyle(
                     fontWeight: FontWeight.w400,
                     fontSize: 14,
-                    height: 1.35,
+                    height: 1.2,
                     color: _kInkSoft)),
           ),
         ],
@@ -1373,7 +1373,7 @@ class _SearchMock extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          _squareBtn(const Icon(Icons.tune, size: 29)),
+          _squareBtn(const Icon(Icons.tune, size: 24)),
           const SizedBox(width: 6),
           _squareBtn(const Icon(Icons.search)),
         ],
@@ -1383,8 +1383,8 @@ class _SearchMock extends StatelessWidget {
 
   Widget _squareBtn(Widget icon) {
     return Container(
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: _kStrip,
         borderRadius: BorderRadius.circular(10),
@@ -1423,20 +1423,20 @@ class _PoiTopBarMock extends StatelessWidget {
           const Spacer(),
           _squareBtn(ImageIcon(
               const AssetImage('assets/icon/calc_distance_icon.png'),
-              size: 29,
+              size: 24,
               color: _kInk)),
           const SizedBox(width: 6),
           _squareBtn(ImageIcon(
               const AssetImage('assets/icon/poi_import_icon.png'),
-              size: 29,
+              size: 24,
               color: _kInk)),
           const SizedBox(width: 6),
           _squareBtn(ImageIcon(
               const AssetImage('assets/icon/poi_map_icon.png'),
-              size: 29,
+              size: 24,
               color: _kInk)),
           const SizedBox(width: 6),
-          _squareBtn(const Icon(Icons.search, size: 29)),
+          _squareBtn(const Icon(Icons.search, size: 24)),
         ],
       ),
     );
@@ -1444,8 +1444,8 @@ class _PoiTopBarMock extends StatelessWidget {
 
   Widget _squareBtn(Widget icon) {
     return Container(
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: _kStrip,
         borderRadius: BorderRadius.circular(10),
@@ -1471,29 +1471,24 @@ class _FindPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Expanded(
-          flex: 4,
-          child: Container(
-            width: double.infinity,
-            color: AppColors.white,
-            child: Center(
-              child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: _contentHPad(context)),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    _SearchMock(),
-                    SizedBox(height: 8),
-                    _PoiTopBarMock(),
-                  ],
-                ),
-              ),
+        Container(
+          width: double.infinity,
+          color: AppColors.white,
+          padding: const EdgeInsets.only(top: 24, bottom: 24),
+          child: Padding(
+            padding:
+                EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                _SearchMock(),
+                SizedBox(height: 24),
+                _PoiTopBarMock(),
+              ],
             ),
           ),
         ),
         Expanded(
-          flex: 6,
           child: Container(
             width: double.infinity,
             color: AppColors.white,
