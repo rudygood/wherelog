@@ -177,8 +177,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const _AddStoragePage(),
                       const _ContentPage(
                         visual: _DetailChips(),
-                        title: 'Add what matters, skip the rest',
-                        body: 'The location and name are all that is needed to log an item. But, the system allows you to capture other details that you may want especially for creating an Inventory report. You can add the additional information at any time. If you choose, each item can hold more than a name and a place. For insurance, the value, the photo, and the serial number are the ones that count.',
+                        visualTopPad: 24,
+                        title: 'ADD USEFUL ITEM DETAILS\nCREATE AN INVENTORY REPORT',
+                        body: 'You can log an item using only location and name, but the app allows you to add other details. Adding details to Personal Inventory allows you to generate a report that you can use for insurance purposes. There is a Reports option on the menu.',
+                        title2: 'MAINTAIN YOUR LOCATION OPTIONS',
+                        body2: 'You can view and maintain your Location Options in a hierarchical view. This feature is available on the menu and allows you to establish your location options before entering Storage and Inventory Items.',
                       ),
                       const _ContentPage(
                         visual: _MapMock(),
@@ -546,6 +549,10 @@ class _AddStoragePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
+                    // Room above the heading so the text sits just
+                    // below the form's name field instead of
+                    // crowding (or overlapping) it.
+                    SizedBox(height: 16),
                     // Centered on the page: this column is left-aligned
                     // for the blocks, so the heading needs its own
                     // centering, or it hugs the left edge.
@@ -769,12 +776,17 @@ class _MainHeaderMock extends StatelessWidget {
 }
 
 /// Screens 4-7: one idea each — a widget visual on top, a title and
-/// one or two short sentences below, all on white.
+/// one or two short sentences below, all on white. A page may carry a
+/// second headline and paragraph (title2/body2, page 4 does), and its
+/// visual may be given extra room from the top (visualTopPad).
 class _ContentPage extends StatelessWidget {
   const _ContentPage({
     required this.visual,
     required this.title,
     required this.body,
+    this.title2,
+    this.body2,
+    this.visualTopPad = 0,
     this.flexTop = 3,
     this.flexBottom = 7,
   });
@@ -782,6 +794,9 @@ class _ContentPage extends StatelessWidget {
   final Widget visual;
   final String title;
   final String body;
+  final String? title2;
+  final String? body2;
+  final double visualTopPad;
   final int flexTop;
   final int flexBottom;
 
@@ -796,8 +811,8 @@ class _ContentPage extends StatelessWidget {
             color: AppColors.white,
             child: Center(
               child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+                padding: EdgeInsets.fromLTRB(
+                    _contentHPad(context), visualTopPad, _contentHPad(context), 0),
                 child: visual,
               ),
             ),
@@ -836,6 +851,31 @@ class _ContentPage extends StatelessWidget {
                       color: _kInkSoft,
                     ),
                   ),
+                  if (title2 != null && body2 != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      title2!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'RobotoCondensed',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        height: 1.0,
+                        color: _kInk,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      body2!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 15,
+                        height: 1.4,
+                        color: _kInkSoft,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
