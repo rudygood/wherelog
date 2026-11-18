@@ -1615,8 +1615,8 @@ class _DataPage extends StatelessWidget {
 }
 
 /// Facsimile of the top of the real Export / Import screen: the app
-/// header, the Important-information box (expanded, as on the real
-/// page), the More Info row, and the two starting buttons.
+/// header, the More Info row, and the two starting buttons. (The
+/// Important-information box is deliberately left out.)
 class _ExportImportMock extends StatelessWidget {
   const _ExportImportMock();
 
@@ -1668,51 +1668,6 @@ class _ExportImportMock extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // Important-information box, expanded as on the real page.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _kLine),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Important information',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                        color: _kInkSoft,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                    Spacer(),
-                    Text(
-                      'Hide',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: _kInkSoft,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  "Imports and Exports utilize a ZIP file that stores the app's data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open \u2014 navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w400,
-                    fontSize: 12,
-                    color: _kInkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
           // More Info row.
           const SizedBox(
             height: 30,
