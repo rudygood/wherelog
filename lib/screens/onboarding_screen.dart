@@ -46,22 +46,26 @@ import '../theme/app_theme.dart';
 /// first time someone adds a place. Naming: the inventory tab is
 /// "Personal Inventory" here, per Rudy's 2026-11-15 decision.
 ///
-/// Intro on/off (build 33): the tour shows on launch while the Intro
-/// setting is on, and stays on until the user turns it off — from the
-/// tour's own "Turn off intro" button or the Intro toggle in
-/// Settings. Finishing (Get started) or skipping does NOT turn it
-/// off, so the tour stays available for another review. The band
-/// holds two rows: Back | dots | Next, then "Skip intro" and
-/// "Turn off intro" side by side (first run only); in replay the
-/// second row is a single Close button. Back is greyed out on the
-/// first page; swiping still works. Pages 2-7 use the app's usual
-/// 6px side margins on phones, squeezed vertically.
+/// Intro on/off (build 33; popup since build 57, always since build
+/// 58): the tour shows on launch while the Intro setting is on.
+/// Leaving it — Skip intro, Close, Get started, or Done — always asks
+/// "Show this intro again?" with two buttons that state the outcome:
+/// "Don't show again" turns it off, "Keep showing" leaves it on
+/// (dismissing the popup also leaves it on). The question fits a
+/// replay as well as a first run: either way the user is deciding
+/// whether they need to see it next time. There is no "Turn off
+/// intro" button on the band any more. The Intro toggle in Settings
+/// still switches it either way. The band holds two rows: Back | dots
+/// | Next, then a single "Skip intro" (first run) or "Close"
+/// (replay). Back is greyed out on the first page; swiping still
+/// works. Pages 2-7 use the app's usual 6px side margins on phones,
+/// squeezed vertically.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onDone, this.isFirstRun = true});
 
   /// First run: the caller just moves on to the home screen. The
-  /// Intro setting is untouched by finishing or skipping — only
-  /// "Turn off intro" (or the Settings toggle) switches it off.
+  /// Intro setting is untouched unless the user picks "Don't show
+  /// again" in the leaving popup (or the Settings toggle).
   /// Replay (from Help): the caller just closes this page.
   final VoidCallback onDone;
 
@@ -107,7 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      widget.onDone();
+      _askShowAgain();
     }
   }
 
@@ -120,9 +124,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  /// Skip this showing only: the tour comes back next launch, because
-  /// the Intro setting is untouched.
-  void _skip() => widget.onDone();
+  /// Leaving by Skip intro, Close, Get started, or Done always asks
+  /// whether to show it again — first run or replay alike.
+  void _skip() => _askShowAgain();
+
+  /// "Show this intro again?" — the buttons state the outcome, so
+  /// there is no Yes/No to puzzle over. "Don't show again" turns the
+  /// Intro setting off; "Keep showing" (or dismissing the popup)
+  /// leaves it on. Either way the tour closes.
+  Future<void> _askShowAgain() async {
+    final again = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorder.radius),
+          side: AppBorder.side,
+        ),
+        title: const Text('Show this intro again?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text("Don't show again"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            child: const Text('Keep showing'),
+          ),
+        ],
+      ),
+    );
+    if (again == false) {
+      try {
+        await SettingsService().setShowIntro(false);
+      } catch (_) {}
+    }
+    widget.onDone();
+  }
 
   /// Compact white text button for the band's second row.
   Widget _bandTextButton(String label, VoidCallback onPressed) {
@@ -138,14 +176,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  /// Turn the tour off for good (until re-enabled in Settings), then
-  /// close it.
-  Future<void> _turnOff() async {
-    try {
-      await SettingsService().setShowIntro(false);
-    } catch (_) {}
-    widget.onDone();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -190,8 +220,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
                 // Two rows on the blue band: Back | dots | Next, then
-                // the two ways to end the intro side by side (first
-                // run) or a single Close (replay). Next is a plain
+                // a single Skip intro (first run) or Close (replay).
+                // Leaving by any of them asks whether to show the
+                // intro again. Next is a plain
                 // text button like Back (build 39) — the white
                 // ElevatedButton crowded the right edge — and a
                 // 10px gap sits between the rows (build 39). The
@@ -258,15 +289,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: widget.isFirstRun
-                            ? [
-                                _bandTextButton('Skip intro', _skip),
-                                const SizedBox(width: 24),
-                                _bandTextButton('Turn off intro', _turnOff),
-                              ]
-                            : [
-                                _bandTextButton('Close', _skip),
-                              ],
+                        children: [
+                          _bandTextButton(
+                            widget.isFirstRun ? 'Skip intro' : 'Close',
+                            _skip,
+                          ),
+                        ],
                       ),
                     ],
                   ),

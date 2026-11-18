@@ -4,7 +4,6 @@ import '../screens/location_options_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/export_import_screen.dart';
 import '../screens/help_screen.dart';
-import '../screens/privacy_screen.dart';
 import '../screens/reports_screen.dart';
 import '../screens/about_screen.dart';
 import '../screens/contact_support_screen.dart';
@@ -135,7 +134,6 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
                     menuTile(icon: Icons.settings_outlined, title: 'Settings', popValue: 'settings'),
                     menuTile(icon: Icons.help_outline, title: 'Help', popValue: 'help'),
                     menuTile(icon: Icons.contact_support_outlined, title: 'Contact / Support', popValue: 'contact'),
-                    menuTile(icon: Icons.privacy_tip_outlined, title: 'Privacy Policy', popValue: 'privacy'),
                     const Divider(height: 12, thickness: 0.5),
                     menuTile(icon: Icons.info_outline, title: 'About', popValue: 'about'),
                   ],
@@ -174,9 +172,6 @@ Future<dynamic> showAppMenu(BuildContext outerContext) async {
       return null;
     case 'help':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
-      return null;
-    case 'privacy':
-      await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const PrivacyScreen()));
       return null;
     case 'about':
       await Navigator.of(outerContext).push(MaterialPageRoute(builder: (_) => const AboutScreen()));
