@@ -185,14 +185,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       const _PoiPage(),
                       const _FindPage(),
-                      const _ContentPage(
-                        visual: _IconDisc(
-                          icon: Icons.shield_outlined,
-                          accent: AppColors.buttonBg,
-                        ),
-                        title: 'Your data stays yours',
-                        body: 'Everything lives on your device. No account, no subscription. Export or back it up any time \u2014 your data is never locked inside the app.',
-                      ),
+                      const _DataPage(),
                     ],
                   ),
                 ),
@@ -1482,7 +1475,6 @@ class _FindPage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: const [
                 _SearchMock(),
-                SizedBox(height: 24),
                 _PoiTopBarMock(),
               ],
             ),
@@ -1554,6 +1546,230 @@ class _FindPage extends StatelessWidget {
 
 /// An icon in the page's accent colour, for pages whose visual is
 /// simply an idea.
+
+/// Page 7: your data stays on your device. The visual is a facsimile
+/// of the top of the real Export / Import screen (app header down to
+/// and including the two buttons); the text takes the rest of the page.
+class _DataPage extends StatelessWidget {
+  const _DataPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const _ExportImportMock(),
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            color: AppColors.white,
+            child: Padding(
+              padding:
+                  EdgeInsets.symmetric(horizontal: _contentHPad(context)),
+              child: const SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 12),
+                    Center(
+                      child: Text(
+                        'YOUR DATA STAYS HERE\nONLY YOU CAN EXPORT IT',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'RobotoCondensed',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          height: 1.0,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'All the data you add to Wherelog stays on your device. You can create exports and backups of your data, but they stay on your device unless you transmit them. It is a good practice to backup your data on a regular basis and save backup zip file in the cloud or on another device (such as your laptop or desktop).',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'You can restore any backup at any time by Importing the backup. See the Export/Import menu option for more details.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        height: 1.35,
+                        color: _kInkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Facsimile of the top of the real Export / Import screen: the app
+/// header, the Important-information box (expanded, as on the real
+/// page), the More Info row, and the two starting buttons.
+class _ExportImportMock extends StatelessWidget {
+  const _ExportImportMock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: _kScaffold,
+      padding: const EdgeInsets.all(6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // App header: back arrow + WhereLog - Export / Import.
+          SizedBox(
+            height: 56,
+            child: Row(
+              children: [
+                const Icon(Icons.arrow_back, color: _kInk, size: 24),
+                const SizedBox(width: 4),
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Where',
+                        style: TextStyle(color: Color(0xFF1E90FF)),
+                      ),
+                      TextSpan(
+                        text: 'Log',
+                        style: TextStyle(color: _kAlert),
+                      ),
+                      TextSpan(
+                        text: ' - Export / Import',
+                        style: TextStyle(
+                          color: _kInk,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Important-information box, expanded as on the real page.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _kLine),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Important information',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: _kInkSoft,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    Spacer(),
+                    Text(
+                      'Hide',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _kInkSoft,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  "Imports and Exports utilize a ZIP file that stores the app's data and images for backups and transfers. Start Export asks for the folder to write to, and Select a Backup asks for the backup file to open \u2014 navigate to wherever your backups live. Before a restore replaces your data, a copy of the current database is saved inside the app. The Auto-Backups button can load that copy back to undo the restore.",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 12,
+                    color: _kInkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // More Info row.
+          const SizedBox(
+            height: 30,
+            child: Row(
+              children: [
+                Spacer(),
+                Icon(Icons.info_outline, size: 16, color: _kInkSoft),
+                SizedBox(width: 4),
+                Text(
+                  'More Info',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: _kInkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // The two starting buttons.
+          Row(
+            children: [
+              Expanded(child: _mockActionButton('Start Export')),
+              const SizedBox(width: 8),
+              Expanded(child: _mockActionButton('Select a Backup')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // A starting-action button, as on the real page: 36px, button grey,
+  // white bold label. A plain Container, not a real button, so the
+  // mock never acts.
+  static Widget _mockActionButton(String label) {
+    return Container(
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.buttonBg,
+        borderRadius: BorderRadius.circular(AppBorder.radius),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+          letterSpacing: 0.2,
+          color: AppColors.white,
+        ),
+      ),
+    );
+  }
+}
+
 class _IconDisc extends StatelessWidget {
   const _IconDisc({required this.icon, required this.accent});
 
