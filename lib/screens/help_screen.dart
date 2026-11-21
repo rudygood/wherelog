@@ -136,32 +136,53 @@ class _HelpScreenState extends State<HelpScreen> {
   /// title — used where the section explains a menu function by another
   /// name, so the reader connects the two (build 74: BACKING UP &
   /// RESTORING carries "Export / Import" under it).
+  ///
+  /// The prose (title, subtitle, body) sits 16px from the screen edge,
+  /// as before. The excerpts mirror the app: they run 6px from the
+  /// screen edge, the app's usual side margin on phones (build 76),
+  /// so a mockup is as wide as the real screen and button text fits
+  /// as it does there. The body padding is 6px and the prose carries
+  /// its own 10px, which is what makes the two widths differ.
   Widget _section(int index, String body,
       {Widget? excerpt, Widget? excerpt2, String? body2, String? subtitle}) {
+    const prosePad = EdgeInsets.symmetric(horizontal: 10);
     return Container(
       key: _sectionKeys[index],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_sectionTitles[index],
-              style: AppText.dialogSection.copyWith(fontSize: 13)),
+          Padding(
+            padding: prosePad,
+            child: Text(_sectionTitles[index],
+                style: AppText.dialogSection.copyWith(fontSize: 13)),
+          ),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
-            Text(subtitle,
-                style: AppText.dialog
-                    .copyWith(fontSize: 13, fontWeight: FontWeight.w600)),
+            Padding(
+              padding: prosePad,
+              child: Text(subtitle,
+                  style: AppText.dialog
+                      .copyWith(fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
           ],
           const SizedBox(height: 4),
           if (excerpt != null) ...[
-            _excerptPanel(excerpt),
+            _excerptBackground(excerpt),
             const SizedBox(height: 8),
           ],
-          _bodyText(body),
+          Padding(
+            padding: prosePad,
+            child: _bodyText(body),
+          ),
           if (excerpt2 != null) ...[
             const SizedBox(height: 8),
-            _excerptPanel(excerpt2),
+            _excerptBackground(excerpt2),
             const SizedBox(height: 8),
-            if (body2 != null) _bodyText(body2),
+            if (body2 != null)
+              Padding(
+                padding: prosePad,
+                child: _bodyText(body2),
+              ),
           ],
         ],
       ),
@@ -193,18 +214,19 @@ class _HelpScreenState extends State<HelpScreen> {
     return Text.rich(TextSpan(style: style, children: spans));
   }
 
-  /// The white panel an excerpt sits in. The excerpts are
-  /// light-locked, so the panel is white in both modes — the mock
-  /// reads exactly as it does in the introduction tour.
-  Widget _excerptPanel(Widget excerpt) {
+  /// The light ground an excerpt sits on. The excerpts are
+  /// light-locked, so the ground is white in both modes — the mock
+  /// reads exactly as it does in the introduction tour. There is no
+  /// box around the excerpt any more (build 76): no border, no
+  /// rounded corners, no inset. The rounded panel was Help-only
+  /// chrome — the real screens put their content straight on the
+  /// page — and its 10px inset was squeezing button text on the
+  /// phone. The excerpt now runs the full width of the body, 6px
+  /// from the screen edge, mirroring the app's usual side margin.
+  Widget _excerptBackground(Widget excerpt) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppBorder.radius),
-      ),
+      color: AppColors.white,
       child: excerpt,
     );
   }
@@ -242,7 +264,7 @@ class _HelpScreenState extends State<HelpScreen> {
       ),
       body: SingleChildScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        padding: const EdgeInsets.fromLTRB(6, 16, 6, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
