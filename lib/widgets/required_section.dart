@@ -112,9 +112,7 @@ class _RequiredSectionState extends State<RequiredSection> {
     if (genName.isEmpty) return [];
     final genId = widget.data.generalIdForName(genName);
     if (genId.isEmpty) return [];
-    return widget.source == RequiredSectionSource.storage
-        ? widget.data.storageSpecificNamesFor(genId)
-        : widget.data.inventorySpecificNamesFor(genId);
+    return widget.data.specificNamesFor(genId);
   }
 
   bool isDuplicateGeneral(String name) => widget.data.isDuplicateGeneral(name);
@@ -122,16 +120,11 @@ class _RequiredSectionState extends State<RequiredSection> {
   bool isDuplicateSpecific(String parent, String name) {
     final genId = widget.data.generalIdForName(parent);
     if (genId.isEmpty) return false;
-    return widget.source == RequiredSectionSource.storage
-        ? widget.data.isDuplicateStorageSpecific(genId, name)
-        : widget.data.isDuplicateInventorySpecific(genId, name);
+    return widget.data.isDuplicateSpecific(genId, name);
   }
 
   String? findSimilarSpecific(String parent, String newName) {
-    final list = widget.data.specificNamesByGeneralName(
-      parent,
-      storage: widget.source == RequiredSectionSource.storage,
-    );
+    final list = widget.data.specificNamesByGeneralName(parent);
     final nl = newName.toLowerCase();
     for (final ex in list) {
       if (ex.toLowerCase().contains(nl) || nl.contains(ex.toLowerCase())) {
@@ -155,11 +148,7 @@ class _RequiredSectionState extends State<RequiredSection> {
     if (p.isEmpty || t.isEmpty || isDuplicateSpecific(p, t)) return;
     final genId = widget.data.generalIdForName(p);
     if (genId.isEmpty) return;
-    if (widget.source == RequiredSectionSource.storage) {
-      await widget.data.addStorageSpecific(genId, t);
-    } else {
-      await widget.data.addInventorySpecific(genId, t);
-    }
+    await widget.data.addSpecific(genId, t);
     _specificAnchor = t;
     if (mounted) setState(() {});
   }
@@ -178,11 +167,7 @@ class _RequiredSectionState extends State<RequiredSection> {
     // The anchor specific lives under the committed general, which is
     // not necessarily the general field's (possibly diverged) text.
     final parent = _generalAnchor ?? widget.generalController.text.trim();
-    if (widget.source == RequiredSectionSource.storage) {
-      await widget.data.renameStorageSpecific(parent, oldName, t);
-    } else {
-      await widget.data.renameInventorySpecific(parent, oldName, t);
-    }
+    await widget.data.renameSpecific(parent, oldName, t);
     _specificAnchor = t;
     if (mounted) setState(() {});
   }
@@ -571,7 +556,7 @@ class _RequiredSectionState extends State<RequiredSection> {
           existing: generalList,
         ),
         const SizedBox(height: 12),
-        Text('${widget.source == RequiredSectionSource.storage ? "Storage" : "Inventory"} Specific Area (optional)',
+        Text('Specific Area (optional)',
             style: AppText.dialogSection),
         const SizedBox(height: 4),
         buildLocationField(

@@ -10,7 +10,7 @@ class InventoryItem {
   /// References general_locations.id. Always known.
   final int generalId;
 
-  /// References inventory_specifics.id. NULL means "General only"
+  /// References specifics.id. NULL means "General only"
   /// (schema Decision D1 — no blank-name sentinel).
   final int? specificId;
 

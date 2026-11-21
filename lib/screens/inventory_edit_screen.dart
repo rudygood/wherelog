@@ -174,7 +174,7 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
         if (g.id == item.generalId) { gName = g.name; break; }
       }
       if (item.specificId != null) {
-        for (final s in await _locRepo.getInventorySpecifics()) {
+        for (final s in await _locRepo.getSpecifics()) {
           if (s.id == item.specificId) {
             sName = s.name;
             if (gName.isEmpty) {
@@ -273,11 +273,11 @@ class _InventoryEditScreenState extends State<InventoryEditScreen> {
     }
     int? specificId;
     if (sName.isNotEmpty) {
-      for (final s in await _locRepo.getInventorySpecifics()) {
+      for (final s in await _locRepo.getSpecifics()) {
         if (s.generalId == generalId && s.name.toLowerCase() == sName.toLowerCase()) { specificId = s.id; break; }
       }
       if (specificId == null) {
-        specificId = await _locRepo.addInventorySpecific(generalId, sName);
+        specificId = await _locRepo.addSpecific(generalId, sName);
       }
     }
 

@@ -3,9 +3,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'app_database.dart';
 import 'location_records.dart';
 
-/// SQLite-backed repository for the location tables (Generals and the two
-/// Specifics lists). The first of the per-entity repositories built
-/// during the migration from the old JSON store.
+/// SQLite-backed repository for the location tables (Generals and the
+/// one Specific list per General). The first of the per-entity
+/// repositories built during the migration from the old JSON store.
+///
+/// Version 4 (build 60) merged the two Specific lists into one:
+/// a spot is a spot, whether the thing on it is stored or inventoried.
 ///
 /// Semantics deliberately match the old repository's location behaviour:
 /// names are trimmed by callers, duplicate checks are case-insensitive,
@@ -21,18 +24,11 @@ class SqliteLocationRepository {
     return rows.map(GeneralLocation.fromMap).toList();
   }
 
-  Future<List<StorageSpecific>> getStorageSpecifics() async {
+  Future<List<Specific>> getSpecifics() async {
     if (kIsWeb) return [];
     final db = await AppDatabase.instance.database;
-    final rows = await db.query('storage_specifics', orderBy: 'id ASC');
-    return rows.map(StorageSpecific.fromMap).toList();
-  }
-
-  Future<List<InventorySpecific>> getInventorySpecifics() async {
-    if (kIsWeb) return [];
-    final db = await AppDatabase.instance.database;
-    final rows = await db.query('inventory_specifics', orderBy: 'id ASC');
-    return rows.map(InventorySpecific.fromMap).toList();
+    final rows = await db.query('specifics', orderBy: 'id ASC');
+    return rows.map(Specific.fromMap).toList();
   }
 
   Future<bool> isDuplicateGeneral(String name) async {
@@ -41,15 +37,9 @@ class SqliteLocationRepository {
     return generals.any((g) => g.name.toLowerCase() == lower);
   }
 
-  Future<bool> isDuplicateStorageSpecific(int generalId, String name) async {
+  Future<bool> isDuplicateSpecific(int generalId, String name) async {
     final lower = name.trim().toLowerCase();
-    final specifics = await getStorageSpecifics();
-    return specifics.any((s) => s.generalId == generalId && s.name.toLowerCase() == lower);
-  }
-
-  Future<bool> isDuplicateInventorySpecific(int generalId, String name) async {
-    final lower = name.trim().toLowerCase();
-    final specifics = await getInventorySpecifics();
+    final specifics = await getSpecifics();
     return specifics.any((s) => s.generalId == generalId && s.name.toLowerCase() == lower);
   }
 
@@ -60,16 +50,10 @@ class SqliteLocationRepository {
     return db.insert('general_locations', GeneralLocation(name: name.trim()).toMap());
   }
 
-  Future<int?> addStorageSpecific(int generalId, String name) async {
+  Future<int?> addSpecific(int generalId, String name) async {
     if (kIsWeb) return null;
     final db = await AppDatabase.instance.database;
-    return db.insert('storage_specifics', StorageSpecific(generalId: generalId, name: name.trim()).toMap());
-  }
-
-  Future<int?> addInventorySpecific(int generalId, String name) async {
-    if (kIsWeb) return null;
-    final db = await AppDatabase.instance.database;
-    return db.insert('inventory_specifics', InventorySpecific(generalId: generalId, name: name.trim()).toMap());
+    return db.insert('specifics', Specific(generalId: generalId, name: name.trim()).toMap());
   }
 
   Future<void> renameGeneral(int id, String name) async {
@@ -78,16 +62,10 @@ class SqliteLocationRepository {
     await db.update('general_locations', {'name': name.trim()}, where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> renameStorageSpecific(int id, String name) async {
+  Future<void> renameSpecific(int id, String name) async {
     if (kIsWeb) return;
     final db = await AppDatabase.instance.database;
-    await db.update('storage_specifics', {'name': name.trim()}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> renameInventorySpecific(int id, String name) async {
-    if (kIsWeb) return;
-    final db = await AppDatabase.instance.database;
-    await db.update('inventory_specifics', {'name': name.trim()}, where: 'id = ?', whereArgs: [id]);
+    await db.update('specifics', {'name': name.trim()}, where: 'id = ?', whereArgs: [id]);
   }
 
   /// The foreign key refuses this delete while Specifics still reference
@@ -98,15 +76,9 @@ class SqliteLocationRepository {
     await db.delete('general_locations', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> deleteStorageSpecific(int id) async {
+  Future<void> deleteSpecific(int id) async {
     if (kIsWeb) return;
     final db = await AppDatabase.instance.database;
-    await db.delete('storage_specifics', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> deleteInventorySpecific(int id) async {
-    if (kIsWeb) return;
-    final db = await AppDatabase.instance.database;
-    await db.delete('inventory_specifics', where: 'id = ?', whereArgs: [id]);
+    await db.delete('specifics', where: 'id = ?', whereArgs: [id]);
   }
 }

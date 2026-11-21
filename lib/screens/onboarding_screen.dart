@@ -44,28 +44,33 @@ import '../theme/app_theme.dart';
 /// re-recorded.
 /// No location permission is asked here: that comes in context, the
 /// first time someone adds a place. Naming: the inventory tab is
-/// "Personal Inventory" here, per Rudy's 2026-11-15 decision.
+/// "Inventory Items" here, per Rudy's 2026-11-19 decision (renamed from
+/// "Personal Inventory", 2026-11-15, so the tab reads as a pair with "Storage Items").
 ///
 /// Intro on/off (build 33; popup since build 57, always since build
-/// 58): the tour shows on launch while the Intro setting is on.
-/// Leaving it — Skip intro, Close, Get started, or Done — always asks
-/// "Show this intro again?" with two buttons that state the outcome:
-/// "Don't show again" turns it off, "Keep showing" leaves it on
-/// (dismissing the popup also leaves it on). The question fits a
-/// replay as well as a first run: either way the user is deciding
-/// whether they need to see it next time. There is no "Turn off
-/// intro" button on the band any more. The Intro toggle in Settings
-/// still switches it either way. The band holds two rows: Back | dots
-/// | Next, then a single "Skip intro" (first run) or "Close"
-/// (replay). Back is greyed out on the first page; swiping still
-/// works. Pages 2-7 use the app's usual 6px side margins on phones,
+/// 58; wording build 71): the tour shows on launch while the Intro
+/// setting is on. Leaving it — Skip intro, Close, Get started, or
+/// Done — always asks "Stop showing this intro at app start up?"
+/// with two buttons that state the outcome: "Stop showing" turns it
+/// off, "Keep showing" leaves it on (dismissing the popup also
+/// leaves it on). The question was "Show this intro again?" until
+/// build 71 — "again" could be read as replaying the intro right
+/// now rather than at the next startup, so the wording was reversed
+/// to name the startup explicitly. The question fits a replay as
+/// well as a first run: either way the user is deciding whether
+/// they need to see it next time. There is no "Turn off intro"
+/// button on the band any more. The Intro toggle in Settings still
+/// switches it either way. The band holds two rows: Back | dots |
+/// Next, then a single "Skip intro" (first run) or "Close" (replay).
+/// Back is greyed out on the first page; swiping still works.
+/// Pages 2-7 use the app's usual 6px side margins on phones,
 /// squeezed vertically.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onDone, this.isFirstRun = true});
 
   /// First run: the caller just moves on to the home screen. The
-  /// Intro setting is untouched unless the user picks "Don't show
-  /// again" in the leaving popup (or the Settings toggle).
+  /// Intro setting is untouched unless the user picks "Stop showing"
+  /// in the leaving popup (or the Settings toggle).
   /// Replay (from Help): the caller just closes this page.
   final VoidCallback onDone;
 
@@ -128,10 +133,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   /// whether to show it again — first run or replay alike.
   void _skip() => _askShowAgain();
 
-  /// "Show this intro again?" — the buttons state the outcome, so
-  /// there is no Yes/No to puzzle over. "Don't show again" turns the
-  /// Intro setting off; "Keep showing" (or dismissing the popup)
-  /// leaves it on. Either way the tour closes.
+  /// "Stop showing this intro at app start up?" (build 71; was
+  /// "Show this intro again?" — "again" could be read as replaying
+  /// it right now). The buttons state the outcome, so there is no
+  /// Yes/No to puzzle over. "Stop showing" turns the Intro setting
+  /// off; "Keep showing" (or dismissing the popup) leaves it on.
+  /// Either way the tour closes.
   Future<void> _askShowAgain() async {
     final again = await showDialog<bool>(
       context: context,
@@ -141,11 +148,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           borderRadius: BorderRadius.circular(AppBorder.radius),
           side: AppBorder.side,
         ),
-        title: const Text('Show this intro again?'),
+        title: const Text('Stop showing this intro at app start up?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(c).pop(false),
-            child: const Text("Don't show again"),
+            child: const Text('Stop showing'),
           ),
           TextButton(
             onPressed: () => Navigator.of(c).pop(true),
@@ -206,7 +213,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const _TabsPage(),
                       const _AddStoragePage(),
                       const _ContentPage(
-                        visual: _DetailChips(),
+                        visual: DetailChips(),
                         visualTopPad: 24,
                         title: 'ADD USEFUL ITEM DETAILS\nCREATE AN INVENTORY REPORT',
                         body: 'The optional details can be useful especially those that allow you to generate a Personal Inventory Report for insurance purpose. See the menu.',
@@ -426,8 +433,8 @@ class _TabsPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _MainHeaderMock(),
-                _TabBarMock(),
+                MainHeaderMock(),
+                TabBarMock(),
               ],
             ),
           ),
@@ -466,7 +473,7 @@ class _TabsPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   _TabsSection(
-                    label: 'Personal Inventory',
+                    label: 'Inventory Items',
                     body: 'Log where your assets are located. Add details for an insurance inventory report.',
                   ),
                   SizedBox(height: 8),
@@ -545,7 +552,7 @@ class _AddStoragePage extends StatelessWidget {
               child: Padding(
                 padding:
                     EdgeInsets.symmetric(horizontal: _contentHPad(context)),
-                child: const _AddFormMock(),
+                child: const AddFormMock(),
               ),
             ),
           ),
@@ -621,8 +628,8 @@ class _AddStoragePage extends StatelessWidget {
 /// like the rest of the tour: fixed light consts throughout, never
 /// the brightness-aware AppColors/AppText getters, so the fields stay
 /// white-on-white-readable in dark mode too.
-class _AddFormMock extends StatelessWidget {
-  const _AddFormMock();
+class AddFormMock extends StatelessWidget {
+  const AddFormMock();
 
   /// One field row: the label above, then the field box with its value
   /// and, for the location fields, the picker's dropdown and action
@@ -722,8 +729,8 @@ class _AddFormMock extends StatelessWidget {
 /// The main page's header as it really is: the app icon, the wordmark,
 /// and the hamburger menu at the right. (The import badge button only
 /// appears while an import is pending, so it is not shown here.)
-class _MainHeaderMock extends StatelessWidget {
-  const _MainHeaderMock();
+class MainHeaderMock extends StatelessWidget {
+  const MainHeaderMock();
 
   @override
   Widget build(BuildContext context) {
@@ -878,8 +885,8 @@ class _ContentPage extends StatelessWidget {
 /// The real tab bar, as built in main.dart: a scaffoldDark strip, the
 /// selected tab a surface "folder tab" with a strong three-side border
 /// and rounded top corners, two-line labels.
-class _TabBarMock extends StatelessWidget {
-  const _TabBarMock();
+class TabBarMock extends StatelessWidget {
+  const TabBarMock();
 
   @override
   Widget build(BuildContext context) {
@@ -889,7 +896,7 @@ class _TabBarMock extends StatelessWidget {
       child: Row(
         children: [
           _tabCell('Storage\nItems', true),
-          _tabCell('Personal\nInventory', false),
+          _tabCell('Inventory\nItems', false),
           _tabCell('Places of\nInterest', false),
         ],
       ),
@@ -920,7 +927,7 @@ class _TabBarMock extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-            fontSize: 12,
+            fontSize: 13,
             height: 1.0,
             color: active ? _kInk : _kInkSoft,
           ),
@@ -934,8 +941,8 @@ class _TabBarMock extends StatelessWidget {
 /// The fields are the real ones from the item record: photo, notes,
 /// quantity, value (replacement), brand, model, serial number, price
 /// (what was paid), acquisition date.
-class _DetailChips extends StatelessWidget {
-  const _DetailChips();
+class DetailChips extends StatelessWidget {
+  const DetailChips();
 
   @override
   Widget build(BuildContext context) {
@@ -984,13 +991,13 @@ class _DetailChips extends StatelessWidget {
 /// real form — the GPS LOCATION section (Latitude/Longitude fields and
 /// the Device GPS / Map GPS buttons) and the PLACE NAME field, all
 /// inside the section's bordered card. A display copy only: the fields
-/// show the real labels and hint, the buttons do nothing. The real
-/// Longitude label reads "Longitude" but truncates to "Longitu..." on
-/// the phone (as in Rudy's reference), so the mock shows it that way.
+/// show the real labels and hint, the buttons do nothing. The
+/// Longitude label reads "Longitude" in full (build 72; it used to
+/// truncate to "Longitu..." on the phone, so the mock showed it that way.
 /// Light-locked like the rest of the tour: fixed light consts
 /// throughout, never the brightness-aware AppColors/AppText getters.
-class _PoiAddMock extends StatelessWidget {
-  const _PoiAddMock();
+class PoiAddMock extends StatelessWidget {
+  const PoiAddMock();
 
   /// A section label, as the real form's dialogSection style.
   Widget _sectionLabel(String text) {
@@ -1069,7 +1076,7 @@ class _PoiAddMock extends StatelessWidget {
                 children: [
                   Expanded(child: _fieldBox('Latitude')),
                   const SizedBox(width: 8),
-                  Expanded(child: _fieldBox('Longitu...')),
+                  Expanded(child: _fieldBox('Longitude')),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1157,7 +1164,7 @@ class _PoiPage extends StatelessWidget {
               child: Padding(
                 padding:
                     EdgeInsets.symmetric(horizontal: _contentHPad(context)),
-                child: const _PoiAddMock(),
+                child: const PoiAddMock(),
               ),
             ),
           ),
@@ -1375,8 +1382,8 @@ class _MapMock extends StatelessWidget {
 /// The search/filter bar as it really appears on the item lists: the
 /// count, then the tune square and the search square, both in the
 /// scaffoldDark style with a light border.
-class _SearchMock extends StatelessWidget {
-  const _SearchMock();
+class SearchMock extends StatelessWidget {
+  const SearchMock();
 
   @override
   Widget build(BuildContext context) {
@@ -1423,8 +1430,8 @@ class _SearchMock extends StatelessWidget {
 /// the distance, import, map and search buttons. Shown on page 6 below
 /// the Storage/Inventory search bar, so the tour can point at the
 /// Places-only icons. Light-locked like the rest of the tour.
-class _PoiTopBarMock extends StatelessWidget {
-  const _PoiTopBarMock();
+class PoiTopBarMock extends StatelessWidget {
+  const PoiTopBarMock();
 
   @override
   Widget build(BuildContext context) {
@@ -1485,6 +1492,263 @@ class _PoiTopBarMock extends StatelessWidget {
 /// headline and the "Find & Use Your Items" section. A dedicated page
 /// (not _ContentPage) because the visual is two bars and the text is
 /// a labeled section with two paragraphs.
+
+/// The POI Import button from the Places tab top bar, with the red
+/// badge that shows how many locations are waiting in the import
+/// queue. Shown in the Help's Places of Interest section, above the
+/// import dialog it opens. Light-locked, like the other mocks.
+class PoiImportButtonMock extends StatelessWidget {
+  const PoiImportButtonMock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _kStrip,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _kLine),
+              ),
+              child: const Center(
+                child: ImageIcon(
+                  AssetImage('assets/icon/poi_import_icon.png'),
+                  size: 24,
+                  color: _kInk,
+                ),
+              ),
+            ),
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: _kAlert,
+                  shape: BoxShape.circle,
+                ),
+                child: const Text(
+                  '2',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.white,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// The POI Import dialog ("Import Places" sheet) as the Help shows
+/// it: the queue of shared locations waiting to be imported, with
+/// the green check to import one and the X to drop it, then Paste
+/// from Clipboard and Import GPX File. Light-locked, like the other
+/// mocks. The queue card background is AppColors.cardSelected in
+/// light mode (0xFFE8F0FF); the green check is AppColors.success in
+/// light mode (0xFF43A047).
+class PoiImportDialogMock extends StatelessWidget {
+  const PoiImportDialogMock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Import Places',
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: _kInk)),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F0FF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('Ready to Import (2)',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: _kInk)),
+                    const Spacer(),
+                    Text('Clear All',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.logoBlue)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('Tap to import - stays until saved',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: _kInkSoft,
+                        fontStyle: FontStyle.italic)),
+                const SizedBox(height: 8),
+                _importRow('Great campsite', '38.12345, -78.12345 \u2022 share'),
+                const SizedBox(height: 6),
+                _importRow('Luray Caverns', '38.12345, -78.12345 \u2022 share'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          _dialogRow(Icons.content_paste, 'Paste from Clipboard',
+              'Apple Maps, Google Maps, geo:, lat,lng'),
+          _dialogRow(Icons.file_open, 'Import GPX File', 'Waypoints from GPX'),
+          const SizedBox(height: 8),
+          Container(
+            height: 36,
+            decoration: BoxDecoration(
+              border: Border.all(color: _kLine),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Center(
+              child: Text('Close',
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w700, color: _kInk)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _importRow(String name, String detail) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.place, color: _kAlert, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _kInk),
+                    overflow: TextOverflow.ellipsis),
+                Text(detail,
+                    style:
+                        const TextStyle(fontSize: 10, color: _kInkSoft)),
+              ],
+            ),
+          ),
+          const Icon(Icons.check_circle,
+              color: Color(0xFF43A047), size: 24),
+          const SizedBox(width: 4),
+          const Icon(Icons.close, size: 18, color: _kInk),
+        ],
+      ),
+    );
+  }
+
+  Widget _dialogRow(IconData icon, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: _kInk, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _kInk)),
+                Text(subtitle,
+                    style:
+                        const TextStyle(fontSize: 11, color: _kInkSoft)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The bottom bar that appears when SELECT is tapped on a tab: how
+/// many entries are checked, and the CANCEL, MOVE, and DELETE
+/// buttons. Shown in the Help's Selecting Entries section. The
+/// buttons are the real ones (buttonBg, white 12px w700) and the
+/// count line is bold, as on the screen.
+class SelectBarMock extends StatelessWidget {
+  const SelectBarMock();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('2 selected in Storage',
+              style: TextStyle(fontWeight: FontWeight.w800, color: _kInk)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _selectBtn('CANCEL'),
+              const SizedBox(width: 8),
+              _selectBtn('MOVE'),
+              const SizedBox(width: 8),
+              _selectBtn('DELETE'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _selectBtn(String label) {
+    return Expanded(
+      child: Container(
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.buttonBg,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(label,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.white)),
+        ),
+      ),
+    );
+  }
+}
+
 class _FindPage extends StatelessWidget {
   const _FindPage();
 
@@ -1502,8 +1766,8 @@ class _FindPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                _SearchMock(),
-                _PoiTopBarMock(),
+                SearchMock(),
+                PoiTopBarMock(),
               ],
             ),
           ),
@@ -1585,7 +1849,7 @@ class _DataPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const _ExportImportMock(),
+        const ExportImportMock(),
         Expanded(
           child: Container(
             width: double.infinity,
@@ -1645,8 +1909,8 @@ class _DataPage extends StatelessWidget {
 /// Facsimile of the top of the real Export / Import screen: the app
 /// header, the More Info row, and the two starting buttons. (The
 /// Important-information box is deliberately left out.)
-class _ExportImportMock extends StatelessWidget {
-  const _ExportImportMock();
+class ExportImportMock extends StatelessWidget {
+  const ExportImportMock();
 
   @override
   Widget build(BuildContext context) {
@@ -1749,6 +2013,423 @@ class _ExportImportMock extends StatelessWidget {
           color: AppColors.white,
         ),
       ),
+    );
+  }
+}
+
+
+/// A Location Options General card, as it really looks when expanded:
+/// the General name and item count with the expand control, then the
+/// one list of Specific locations. Shared by the tour and the Help
+/// page. Light-locked like the rest of the tour excerpts.
+/// The location tree's trunk and branch, as the real Location Options
+/// screen draws them (_TreeLinePainter in location_options_screen.dart):
+/// a vertical trunk down the middle of a 22px gutter, and a horizontal
+/// branch reaching to the entry at the row's middle. The last row's
+/// trunk stops at its branch, closing the tree. (Build 73: the mock
+/// used to draw three disconnected vertical dashes with no horizontal
+/// branch — Rudy's report, 2026-11-20.)
+class _MockTreeLinePainter extends CustomPainter {
+  final bool isLast;
+  const _MockTreeLinePainter({required this.isLast});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF1E90FF)
+      ..strokeWidth = 3.2
+      ..style = PaintingStyle.stroke;
+    final trunkX = size.width / 2;
+    final midY = size.height / 2;
+    canvas.drawLine(Offset(trunkX, 0), Offset(trunkX, isLast ? midY : size.height), paint);
+    canvas.drawLine(Offset(trunkX, midY), Offset(size.width, midY), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MockTreeLinePainter oldDelegate) =>
+      oldDelegate.isLast != isLast;
+}
+
+class LocationCardMock extends StatelessWidget {
+  const LocationCardMock();
+
+  /// One Specific row, with the real tree's trunk and branch at the
+  /// left — a 22px gutter, full row height, drawn by
+  /// _MockTreeLinePainter. The last row's trunk stops at its branch,
+  /// closing the tree.
+  Widget _specRow(String text, {required bool isLast}) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: 22, child: CustomPaint(painter: _MockTreeLinePainter(isLast: isLast))),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: _kInkSoft,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kCard,
+        border: Border.all(color: _kLine),
+        borderRadius: BorderRadius.circular(AppBorder.radius),
+      ),
+      padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Garage (12)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: _kInk,
+                  ),
+                ),
+              ),
+              const Icon(Icons.expand_less, size: 22, color: _kInkSoft),
+            ],
+          ),
+          Container(height: 1, color: _kLine, margin: const EdgeInsets.symmetric(vertical: 4)),
+          _specRow('Hardware Bin (3)', isLast: false),
+          _specRow('Paint Shelf (2)', isLast: false),
+          _specRow('Tool Chest (1)', isLast: true),
+        ],
+      ),
+    );
+  }
+}
+
+/// The Reports screen's two actions, as they really look: the Personal
+/// Inventory Report button and the CSV button, each under its section
+/// label. Shared by the tour and the Help page. Light-locked like the
+/// rest of the tour excerpts.
+class ReportsMock extends StatelessWidget {
+  const ReportsMock();
+
+  Widget _label(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: 11,
+        color: _kInkSoft,
+        letterSpacing: 0.6,
+      ),
+    );
+  }
+
+  Widget _actionButton(String label) {
+    return Container(
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.buttonBg,
+        borderRadius: BorderRadius.circular(AppBorder.radius),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+          color: AppColors.white,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _label('PERSONAL INVENTORY REPORT'),
+        const SizedBox(height: 8),
+        _actionButton('View Insurance Report'),
+        const SizedBox(height: 12),
+        Container(height: 1, color: _kLine),
+        const SizedBox(height: 12),
+        _label('ITEMS AND PLACES (CSV)'),
+        const SizedBox(height: 8),
+        _actionButton('Create Three CSV Files'),
+      ],
+    );
+
+  }
+}
+
+/// One labeled detail field, as it appears on the Add screen: the
+/// label above, then the 36px field box. Shared by the Storage and
+/// Inventory detail mocks below.
+class _DetailFieldMock extends StatelessWidget {
+  const _DetailFieldMock({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            color: _kInkSoft,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: AppSize.fieldHeight,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            border: Border.all(color: _kLine),
+            borderRadius: BorderRadius.circular(AppBorder.radius),
+          ),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: _kInk,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The Storage Add screen's detail fields, as they really are:
+/// Quantity and Value side by side. The tour's DetailChips show
+/// the union of both tabs' fields; Help shows each tab's own set,
+/// true to its screen. Shared by the Help page. Light-locked.
+class StorageDetailMock extends StatelessWidget {
+  const StorageDetailMock();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(child: _DetailFieldMock(label: 'Quantity', value: '1')),
+        SizedBox(width: 12),
+        Expanded(child: _DetailFieldMock(label: 'Value (\$)', value: '0.00')),
+      ],
+    );
+  }
+}
+
+/// The Inventory Add screen's detail fields, as they really are:
+/// Brand and Model, Serial Number and Quantity, Purchase Price and
+/// Replacement Value, then Acquisition Date — two to a row, in the
+/// same order the screen shows them. Shared by the Help page.
+/// Light-locked.
+class InventoryDetailMock extends StatelessWidget {
+  const InventoryDetailMock();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(child: _DetailFieldMock(label: 'Brand', value: 'Optional')),
+            SizedBox(width: 12),
+            Expanded(child: _DetailFieldMock(label: 'Model', value: 'Optional')),
+          ],
+        ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _DetailFieldMock(label: 'Serial Number', value: 'Optional')),
+            SizedBox(width: 12),
+            Expanded(child: _DetailFieldMock(label: 'Quantity', value: '1')),
+          ],
+        ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _DetailFieldMock(label: 'Purchase Price (\$)', value: '0.00')),
+            SizedBox(width: 12),
+            Expanded(child: _DetailFieldMock(label: 'Replacement Value (\$)', value: '0.00')),
+          ],
+        ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _DetailFieldMock(label: 'Acquisition Date', value: 'Optional')),
+            SizedBox(width: 12),
+            Expanded(child: SizedBox()),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// The photo and notes input, as they really are on the Add screen:
+/// the three photo buttons (Camera, Gallery, Clipboard) beside the
+/// thumbnail, View Photo and Remove beside that, and the Notes field
+/// below. The same section serves Storage, Inventory, and Places.
+/// Shared by the Help page. Light-locked.
+class PhotoNotesMock extends StatelessWidget {
+  const PhotoNotesMock();
+
+  Widget _photoButton(IconData icon, String label) {
+    return Container(
+      height: AppSize.buttonHeight,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.buttonBg,
+        borderRadius: BorderRadius.circular(AppRadius.button),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16, color: AppColors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            border: Border.all(color: _kLine),
+            borderRadius: BorderRadius.circular(AppRadius.button),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _photoButton(Icons.photo_camera_outlined, 'Camera'),
+                    const SizedBox(height: 8),
+                    _photoButton(Icons.photo_library_outlined, 'Gallery'),
+                    const SizedBox(height: 8),
+                    _photoButton(Icons.content_paste_outlined, 'Clipboard'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 124,
+                height: 124,
+                decoration: BoxDecoration(
+                  color: _kStrip,
+                  border: Border.all(color: _kLine),
+                  borderRadius: BorderRadius.circular(AppRadius.button),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.image_outlined, size: 32, color: _kTaglineGrey),
+                    SizedBox(height: 4),
+                    Text(
+                      'No Photo',
+                      style: TextStyle(
+                        color: _kInk,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _photoButton(Icons.fullscreen_outlined, 'View Photo'),
+                    const SizedBox(height: 8),
+                    _photoButton(Icons.delete_outline, 'Remove'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'NOTES',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            color: _kInkSoft,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 48,
+          width: double.infinity,
+          alignment: Alignment.topLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            border: Border.all(color: _kLine),
+            borderRadius: BorderRadius.circular(AppBorder.radius),
+          ),
+          child: const Text(
+            'Optional notes...',
+            style: TextStyle(
+              fontWeight: FontWeight.w400,
+              fontSize: 12,
+              color: _kTaglineGrey,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

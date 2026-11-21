@@ -10,7 +10,7 @@ class StorageItem {
   /// General location.
   final int generalId;
 
-  /// References storage_specifics.id. NULL means "General only" — there
+  /// References specifics.id. NULL means "General only" — there
   /// is no blank-name sentinel row (schema Decision D1).
   final int? specificId;
 

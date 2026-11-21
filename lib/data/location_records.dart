@@ -19,34 +19,14 @@ class GeneralLocation {
       };
 }
 
-class StorageSpecific {
+class Specific {
   final int? id;
   final int generalId;
   final String name;
 
-  const StorageSpecific({this.id, required this.generalId, required this.name});
+  const Specific({this.id, required this.generalId, required this.name});
 
-  factory StorageSpecific.fromMap(Map<String, Object?> map) => StorageSpecific(
-        id: map['id'] as int?,
-        generalId: map['general_id'] as int,
-        name: map['name'] as String,
-      );
-
-  Map<String, Object?> toMap() => {
-        if (id != null) 'id': id,
-        'general_id': generalId,
-        'name': name,
-      };
-}
-
-class InventorySpecific {
-  final int? id;
-  final int generalId;
-  final String name;
-
-  const InventorySpecific({this.id, required this.generalId, required this.name});
-
-  factory InventorySpecific.fromMap(Map<String, Object?> map) => InventorySpecific(
+  factory Specific.fromMap(Map<String, Object?> map) => Specific(
         id: map['id'] as int?,
         generalId: map['general_id'] as int,
         name: map['name'] as String,

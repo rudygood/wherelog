@@ -118,8 +118,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final genNames = _names('generals');
-    final sSpecNames = _names('storageSpecifics');
-    final iSpecNames = _names('inventorySpecifics');
+    final specNames = _names('specifics');
 
     String locationLine(
       Map<String, dynamic> r,
@@ -159,10 +158,9 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
                 ),
                 const SizedBox(height: 10),
                 _compareRow('General Location', _sel.countOf('generals'), _current?.generals),
-                _compareRow('Storage Specific', _sel.countOf('storageSpecifics'), _current?.storageSpecifics),
-                _compareRow('Inventory Specific', _sel.countOf('inventorySpecifics'), _current?.inventorySpecifics),
+                _compareRow('Specific Location', _sel.countOf('specifics'), _current?.specifics),
                 _compareRow('Storage Item', _sel.countOf('storageItems'), _current?.storageItems),
-                _compareRow('Personal Inventory', _sel.countOf('inventoryItems'), _current?.inventoryItems),
+                _compareRow('Inventory Items', _sel.countOf('inventoryItems'), _current?.inventoryItems),
                 _compareRow('Place of Interest', _sel.countOf('poiItems'), _current?.poiItems),
                 _compareRow('Photos in backup', _sel.photoCount, _current?.imagesLinked),
               ],
@@ -176,14 +174,8 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
             (_) => null,
           ),
           _section(
-            'Storage Specific Locations',
-            _sel.rows('storageSpecifics'),
-            (r) => r['name'] as String,
-            (r) => 'in ${genNames[r['general_id']] ?? '?'}',
-          ),
-          _section(
-            'Inventory Specific Locations',
-            _sel.rows('inventorySpecifics'),
+            'Specific Locations',
+            _sel.rows('specifics'),
             (r) => r['name'] as String,
             (r) => 'in ${genNames[r['general_id']] ?? '?'}',
           ),
@@ -192,7 +184,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
             _sel.rows('storageItems'),
             (r) => r['name'] as String,
             (r) {
-              final parts = <String>[locationLine(r, sSpecNames)];
+              final parts = <String>[locationLine(r, specNames)];
               parts.add('Qty ${r['quantity']}');
               if (r['value_cents'] != null) {
                 parts.add('Value ${_money(r['value_cents'] as int)}');
@@ -202,7 +194,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
             },
           ),
           _section(
-            'Personal Inventory',
+            'Inventory Items',
             _sel.rows('inventoryItems'),
             (r) => r['name'] as String,
             (r) {
@@ -215,7 +207,7 @@ class _BackupViewerScreenState extends State<BackupViewerScreen> {
               if (r['serial_number'] != null) {
                 parts.add('SN ${r['serial_number']}');
               }
-              parts.add(locationLine(r, iSpecNames));
+              parts.add(locationLine(r, specNames));
               parts.add('Qty ${r['quantity']}');
               if (r['purchase_price_cents'] != null) {
                 parts.add('Purchased ${_money(r['purchase_price_cents'] as int)}');

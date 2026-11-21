@@ -14,8 +14,7 @@ import 'photo_store.dart';
 /// backup viewer's comparison header.
 class DataCounts {
   final int generals;
-  final int storageSpecifics;
-  final int inventorySpecifics;
+  final int specifics;
   final int storageItems;
   final int inventoryItems;
   final int poiItems;
@@ -23,8 +22,7 @@ class DataCounts {
 
   const DataCounts({
     required this.generals,
-    required this.storageSpecifics,
-    required this.inventorySpecifics,
+    required this.specifics,
     required this.storageItems,
     required this.inventoryItems,
     required this.poiItems,
@@ -95,7 +93,10 @@ class DataTransfer {
 
   /// The backup document's format stamp. Version 9 was the JSON
   /// store's; it is recognised on import only to be refused politely.
-  static const int backupFormatVersion = 10;
+  /// Version 11 carries one Specific list per General (build 60):
+  /// a single `specifics` section replaces the two old sections.
+  /// Version 10 backups are refused — export fresh after upgrading.
+  static const int backupFormatVersion = 11;
 
   static const List<String> _itemSections = [
     'storageItems',
@@ -132,9 +133,7 @@ class DataTransfer {
         );
     return DataCounts(
       generals: await count('SELECT COUNT(*) FROM general_locations'),
-      storageSpecifics: await count('SELECT COUNT(*) FROM storage_specifics'),
-      inventorySpecifics:
-          await count('SELECT COUNT(*) FROM inventory_specifics'),
+      specifics: await count('SELECT COUNT(*) FROM specifics'),
       storageItems: await count('SELECT COUNT(*) FROM storage_items'),
       inventoryItems: await count('SELECT COUNT(*) FROM inventory_items'),
       poiItems: await count('SELECT COUNT(*) FROM poi_items'),
@@ -159,8 +158,7 @@ class DataTransfer {
       'version': backupFormatVersion,
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'generals': await rows('general_locations'),
-      'storageSpecifics': await rows('storage_specifics'),
-      'inventorySpecifics': await rows('inventory_specifics'),
+      'specifics': await rows('specifics'),
       'storageItems': await rows('storage_items'),
       'inventoryItems': await rows('inventory_items'),
       'poiItems': await rows('poi_items'),
@@ -322,8 +320,7 @@ class DataTransfer {
     final generals = rowsOf(doc, 'generals');
     for (final key in const [
       'generals',
-      'storageSpecifics',
-      'inventorySpecifics',
+      'specifics',
       'storageItems',
       'inventoryItems',
       'poiItems',
@@ -334,8 +331,7 @@ class DataTransfer {
         );
       }
     }
-    final sSpecs = rowsOf(doc, 'storageSpecifics');
-    final iSpecs = rowsOf(doc, 'inventorySpecifics');
+    final specs = rowsOf(doc, 'specifics');
     final sItems = rowsOf(doc, 'storageItems');
     final iItems = rowsOf(doc, 'inventoryItems');
     final pois = rowsOf(doc, 'poiItems');
@@ -346,15 +342,14 @@ class DataTransfer {
       _reqString(r, 'name');
       generalIds.add(r['id'] as int);
     }
-    final sSpecIds = _validateSpecifics(sSpecs, generalIds);
-    final iSpecIds = _validateSpecifics(iSpecs, generalIds);
+    final specIds = _validateSpecifics(specs, generalIds);
 
     for (final r in sItems) {
-      _validateItemBase(r, generalIds, sSpecIds);
+      _validateItemBase(r, generalIds, specIds);
       _optInt(r, 'value_cents');
     }
     for (final r in iItems) {
-      _validateItemBase(r, generalIds, iSpecIds);
+      _validateItemBase(r, generalIds, specIds);
       _optInt(r, 'value_cents');
       _optInt(r, 'purchase_price_cents');
       _optString(r, 'brand');
@@ -498,8 +493,7 @@ class DataTransfer {
   /// [parseBackup]).
   Future<void> importDocument(Map<String, dynamic> doc) async {
     final generals = rowsOf(doc, 'generals');
-    final sSpecs = rowsOf(doc, 'storageSpecifics');
-    final iSpecs = rowsOf(doc, 'inventorySpecifics');
+    final specs = rowsOf(doc, 'specifics');
     final sItems = rowsOf(doc, 'storageItems');
     final iItems = rowsOf(doc, 'inventoryItems');
     final pois = rowsOf(doc, 'poiItems');
@@ -516,22 +510,13 @@ class DataTransfer {
         genMap[r['id'] as int] = newId;
       }
 
-      final sSpecMap = <int, int>{};
-      for (final r in sSpecs) {
-        final newId = await txn.insert('storage_specifics', {
+      final specMap = <int, int>{};
+      for (final r in specs) {
+        final newId = await txn.insert('specifics', {
           'general_id': genMap[r['general_id']],
           'name': r['name'],
         });
-        sSpecMap[r['id'] as int] = newId;
-      }
-
-      final iSpecMap = <int, int>{};
-      for (final r in iSpecs) {
-        final newId = await txn.insert('inventory_specifics', {
-          'general_id': genMap[r['general_id']],
-          'name': r['name'],
-        });
-        iSpecMap[r['id'] as int] = newId;
+        specMap[r['id'] as int] = newId;
       }
 
       for (final r in sItems) {
@@ -539,7 +524,7 @@ class DataTransfer {
           'name': r['name'],
           'general_id': genMap[r['general_id']],
           'specific_id':
-              r['specific_id'] == null ? null : sSpecMap[r['specific_id']],
+              r['specific_id'] == null ? null : specMap[r['specific_id']],
           'quantity': r['quantity'],
           'value_cents': r['value_cents'],
           'notes': r['notes'],
@@ -554,7 +539,7 @@ class DataTransfer {
           'name': r['name'],
           'general_id': genMap[r['general_id']],
           'specific_id':
-              r['specific_id'] == null ? null : iSpecMap[r['specific_id']],
+              r['specific_id'] == null ? null : specMap[r['specific_id']],
           'brand': r['brand'],
           'model': r['model'],
           'serial_number': r['serial_number'],
@@ -585,7 +570,7 @@ class DataTransfer {
     });
   }
 
-  /// Empties all six tables in one transaction (Export Data Reset,
+  /// Empties all five tables in one transaction (Export Data Reset,
   /// after its export has been written). Photo files are left on disk
   /// unlinked, as the reset's confirmation dialog states.
   Future<void> clearAllData() async {
@@ -601,8 +586,7 @@ class DataTransfer {
     await txn.delete('storage_items');
     await txn.delete('inventory_items');
     await txn.delete('poi_items');
-    await txn.delete('storage_specifics');
-    await txn.delete('inventory_specifics');
+    await txn.delete('specifics');
     await txn.delete('general_locations');
   }
 }

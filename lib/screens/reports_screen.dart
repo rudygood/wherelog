@@ -11,6 +11,7 @@ import '../data/inventory_records.dart';
 import '../data/photo_store.dart';
 import '../data/sqlite_inventory_repository.dart';
 import '../data/sqlite_location_repository.dart';
+import '../data/sqlite_poi_repository.dart';
 import '../data/sqlite_storage_repository.dart';
 import '../services/directory_access_service.dart';
 import '../theme/app_theme.dart';
@@ -29,9 +30,10 @@ import 'report_preview_screen.dart';
 ///    column, by design: what was paid can only work against a
 ///    claim on a gift or a bargain — the replacement value is the
 ///    number on the record.
-/// 2. The three location lists as CSV files — General locations,
-///    Storage specifics, Inventory specifics — so the location data
-///    is never locked inside the app.
+/// 2. Three CSV files, one per kind of data — Storage Items,
+///    Inventory Items, and Places of Interest — each row an item (or
+///    a place) with its location spelled out, so the data is never
+///    locked inside the app.
 ///
 /// The complete backup of everything, photos included, is the
 /// Export / Import ZIP; these reports are the readable layer on
@@ -46,6 +48,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final _locRepo = SqliteLocationRepository.instance;
   final _invRepo = SqliteInventoryRepository.instance;
   final _storageRepo = SqliteStorageRepository.instance;
+  final _poiRepo = SqlitePoiRepository.instance;
 
   bool _isWorking = false;
   String _status = '';
@@ -130,7 +133,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<Uint8List> _buildInsurancePdf(PdfPageFormat format) async {
     final generals = await _locRepo.getGenerals();
-    final specifics = await _locRepo.getInventorySpecifics();
+    final specifics = await _locRepo.getSpecifics();
     final items = await _invRepo.getAll();
     generals.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final specificName = {for (final s in specifics) s.id: s.name};
@@ -333,9 +336,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return doc.save();
   }
 
-  // --- location CSVs ---
+  // --- item CSVs (build 75): one denormalized list per kind of
+  // data, each row an item with its location spelled out. This
+  // replaces the two location lists (General/Specific counts) —
+  // Rudy, 2026-11-19: "there should be three. One for each type
+  // of data." The Help already describes three CSV files.
 
-  Future<void> _createLocationCsvs() async {
+  Future<void> _createItemCsvs() async {
     setState(() {
       _isWorking = true;
       _status = 'Choosing folder...';
@@ -351,7 +358,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final dir = Directory(picked);
       if (!await dir.exists()) await dir.create(recursive: true);
       if (mounted) setState(() => _status = 'Writing CSV files...');
-      await _writeLocationCsvs(dir);
+      await _writeItemCsvs(dir);
       if (mounted) {
         setState(() => _status = '3 CSV files saved to:\n$picked');
       }
@@ -363,39 +370,73 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Future<void> _writeLocationCsvs(Directory dir) async {
+  Future<void> _writeItemCsvs(Directory dir) async {
     final generals = await _locRepo.getGenerals();
-    final storageSpecifics = await _locRepo.getStorageSpecifics();
-    final inventorySpecifics = await _locRepo.getInventorySpecifics();
-    generals.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    storageSpecifics.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    inventorySpecifics.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final specifics = await _locRepo.getSpecifics();
     final generalName = {for (final g in generals) g.id: g.name};
+    final specificName = {for (final s in specifics) s.id: s.name};
+    String generalOf(int generalId) => generalName[generalId] ?? '';
+    String specificOf(int? specificId) =>
+        specificId == null ? '' : specificName[specificId] ?? '';
 
-    final generalRows = StringBuffer('General location,Storage items,Inventory items\n');
-    for (final g in generals) {
-      final sCount = g.id == null ? 0 : await _storageRepo.countForGeneral(g.id!);
-      final iCount = g.id == null ? 0 : await _invRepo.countForGeneral(g.id!);
-      generalRows.writeln('${_csv(g.name)},$sCount,$iCount');
+    // Storage items, grouped by location, then name.
+    final storage = await _storageRepo.getAll();
+    storage.sort((a, b) {
+      final c = generalOf(a.generalId)
+          .toLowerCase()
+          .compareTo(generalOf(b.generalId).toLowerCase());
+      if (c != 0) return c;
+      final d = specificOf(a.specificId)
+          .toLowerCase()
+          .compareTo(specificOf(b.specificId).toLowerCase());
+      if (d != 0) return d;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    final storageRows = StringBuffer(
+        'Item,General location,Specific location,Quantity,Value,Notes,Photo\n');
+    for (final item in storage) {
+      storageRows.writeln(
+          '${_csv(item.name)},${_csv(generalOf(item.generalId))},${_csv(specificOf(item.specificId))},${item.quantity},${_csv(_money(item.valueCents))},${_csv(item.notes)},${_csv(item.photoFilename)}');
     }
-    await File(p.join(dir.path, 'WhereLog-General-Locations.csv'))
-        .writeAsString(generalRows.toString());
-
-    final storageRows = StringBuffer('General location,Specific location,Items\n');
-    for (final s in storageSpecifics) {
-      final count = s.id == null ? 0 : await _storageRepo.countForSpecific(s.id!);
-      storageRows.writeln('${_csv(generalName[s.generalId] ?? '')},${_csv(s.name)},$count');
-    }
-    await File(p.join(dir.path, 'WhereLog-Storage-Specific-Locations.csv'))
+    await File(p.join(dir.path, 'WhereLog-Storage-Items.csv'))
         .writeAsString(storageRows.toString());
 
-    final inventoryRows = StringBuffer('General location,Specific location,Items\n');
-    for (final s in inventorySpecifics) {
-      final count = s.id == null ? 0 : await _invRepo.countForSpecific(s.id!);
-      inventoryRows.writeln('${_csv(generalName[s.generalId] ?? '')},${_csv(s.name)},$count');
+    // Inventory items, grouped by location, then name. Purchase price
+    // is included here: this is the user's own data export, not the
+    // insurance report, which leaves it out by design.
+    final inventory = await _invRepo.getAll();
+    inventory.sort((a, b) {
+      final c = generalOf(a.generalId)
+          .toLowerCase()
+          .compareTo(generalOf(b.generalId).toLowerCase());
+      if (c != 0) return c;
+      final d = specificOf(a.specificId)
+          .toLowerCase()
+          .compareTo(specificOf(b.specificId).toLowerCase());
+      if (d != 0) return d;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    final inventoryRows = StringBuffer(
+        'Item,General location,Specific location,Brand,Model,Serial number,Acquisition date,Quantity,Purchase price,Replacement value,Notes,Photo\n');
+    for (final item in inventory) {
+      inventoryRows.writeln(
+          '${_csv(item.name)},${_csv(generalOf(item.generalId))},${_csv(specificOf(item.specificId))},${_csv(item.brand)},${_csv(item.model)},${_csv(item.serialNumber)},${_csv(item.acquisitionDate)},${item.quantity},${_csv(_money(item.purchasePriceCents))},${_csv(_money(item.valueCents))},${_csv(item.notes)},${_csv(item.photoFilename)}');
     }
-    await File(p.join(dir.path, 'WhereLog-Inventory-Specific-Locations.csv'))
+    await File(p.join(dir.path, 'WhereLog-Inventory-Items.csv'))
         .writeAsString(inventoryRows.toString());
+
+    // Places of Interest, by name. The coordinates, address and source
+    // are the location information for a place.
+    final pois = await _poiRepo.getAll();
+    pois.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final poiRows = StringBuffer(
+        'Place,Latitude,Longitude,Address,Coordinates source,Notes,Photo\n');
+    for (final poi in pois) {
+      poiRows.writeln(
+          '${_csv(poi.name)},${poi.latitude},${poi.longitude},${_csv(poi.address)},${_csv(poi.source)},${_csv(poi.notes)},${_csv(poi.photoFilename)}');
+    }
+    await File(p.join(dir.path, 'WhereLog-Places-of-Interest.csv'))
+        .writeAsString(poiRows.toString());
   }
 
   // --- page ---
@@ -411,7 +452,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           Text('PERSONAL INVENTORY REPORT', style: AppText.dialogSection),
           const SizedBox(height: 4),
           Text(
-            'An itemized list of your Personal Inventory, grouped by General location with serial '
+            'An itemized list of your Inventory Items, grouped by General location with serial '
             'numbers, acquisition dates, values and a total. It opens as a print-ready PDF '
             'preview — print it, or share it to Files when you want a saved copy. Items with '
             'a photo on file are marked with a check in the Photo column. Suitable as an '
@@ -425,19 +466,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Text('View Insurance Report', style: AppText.buttonPrimary),
           ),
           AppDivider.horizontal,
-          Text('LOCATION DATA (CSV)', style: AppText.dialogSection),
+          Text('ITEMS AND PLACES (CSV)', style: AppText.dialogSection),
           const SizedBox(height: 4),
           Text(
-            'The three location lists as spreadsheet files — General locations, Storage specifics '
-            'and Inventory specifics — so the data is never locked inside the app. For the complete '
-            'backup of everything, photos included, see Export / Import.',
+            'One spreadsheet file for each kind of data — Storage Items, Inventory '
+            'Items, and Places of Interest — with each item\u2019s location spelled out, '
+            'so the data is never locked inside the app. For the complete backup of '
+            'everything, photos included, see Export / Import.',
             style: AppText.dialog,
           ),
           const SizedBox(height: 12),
           ElevatedButton(
-            onPressed: _isWorking ? null : _createLocationCsvs,
+            onPressed: _isWorking ? null : _createItemCsvs,
             style: AppButton.primary,
-            child: Text('Create All Three CSV Files', style: AppText.buttonPrimary),
+            child: Text('Create Three CSV Files', style: AppText.buttonPrimary),
           ),
           if (_status.isNotEmpty) ...[
             const SizedBox(height: 16),

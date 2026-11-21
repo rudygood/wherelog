@@ -15,12 +15,12 @@ import '../data/sqlite_storage_repository.dart';
 /// The page Rudy designed: a collapsible "About this Page" box at
 /// the front (Hide/Show beside its label, opens by default, and its
 /// state is remembered like the Notes/Photo sections'), one standing
-/// instruction line, then a card per General. Inside an open card, two
-/// trees drawn in the wordmark's split colors — Storage specifics in
-/// logo blue, Inventory specifics in Alert red — each entry one line,
+/// instruction line, then a card per General. Inside an open card, one
+/// tree of Specific locations — a spot is a spot, whether the thing
+/// on it is stored or inventoried (build 60) — each entry one line,
 /// name plus item count. Tapping any entry opens its edit popup
 /// (rename, or a red Delete that explains itself when greyed out).
-/// The last row of each tree is its add-entry row; new Generals are
+/// The last row of the tree is its add-entry row; new Generals are
 /// added at the bottom of the page. Horizontal padding is the main
 /// page's 6 outside / 6 inside.
 
@@ -52,19 +52,16 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
   final SqliteStorageRepository _storageRepo = SqliteStorageRepository.instance;
   final SqliteInventoryRepository _invRepo = SqliteInventoryRepository.instance;
   List<GeneralLocation> generals = [];
-  List<StorageSpecific> storageSpecifics = [];
-  List<InventorySpecific> inventorySpecifics = [];
-  Map<int, int> _storageCountsBySpecific = {};
+  List<Specific> specifics = [];
+  Map<int, int> _countsBySpecific = {};
   Map<int, int> _storageCountsByGeneral = {};
-  Map<int, int> _invCountsBySpecific = {};
   Map<int, int> _invCountsByGeneral = {};
   bool _loaded = false;
   Set<int> expanded = {};
   bool _howToOpen = true;
   bool _editEnabled = true;
   final TextEditingController _newGeneralController = TextEditingController();
-  final Map<int, TextEditingController> _newStorageSpecificControllers = {};
-  final Map<int, TextEditingController> _newInventorySpecificControllers = {};
+  final Map<int, TextEditingController> _newSpecificControllers = {};
 
   @override
   void initState() {
@@ -105,21 +102,19 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
 
   Future<void> _reload() async {
     final g = await _locRepo.getGenerals();
-    final ss = await _locRepo.getStorageSpecifics();
-    final isx = await _locRepo.getInventorySpecifics();
-    // Item counts are real for both item tables now that storage_items
-    // and inventory_items are both wired.
+    final sp = await _locRepo.getSpecifics();
+    // A Specific's item count sums both item tables — a spot can hold
+    // a stored item, an inventoried item, or both.
     final bySpec = <int, int>{};
-    for (final s in ss) {
-      if (s.id != null) bySpec[s.id!] = await _storageRepo.countForSpecific(s.id!);
+    for (final s in sp) {
+      if (s.id != null) {
+        bySpec[s.id!] = await _storageRepo.countForSpecific(s.id!) +
+            await _invRepo.countForSpecific(s.id!);
+      }
     }
     final byGen = <int, int>{};
     for (final gen in g) {
       if (gen.id != null) byGen[gen.id!] = await _storageRepo.countForGeneral(gen.id!);
-    }
-    final invBySpec = <int, int>{};
-    for (final s in isx) {
-      if (s.id != null) invBySpec[s.id!] = await _invRepo.countForSpecific(s.id!);
     }
     final invByGen = <int, int>{};
     for (final gen in g) {
@@ -128,23 +123,19 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     if (!mounted) return;
     setState(() {
       generals = g;
-      storageSpecifics = ss;
-      inventorySpecifics = isx;
-      _storageCountsBySpecific = bySpec;
+      specifics = sp;
+      _countsBySpecific = bySpec;
       _storageCountsByGeneral = byGen;
-      _invCountsBySpecific = invBySpec;
       _invCountsByGeneral = invByGen;
       _loaded = true;
     });
   }
 
-  int _itemCountForStorageSpecific(int specId) => _storageCountsBySpecific[specId] ?? 0;
-  int _itemCountForInventorySpecific(int specId) => _invCountsBySpecific[specId] ?? 0;
+  int _itemCountForSpecific(int specId) => _countsBySpecific[specId] ?? 0;
   int _itemCountForGeneral(int genId) =>
       (_storageCountsByGeneral[genId] ?? 0) + (_invCountsByGeneral[genId] ?? 0);
 
-  List<StorageSpecific> _storageSpecificsForGeneral(int genId) => storageSpecifics.where((s) => s.generalId == genId).toList()..sort((a,b)=>a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-  List<InventorySpecific> _inventorySpecificsForGeneral(int genId) => inventorySpecifics.where((s) => s.generalId == genId).toList()..sort((a,b)=>a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  List<Specific> _specificsForGeneral(int genId) => specifics.where((s) => s.generalId == genId).toList()..sort((a,b)=>a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   InputDecoration _fieldDec(String hint) => InputDecoration(
     hintText: hint,
@@ -161,10 +152,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
   @override
   void dispose() {
     _newGeneralController.dispose();
-    for (final c in _newStorageSpecificControllers.values) {
-      c.dispose();
-    }
-    for (final c in _newInventorySpecificControllers.values) {
+    for (final c in _newSpecificControllers.values) {
       c.dispose();
     }
     super.dispose();
@@ -192,42 +180,36 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
             ),
           ]),
           if (_howToOpen) ...[
-             Text('Location options record the location of Storage Items and Personal Inventory. Every entry in these two categories must have a General location and may also have an optional Specific location. There is one shared list of General locations for both; the Specific locations are separate — Storage Items and Personal Inventory each have their own Specifics for each General. Locations can also be added or edited while adding or editing items, to accommodate new or changed entries.', style: AppText.dialog),
+             Text('Location options record the location of Storage Items and Inventory Items. Every entry in these two categories must have a General location and may also have an optional Specific location. There is one shared list of General locations for both, and one shared list of Specific locations under each General — a spot is a spot, whether the thing on it is stored or inventoried. Locations can also be added or edited while adding or editing items, to accommodate new or changed entries.', style: AppText.dialog),
             const SizedBox(height: 6),
-             Text('This page lets you view and manage location options as a whole — particularly useful for prepopulating them before capturing your Storage and Inventory items. Each General appears as an expandable card; expanded, it shows all its Specific locations, those connected by blue lines belonging to Storage and those by red to Inventory. Add a new General with the entry field at the bottom of the screen. New Specifics are added in the last row of each color\'s list. To edit or delete, tap any entry: a popup lets you update it or delete it — though delete is unavailable while items still use that location.', style: AppText.dialog),
+             Text('This page lets you view and manage location options as a whole — particularly useful for prepopulating them before capturing your Storage and Inventory items. Each General appears as an expandable card; expanded, it shows all its Specific locations. Add a new General with the entry field at the bottom of the screen. New Specifics are added in the last row of the list. To edit or delete, tap any entry: a popup lets you update it or delete it — though delete is unavailable while items still use that location.', style: AppText.dialog),
           ],
         ],
       ),
     );
   }
 
-  // One tree of a card: the family's entry rows, then its add row.
-  // [color] is the family's wordmark color. The Storage tree never
-  // ends inside its section — its trunk runs on into the junction
-  // row between the families. The Inventory tree ends at its add
-  // row, or, in read-only, at its last entry. In read-only the add
-  // row is not built at all, and entry taps are quiet (Rudy,
-  // 2026-11-10: the adds disappear entirely, never show disabled).
+  // The one tree of a card: the Specific rows, then the add row.
+  // The tree ends at its add row, or, in read-only, at its last
+  // entry. In read-only the add row is not built at all, and entry
+  // taps are quiet (Rudy, 2026-11-10: the adds disappear entirely,
+  // never show disabled). The tree lines are the logo blue.
   Widget _treeSection({
     required int genId,
-    required String kind,
-    required Color color,
     required List<int> ids,
     required List<String> names,
     required List<int> counts,
     required TextEditingController addController,
     required String addHint,
   }) {
-    final isInventory = kind == 'inventory';
     return Padding(
-      padding: isInventory ? const EdgeInsets.fromLTRB(6, 0, 6, 2) : const EdgeInsets.fromLTRB(6, 4, 6, 0),
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
       child: Column(children: [
         for (var i = 0; i < ids.length; i++)
           _treeRow(
-            color: color,
-            isLast: isInventory && !_editEnabled && i == ids.length - 1,
+            isLast: !_editEnabled && i == ids.length - 1,
             child: InkWell(
-              onTap: _editEnabled ? () => _showEntryPopup(kind: kind, id: ids[i], name: names[i]) : null,
+              onTap: _editEnabled ? () => _showEntryPopup(kind: 'specific', id: ids[i], name: names[i]) : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Text('${names[i]} (${counts[i]})', style: AppText.countBar),
@@ -236,39 +218,24 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
           ),
         if (_editEnabled)
           _treeRow(
-            color: color,
-            isLast: isInventory,
+            isLast: true,
             child: Row(children: [
-              Expanded(child: TextField(controller: addController, textCapitalization: TextCapitalization.words, decoration: _fieldDec(addHint), style: AppText.input, onSubmitted: (v) => _addSpecific(genId, v, kind))),
+              Expanded(child: TextField(controller: addController, textCapitalization: TextCapitalization.words, decoration: _fieldDec(addHint), style: AppText.input, onSubmitted: (v) => _addSpecific(genId, v))),
               const SizedBox(width: 6),
-              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addSpecific(genId, addController.text, kind), style: AppButton.primary, child:  Text('+ Add', style: AppText.buttonPrimary))),
+              SizedBox(height: AppSize.buttonHeight, child: ElevatedButton(onPressed: () => _addSpecific(genId, addController.text), style: AppButton.primary, child:  Text('+ Add', style: AppText.buttonPrimary))),
             ]),
           ),
       ]),
     );
   }
 
-  // The junction between a card's two trees: the blue trunk descends
-  // into a red ball, and the red trunk descends out of it — one
-  // connected tree per card (Rudy, 2026-11-10). The ball falls in
-  // the gap between the last blue row and the first red row.
-  Widget _junctionRow() {
-    return const SizedBox(
-      height: 14,
-      child: Row(children: [
-        SizedBox(width: 28, child: CustomPaint(painter: _JunctionPainter())),
-        Expanded(child: SizedBox()),
-      ]),
-    );
-  }
-
   // A tree row: the drawn branch at the left, the content beside it.
-  Widget _treeRow({required Color color, required bool isLast, required Widget child}) {
+  Widget _treeRow({required bool isLast, required Widget child}) {
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(width: 22, child: CustomPaint(painter: _TreeLinePainter(color: color, isLast: isLast))),
+          SizedBox(width: 22, child: CustomPaint(painter: _TreeLinePainter(isLast: isLast))),
           Expanded(child: Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: child)),
         ],
       ),
@@ -289,21 +256,21 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     final String why;
     if (isGeneral) {
       final itemCount = _itemCountForGeneral(id);
-      final specCount = _storageSpecificsForGeneral(id).length + _inventorySpecificsForGeneral(id).length;
+      final specCount = _specificsForGeneral(id).length;
       canDelete = itemCount == 0 && specCount == 0;
       why = [
         if (specCount > 0) '$specCount specific${specCount == 1 ? '' : 's'} below it',
         if (itemCount > 0) '$itemCount item${itemCount == 1 ? '' : 's'} use it',
       ].join(' and ');
     } else {
-      final itemCount = kind == 'storage' ? _itemCountForStorageSpecific(id) : _itemCountForInventorySpecific(id);
+      final itemCount = _itemCountForSpecific(id);
       canDelete = itemCount == 0;
       why = '$itemCount item${itemCount == 1 ? '' : 's'} use it';
     }
     final result = await showDialog<({bool delete, String name})>(
       context: context,
       builder: (c) => _EntryEditDialog(
-        title: isGeneral ? 'General location' : (kind == 'storage' ? 'Storage specific' : 'Inventory specific'),
+        title: isGeneral ? 'General location' : 'Specific location',
         initialName: name,
         canDelete: canDelete,
         why: why,
@@ -322,7 +289,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     if (kind == 'general') {
       await _renameGeneral(id, newName);
     } else {
-      await _renameSpecific(id, newName, kind);
+      await _renameSpecific(id, newName);
     }
   }
 
@@ -330,7 +297,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     if (kind == 'general') {
       await _deleteGeneral(id);
     } else {
-      await _deleteSpecific(id, kind);
+      await _deleteSpecific(id);
     }
   }
 
@@ -389,8 +356,7 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
               final genId = g.id!;
               final genName = g.name;
               final isExp = expanded.contains(genId);
-              final stoSpecifics = _storageSpecificsForGeneral(genId);
-              final invSpecifics = _inventorySpecificsForGeneral(genId);
+              final specs = _specificsForGeneral(genId);
               final itemCount = _itemCountForGeneral(genId);
               return Card(
                 margin: const EdgeInsets.only(bottom: 6),
@@ -422,24 +388,11 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
                     Container(height: 1, color: AppColors.border, margin: const EdgeInsets.symmetric(horizontal: 6)),
                     _treeSection(
                       genId: genId,
-                      kind: 'storage',
-                      color: AppColors.logoBlue,
-                      ids: [for (final s in stoSpecifics) s.id!],
-                      names: [for (final s in stoSpecifics) s.name],
-                      counts: [for (final s in stoSpecifics) _itemCountForStorageSpecific(s.id!)],
-                      addController: _newStorageSpecificControllers.putIfAbsent(genId, () => TextEditingController()),
-                      addHint: 'New Storage Specific',
-                    ),
-                    _junctionRow(),
-                    _treeSection(
-                      genId: genId,
-                      kind: 'inventory',
-                      color: AppColors.alert,
-                      ids: [for (final s in invSpecifics) s.id!],
-                      names: [for (final s in invSpecifics) s.name],
-                      counts: [for (final s in invSpecifics) _itemCountForInventorySpecific(s.id!)],
-                      addController: _newInventorySpecificControllers.putIfAbsent(genId, () => TextEditingController()),
-                      addHint: 'New Inventory Specific',
+                      ids: [for (final s in specs) s.id!],
+                      names: [for (final s in specs) s.name],
+                      counts: [for (final s in specs) _itemCountForSpecific(s.id!)],
+                      addController: _newSpecificControllers.putIfAbsent(genId, () => TextEditingController()),
+                      addHint: 'New Specific',
                     ),
                     const SizedBox(height: 4),
                   ],
@@ -471,17 +424,11 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     _newGeneralController.clear();
     await _reload();
   }
-  Future<void> _addSpecific(int genId, String name, String type) async {
+  Future<void> _addSpecific(int genId, String name) async {
     final t=name.trim(); if(t.isEmpty) return;
-    if(type=='storage'){
-      if(await _locRepo.isDuplicateStorageSpecific(genId, t)){_snack('Storage Specific "$t" already exists'); return;}
-      await _locRepo.addStorageSpecific(genId, t);
-      _newStorageSpecificControllers[genId]?.clear();
-    } else {
-      if(await _locRepo.isDuplicateInventorySpecific(genId, t)){_snack('Inventory Specific "$t" already exists'); return;}
-      await _locRepo.addInventorySpecific(genId, t);
-      _newInventorySpecificControllers[genId]?.clear();
-    }
+    if(await _locRepo.isDuplicateSpecific(genId, t)){_snack('Specific "$t" already exists'); return;}
+    await _locRepo.addSpecific(genId, t);
+    _newSpecificControllers[genId]?.clear();
     setState(()=>expanded.add(genId));
     await _reload();
   }
@@ -493,63 +440,50 @@ class _SingleGeneralTreeState extends State<_SingleGeneralTree> {
     await _locRepo.renameGeneral(genId, t);
     await _reload();
   }
-  Future<void> _renameSpecific(int specId, String newName, String type) async {
+  Future<void> _renameSpecific(int specId, String newName) async {
     final t=newName.trim(); if(t.isEmpty) return;
-    final int genId;
-    final String old;
-    if(type=='storage'){
-      final idx=storageSpecifics.indexWhere((s)=>s.id==specId); if(idx<0) return;
-      old=storageSpecifics[idx].name; genId=storageSpecifics[idx].generalId;
-    } else {
-      final idx=inventorySpecifics.indexWhere((s)=>s.id==specId); if(idx<0) return;
-      old=inventorySpecifics[idx].name; genId=inventorySpecifics[idx].generalId;
-    }
+    final idx=specifics.indexWhere((s)=>s.id==specId); if(idx<0) return;
+    final old=specifics[idx].name; final genId=specifics[idx].generalId;
     if(t.toLowerCase()==old.toLowerCase()) return;
-    if(type=='storage' && await _locRepo.isDuplicateStorageSpecific(genId, t) || type=='inventory' && await _locRepo.isDuplicateInventorySpecific(genId, t)){_snack('Specific "$t" already exists'); return;}
-    if(type=='storage'){ await _locRepo.renameStorageSpecific(specId, t); } else { await _locRepo.renameInventorySpecific(specId, t); }
+    if(await _locRepo.isDuplicateSpecific(genId, t)){_snack('Specific "$t" already exists'); return;}
+    await _locRepo.renameSpecific(specId, t);
     await _reload();
   }
   Future<void> _deleteGeneral(int genId) async {
     final gen=generals.firstWhere((g)=>g.id==genId, orElse: ()=>const GeneralLocation(name: '')); final genName=gen.name;
-    final stoSpecifics=_storageSpecificsForGeneral(genId); final invSpecifics=_inventorySpecificsForGeneral(genId); final itemCount=_itemCountForGeneral(genId);
-    if(itemCount>0 || stoSpecifics.isNotEmpty || invSpecifics.isNotEmpty){_snack('Cannot delete $genName: has ${stoSpecifics.length} storage + ${invSpecifics.length} inventory specifics, $itemCount items'); return;}
+    final specs=_specificsForGeneral(genId); final itemCount=_itemCountForGeneral(genId);
+    if(itemCount>0 || specs.isNotEmpty){_snack('Cannot delete $genName: has ${specs.length} specifics, $itemCount items'); return;}
     final confirm=await showDialog<bool>(context: context, builder: (c)=>AlertDialog(title: Text('Delete General "$genName"?'), content: const Text('General has no specifics and no items. This cannot be undone.'), actions: [TextButton(onPressed: ()=>Navigator.pop(c,false), child: const Text('Cancel')), ElevatedButton(onPressed: ()=>Navigator.pop(c,true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert), child: const Text('Delete'))]));
     if(confirm!=true) return;
     await _locRepo.deleteGeneral(genId);
     setState(()=>{expanded.remove(genId)});
     await _reload();
   }
-  Future<void> _deleteSpecific(int specId, String type) async {
-    final String specName; final int genId;
-    if(type=='storage'){
-      final spec=storageSpecifics.firstWhere((s)=>s.id==specId, orElse: ()=>StorageSpecific(generalId: 0, name: '')); specName=spec.name; genId=spec.generalId;
-    } else {
-      final spec=inventorySpecifics.firstWhere((s)=>s.id==specId, orElse: ()=>InventorySpecific(generalId: 0, name: '')); specName=spec.name; genId=spec.generalId;
-    }
+  Future<void> _deleteSpecific(int specId) async {
+    final spec=specifics.firstWhere((s)=>s.id==specId, orElse: ()=>const Specific(generalId: 0, name: '')); final specName=spec.name; final genId=spec.generalId;
     final gen=generals.firstWhere((g)=>g.id==genId, orElse: ()=>const GeneralLocation(name: '')); final genName=gen.name;
-    final count = type=='storage' ? _itemCountForStorageSpecific(specId) : _itemCountForInventorySpecific(specId);
+    final count = _itemCountForSpecific(specId);
     if(count>0){_snack('Cannot delete $genName / $specName: $count items reference it'); return;}
     final confirm=await showDialog<bool>(context: context, builder: (c)=>AlertDialog(title: Text('Delete Specific "$genName / $specName"?'), content: const Text('Specific has no items. Delete?'), actions: [TextButton(onPressed: ()=>Navigator.pop(c,false), child: const Text('Cancel')), ElevatedButton(onPressed: ()=>Navigator.pop(c,true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert), child: const Text('Delete'))]));
     if(confirm!=true) return;
-    if(type=='storage'){ await _locRepo.deleteStorageSpecific(specId); } else { await _locRepo.deleteInventorySpecific(specId); }
+    await _locRepo.deleteSpecific(specId);
     await _reload();
   }
   void _snack(String msg)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 }
 
-/// Draws one row of a location tree in the family's color: the
-/// vertical trunk running through the row, and a horizontal branch
-/// reaching to the entry. The tree's last row stops its trunk at the
-/// branch, closing the tree.
+/// Draws one row of a location tree in the logo blue: the vertical
+/// trunk running through the row, and a horizontal branch reaching to
+/// the entry. The tree's last row stops its trunk at the branch,
+/// closing the tree.
 class _TreeLinePainter extends CustomPainter {
-  final Color color;
   final bool isLast;
-  const _TreeLinePainter({required this.color, required this.isLast});
+  const _TreeLinePainter({required this.isLast});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color
+      ..color = AppColors.logoBlue
       ..strokeWidth = 3.2
       ..style = PaintingStyle.stroke;
     final trunkX = size.width / 2;
@@ -560,7 +494,7 @@ class _TreeLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TreeLinePainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.isLast != isLast;
+      oldDelegate.isLast != isLast;
 }
 
 
@@ -635,30 +569,3 @@ class _EntryEditDialogState extends State<_EntryEditDialog> {
   }
 }
 
-
-/// Paints the junction between a card's two trees inside the 28-wide
-/// gutter (the trunk center, x 17, matches the tree rows': their 22
-/// gutter plus the sections' 6 left padding): the blue trunk comes
-/// down from above, meets a red ball at the row's middle, and the
-/// red trunk continues down out of the ball.
-class _JunctionPainter extends CustomPainter {
-  const _JunctionPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const x = 17.0;
-    final cy = size.height / 2;
-    final blue = Paint()
-      ..color = AppColors.logoBlue
-      ..strokeWidth = 3.2;
-    canvas.drawLine(const Offset(x, 0), Offset(x, cy - 4.5), blue);
-    final red = Paint()
-      ..color = AppColors.alert
-      ..strokeWidth = 3.2;
-    canvas.drawLine(Offset(x, cy + 4.5), Offset(x, size.height), red);
-    canvas.drawCircle(Offset(x, cy), 4.5, Paint()..color = AppColors.alert);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

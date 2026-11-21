@@ -87,11 +87,11 @@ class _StorageAddScreenState extends State<StorageAddScreen> {
     // (schema D1 — there is no blank-name sentinel row any more).
     int? specificId;
     if (sName.isNotEmpty) {
-      for (final s in await _locRepo.getStorageSpecifics()) {
+      for (final s in await _locRepo.getSpecifics()) {
         if (s.generalId == generalId && s.name.toLowerCase() == sName.toLowerCase()) { specificId = s.id; break; }
       }
       if (specificId == null) {
-        specificId = await _locRepo.addStorageSpecific(generalId, sName);
+        specificId = await _locRepo.addSpecific(generalId, sName);
       }
       if (specificId == null) { showCenterNotice('Specific not found'); return; }
     }

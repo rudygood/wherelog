@@ -148,7 +148,7 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
         if (g.id == item.generalId) { gName = g.name; break; }
       }
       if (item.specificId != null) {
-        for (final s in await _locRepo.getStorageSpecifics()) {
+        for (final s in await _locRepo.getSpecifics()) {
           if (s.id == item.specificId) {
             sName = s.name;
             if (gName.isEmpty) {
@@ -233,11 +233,11 @@ class _StorageEditScreenState extends State<StorageEditScreen> {
     }
     int? specificId;
     if (sName.isNotEmpty) {
-      for (final s in await _locRepo.getStorageSpecifics()) {
+      for (final s in await _locRepo.getSpecifics()) {
         if (s.generalId == generalId && s.name.toLowerCase() == sName.toLowerCase()) { specificId = s.id; break; }
       }
       if (specificId == null) {
-        specificId = await _locRepo.addStorageSpecific(generalId, sName);
+        specificId = await _locRepo.addSpecific(generalId, sName);
       }
     }
 

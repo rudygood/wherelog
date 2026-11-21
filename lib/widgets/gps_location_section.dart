@@ -50,7 +50,9 @@ class GpsLocationSection extends StatelessWidget {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                         filled: true,
                         fillColor: AppColors.surface,
-                        contentPadding: AppSize.fieldPadding,
+                        // Tighter horizontal padding (build 72): gives the
+                        // label room so "Longitude" reads in full.
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                         isDense: true,
                       ),
                     ),
@@ -68,7 +70,9 @@ class GpsLocationSection extends StatelessWidget {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppBorder.radius)),
                         filled: true,
                         fillColor: AppColors.surface,
-                        contentPadding: AppSize.fieldPadding,
+                        // Tighter horizontal padding (build 72): gives the
+                        // label room so "Longitude" reads in full.
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                         isDense: true,
                       ),
                     ),

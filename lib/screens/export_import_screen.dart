@@ -29,8 +29,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
   int _cInventoryItems = 0;
   int _cPoiItems = 0;
   int _cGenerals = 0;
-  int _cStorageSpecifics = 0;
-  int _cInventorySpecifics = 0;
+  int _cSpecifics = 0;
   int _cImages = 0;
 
   /// The one picked backup, decoded and validated, shared by the
@@ -112,8 +111,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
       _cInventoryItems = c.inventoryItems;
       _cPoiItems = c.poiItems;
       _cGenerals = c.generals;
-      _cStorageSpecifics = c.storageSpecifics;
-      _cInventorySpecifics = c.inventorySpecifics;
+      _cSpecifics = c.specifics;
       _cImages = c.imagesLinked;
     });
   }
@@ -336,7 +334,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
       backgroundColor: AppColors.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppBorder.radius), side: AppBorder.side),
       title:  Text('Confirm Restore - Overwrite', style: AppText.dialogTitleAlert),
-      content: Text('Restore will DELETE current:\nStorage Item: $_cStorageItems, Personal Inventory: $_cInventoryItems, Place of Interest: $_cPoiItems, General Location: $_cGenerals\n\nAnd REPLACE with this backup:\n${sel.fileName}\nExported: ${_fmtExported(sel)}\nStorage Item: ${sel.countOf('storageItems')}, Personal Inventory: ${sel.countOf('inventoryItems')}, Place of Interest: ${sel.countOf('poiItems')}, General Location: ${sel.countOf('generals')}, Photos: ${sel.photoCount}\n\n$autoNote', style: const TextStyle(fontSize: 12)),
+      content: Text('Restore will DELETE current:\nStorage Item: $_cStorageItems, Inventory Items: $_cInventoryItems, Place of Interest: $_cPoiItems, General Location: $_cGenerals\n\nAnd REPLACE with this backup:\n${sel.fileName}\nExported: ${_fmtExported(sel)}\nStorage Item: ${sel.countOf('storageItems')}, Inventory Items: ${sel.countOf('inventoryItems')}, Place of Interest: ${sel.countOf('poiItems')}, General Location: ${sel.countOf('generals')}, Photos: ${sel.photoCount}\n\n$autoNote', style: const TextStyle(fontSize: 12)),
       actions: [TextButton(onPressed: ()=>Navigator.pop(c,false), child: const Text('Cancel')), ElevatedButton(onPressed: ()=>Navigator.pop(c,true), style: AppButton.primary.copyWith(backgroundColor: WidgetStateProperty.all(AppColors.alert)), child: const Text('Yes, Restore'))],
     ));
     if (confirm!=true) { setState(()=>_status='Restore cancelled'); return; }
@@ -363,7 +361,7 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
       await _transfer.restore(sel);
       await _refreshCounts();
       final autoLine = autoBackup != null ? '\nAuto-backup of previous data: ${autoBackup.path}' : '';
-      setState(() => _status = 'Restore COMPLETE from ${sel.fileName}:\n${sel.countOf('storageItems')} Storage Item, ${sel.countOf('inventoryItems')} Personal Inventory, ${sel.countOf('poiItems')} Place of Interest, ${sel.photoCount} photos restored.$autoLine\n\nCurrent counts: Storage $_cStorageItems, Inventory $_cInventoryItems, POI $_cPoiItems, Generals $_cGenerals');
+      setState(() => _status = 'Restore COMPLETE from ${sel.fileName}:\n${sel.countOf('storageItems')} Storage Item, ${sel.countOf('inventoryItems')} Inventory Items, ${sel.countOf('poiItems')} Place of Interest, ${sel.photoCount} photos restored.$autoLine\n\nCurrent counts: Storage $_cStorageItems, Inventory $_cInventoryItems, POI $_cPoiItems, Generals $_cGenerals');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Restore complete from ${sel.fileName}'), backgroundColor: AppColors.buttonBg));
     } catch (e, st) {
       setState(() => _status = 'Restore failed: $e\n$st');
@@ -586,11 +584,10 @@ class _ExportImportScreenState extends State<ExportImportScreen> {
             child: Column(children: [
               _countHeaderRow(),
               _countRow('Storage Item', _cStorageItems, backup: _selection?.countOf('storageItems')),
-              _countRow('Personal Inventory', _cInventoryItems, backup: _selection?.countOf('inventoryItems'), alt: true),
+              _countRow('Inventory Items', _cInventoryItems, backup: _selection?.countOf('inventoryItems'), alt: true),
               _countRow('Place of Interest', _cPoiItems, backup: _selection?.countOf('poiItems')),
               _countRow('General Location', _cGenerals, backup: _selection?.countOf('generals'), alt: true),
-              _countRow('Storage Specific Location', _cStorageSpecifics, backup: _selection?.countOf('storageSpecifics')),
-              _countRow('Inventory Specific Location', _cInventorySpecifics, backup: _selection?.countOf('inventorySpecifics'), alt: true),
+              _countRow('Specific Location', _cSpecifics, backup: _selection?.countOf('specifics')),
               _countRow('Images linked', _cImages, backup: _selection?.photoCount),
             ]),
           ),

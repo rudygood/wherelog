@@ -146,11 +146,11 @@ class _InventoryAddScreenState extends State<InventoryAddScreen> {
     final generalId = general.id!;
     int? specificId;
     if (sName.isNotEmpty) {
-      for (final s in await _locRepo.getInventorySpecifics()) {
+      for (final s in await _locRepo.getSpecifics()) {
         if (s.generalId == generalId && s.name.toLowerCase() == sName.toLowerCase()) { specificId = s.id; break; }
       }
       if (specificId == null) {
-        specificId = await _locRepo.addInventorySpecific(generalId, sName);
+        specificId = await _locRepo.addSpecific(generalId, sName);
       }
       if (specificId == null) {
         showCenterNotice('Specific not found');

@@ -10,48 +10,46 @@ import 'sqlite_location_repository.dart';
 /// the same load-then-read pattern the Location Options screen uses.
 /// (A JSON-backed implementation served during the migration and
 /// retired with the JSON store in the Export/Import batch.)
+///
+/// Version 4 (build 60): one Specific list per General, shared by
+/// both tabs — a spot is a spot, whether the thing on it is stored
+/// or inventoried.
 abstract class LocationData {
   List<String> get generalNames;
 
   /// Opaque id token for a general name, '' if the name doesn't resolve.
   String generalIdForName(String name);
 
-  List<String> storageSpecificNamesFor(String generalId);
-  List<String> inventorySpecificNamesFor(String generalId);
+  List<String> specificNamesFor(String generalId);
 
   /// Specific names under a general *name* (the picker's similar-name
   /// check works from names alone).
-  List<String> specificNamesByGeneralName(String generalName, {required bool storage});
+  List<String> specificNamesByGeneralName(String generalName);
 
   bool isDuplicateGeneral(String name);
-  bool isDuplicateStorageSpecific(String generalId, String name);
-  bool isDuplicateInventorySpecific(String generalId, String name);
+  bool isDuplicateSpecific(String generalId, String name);
 
   Future<void> addGeneral(String name);
-  Future<void> addStorageSpecific(String generalId, String name);
-  Future<void> addInventorySpecific(String generalId, String name);
+  Future<void> addSpecific(String generalId, String name);
 
   /// Renames, by current name. Items reference locations by id, so a
   /// rename is one row and every item filed under it follows.
   Future<void> renameGeneral(String oldName, String newName);
-  Future<void> renameStorageSpecific(String generalName, String oldName, String newName);
-  Future<void> renameInventorySpecific(String generalName, String oldName, String newName);
+  Future<void> renameSpecific(String generalName, String oldName, String newName);
 }
 
 class SqliteLocationData implements LocationData {
   final SqliteLocationRepository _repo = SqliteLocationRepository.instance;
 
   List<GeneralLocation> _generals = [];
-  List<StorageSpecific> _storageSpecifics = [];
-  List<InventorySpecific> _inventorySpecifics = [];
+  List<Specific> _specifics = [];
 
   /// Loads (or reloads) the cached location lists. Callers await this
   /// before the picker reads names, and the add methods below refresh
   /// the cache themselves after a write.
   Future<void> load() async {
     _generals = await _repo.getGenerals();
-    _storageSpecifics = await _repo.getStorageSpecifics();
-    _inventorySpecifics = await _repo.getInventorySpecifics();
+    _specifics = await _repo.getSpecifics();
   }
 
   @override
@@ -70,28 +68,24 @@ class SqliteLocationData implements LocationData {
     return '';
   }
 
-  List<String> _specificNames(int? generalId, bool storage) {
-    if (generalId == null) return [];
-    final names = storage
-        ? _storageSpecifics.where((s) => s.generalId == generalId).map((s) => s.name)
-        : _inventorySpecifics.where((s) => s.generalId == generalId).map((s) => s.name);
-    return names.where((n) => n.trim().isNotEmpty).toList()
+  @override
+  List<String> specificNamesFor(String generalId) {
+    final id = int.tryParse(generalId);
+    if (id == null) return [];
+    final names = _specifics
+        .where((s) => s.generalId == id)
+        .map((s) => s.name)
+        .where((n) => n.trim().isNotEmpty)
+        .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return names;
   }
 
   @override
-  List<String> storageSpecificNamesFor(String generalId) =>
-      _specificNames(int.tryParse(generalId), true);
-
-  @override
-  List<String> inventorySpecificNamesFor(String generalId) =>
-      _specificNames(int.tryParse(generalId), false);
-
-  @override
-  List<String> specificNamesByGeneralName(String generalName, {required bool storage}) {
+  List<String> specificNamesByGeneralName(String generalName) {
     final token = generalIdForName(generalName);
     if (token.isEmpty) return [];
-    return storage ? storageSpecificNamesFor(token) : inventorySpecificNamesFor(token);
+    return specificNamesFor(token);
   }
 
   @override
@@ -101,19 +95,11 @@ class SqliteLocationData implements LocationData {
   }
 
   @override
-  bool isDuplicateStorageSpecific(String generalId, String name) {
+  bool isDuplicateSpecific(String generalId, String name) {
     final id = int.tryParse(generalId);
     if (id == null) return false;
     final lower = name.trim().toLowerCase();
-    return _storageSpecifics.any((s) => s.generalId == id && s.name.toLowerCase() == lower);
-  }
-
-  @override
-  bool isDuplicateInventorySpecific(String generalId, String name) {
-    final id = int.tryParse(generalId);
-    if (id == null) return false;
-    final lower = name.trim().toLowerCase();
-    return _inventorySpecifics.any((s) => s.generalId == id && s.name.toLowerCase() == lower);
+    return _specifics.any((s) => s.generalId == id && s.name.toLowerCase() == lower);
   }
 
   @override
@@ -123,18 +109,10 @@ class SqliteLocationData implements LocationData {
   }
 
   @override
-  Future<void> addStorageSpecific(String generalId, String name) async {
+  Future<void> addSpecific(String generalId, String name) async {
     final id = int.tryParse(generalId);
     if (id == null) return;
-    await _repo.addStorageSpecific(id, name);
-    await load();
-  }
-
-  @override
-  Future<void> addInventorySpecific(String generalId, String name) async {
-    final id = int.tryParse(generalId);
-    if (id == null) return;
-    await _repo.addInventorySpecific(id, name);
+    await _repo.addSpecific(id, name);
     await load();
   }
 
@@ -147,29 +125,14 @@ class SqliteLocationData implements LocationData {
   }
 
   @override
-  Future<void> renameStorageSpecific(String generalName, String oldName, String newName) async {
+  Future<void> renameSpecific(String generalName, String oldName, String newName) async {
     final gid = int.tryParse(generalIdForName(generalName));
     if (gid == null) return;
-    for (final s in _storageSpecifics) {
+    for (final s in _specifics) {
       if (s.generalId == gid && s.name == oldName) {
         final id = s.id;
         if (id == null) return;
-        await _repo.renameStorageSpecific(id, newName.trim());
-        await load();
-        return;
-      }
-    }
-  }
-
-  @override
-  Future<void> renameInventorySpecific(String generalName, String oldName, String newName) async {
-    final gid = int.tryParse(generalIdForName(generalName));
-    if (gid == null) return;
-    for (final s in _inventorySpecifics) {
-      if (s.generalId == gid && s.name == oldName) {
-        final id = s.id;
-        if (id == null) return;
-        await _repo.renameInventorySpecific(id, newName.trim());
+        await _repo.renameSpecific(id, newName.trim());
         await load();
         return;
       }

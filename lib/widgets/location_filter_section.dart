@@ -4,10 +4,9 @@ import '../theme/app_theme.dart';
 
 /// Location filter - similar to required_section.dart location part
 /// but NO chips, NO add. Just fields that open picker sheets.
-/// isStorage flag picks different Specific lists.
+/// One Specific list per General (build 60), shared by both tabs.
 class LocationFilterSection extends StatelessWidget {
   final LocationData data;
-  final bool isStorage;
   final String selectedGeneral;
   final String? selectedSpecific;
   final ValueChanged<String> onGeneralChanged;
@@ -16,7 +15,6 @@ class LocationFilterSection extends StatelessWidget {
   const LocationFilterSection({
     super.key,
     required this.data,
-    required this.isStorage,
     required this.selectedGeneral,
     required this.selectedSpecific,
     required this.onGeneralChanged,
@@ -29,9 +27,7 @@ class LocationFilterSection extends StatelessWidget {
     if (generalName == 'All' || generalName.isEmpty) return [];
     final genId = data.generalIdForName(generalName);
     if (genId.isEmpty) return [];
-    return isStorage
-        ? data.storageSpecificNamesFor(genId)
-        : data.inventorySpecificNamesFor(genId);
+    return data.specificNamesFor(genId);
   }
 
   static bool matchesFilter({
@@ -174,7 +170,7 @@ class LocationFilterSection extends StatelessWidget {
         ),
         SizedBox(height: 12),
         buildLocationField(
-          label: '${isStorage ? "Storage" : "Inventory"} Specific Area (optional)',
+          label: 'Specific Area (optional)',
           value: specificFieldValue,
           enabled: hasGeneral,
           onTap: () => openSpecificPicker(context),

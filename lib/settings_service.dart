@@ -8,10 +8,10 @@ class SettingsService {
   static const String _kPendingImports = 'pendingImports';
   static const String _kShowIntro = 'showIntro';
 
-  // New canonical order - Storage Items, Personal Inventory, Places of Interest
+  // New canonical order - Storage Items, Inventory Items, Places of Interest
   static const List<String> defaultTabOrder = [
     'Storage Items',
-    'Personal Inventory',
+    'Inventory Items',
     'Places of Interest',
   ];
 
@@ -19,11 +19,11 @@ class SettingsService {
   // pre-rename name; stored orders carrying it still resolve.
   static const Map<String, String> legacyToCanonical = {
     'Storage': 'Storage Items',
-    'Inventory': 'Personal Inventory',
+    'Inventory': 'Inventory Items',
     'POI': 'Places of Interest',
     'Storage Items': 'Storage Items',
-    'Home Inventory': 'Personal Inventory',
-    'Personal Inventory': 'Personal Inventory',
+    'Home Inventory': 'Inventory Items',
+    'Personal Inventory': 'Inventory Items',
     'Places of Interest': 'Places of Interest',
   };
 

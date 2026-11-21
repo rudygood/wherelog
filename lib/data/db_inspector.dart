@@ -15,8 +15,7 @@ class DbInspector {
 
   static const List<String> tables = [
     'general_locations',
-    'storage_specifics',
-    'inventory_specifics',
+    'specifics',
     'storage_items',
     'inventory_items',
     'poi_items',

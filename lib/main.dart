@@ -171,8 +171,7 @@ class _HomeScreenState extends State<HomeScreen>
   final SqlitePoiRepository _poiRepo = SqlitePoiRepository.instance;
   final SqliteLocationData _locationData = SqliteLocationData();
   List<GeneralLocation> _sqlGenerals = [];
-  List<StorageSpecific> _sqlStorageSpecifics = [];
-  List<InventorySpecific> _sqlInventorySpecifics = [];
+  List<Specific> _sqlSpecifics = [];
   List<StorageItem> _storageRecords = [];
   List<InventoryItem> _inventoryRecords = [];
   List<PoiItem> _poiRecords = [];
@@ -209,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   List<Place> _placesFromLocations() {
     // Location tree from the SQLite location tables (cached records):
-    // single generals + both specific types merged for tree view.
+    // one General list and one Specific list per General.
     final Map<String, List<String>> generalsMap = {};
     final Map<int, String> genIdToName = {};
     for (var g in _sqlGenerals) {
@@ -218,15 +217,7 @@ class _HomeScreenState extends State<HomeScreen>
         generalsMap.putIfAbsent(g.name, () => []);
       }
     }
-    for (var s in _sqlStorageSpecifics) {
-      if (s.name.trim().isEmpty) continue;
-      final genName = genIdToName[s.generalId];
-      if (genName != null) {
-        generalsMap.putIfAbsent(genName, () => []);
-        if (!generalsMap[genName]!.contains(s.name)) generalsMap[genName]!.add(s.name);
-      }
-    }
-    for (var s in _sqlInventorySpecifics) {
+    for (var s in _sqlSpecifics) {
       if (s.name.trim().isEmpty) continue;
       final genName = genIdToName[s.generalId];
       if (genName != null) {
@@ -253,8 +244,8 @@ class _HomeScreenState extends State<HomeScreen>
     for (var g in _sqlGenerals) {
       if (g.id != null) genIdToName[g.id!] = g.name;
     }
-    final Map<int, StorageSpecific> specById = {};
-    for (var s in _sqlStorageSpecifics) {
+    final Map<int, Specific> specById = {};
+    for (var s in _sqlSpecifics) {
       if (s.id != null) specById[s.id!] = s;
     }
 
@@ -284,13 +275,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _refreshSqliteLocations() async {
     final generals = await _locRepo.getGenerals();
-    final stoSpecs = await _locRepo.getStorageSpecifics();
-    final invSpecs = await _locRepo.getInventorySpecifics();
+    final specs = await _locRepo.getSpecifics();
     if (!mounted) return;
     setState(() {
       _sqlGenerals = generals;
-      _sqlStorageSpecifics = stoSpecs;
-      _sqlInventorySpecifics = invSpecs;
+      _sqlSpecifics = specs;
       places = _placesFromLocations();
     });
   }
@@ -311,8 +300,8 @@ class _HomeScreenState extends State<HomeScreen>
     for (var g in _sqlGenerals) {
       if (g.id != null) genIdToName[g.id!] = g.name;
     }
-    final Map<int, InventorySpecific> specById = {};
-    for (var s in _sqlInventorySpecifics) {
+    final Map<int, Specific> specById = {};
+    for (var s in _sqlSpecifics) {
       if (s.id != null) specById[s.id!] = s;
     }
 
@@ -912,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen>
 
 
   // Tab names come in two forms: short ('Storage','Inventory','POI') used
-  // throughout main.dart, and long ('Storage Items','Personal Inventory',
+  // throughout main.dart, and long ('Storage Items','Inventory Items',
   // 'Places of Interest') returned by SettingsService.getTabOrder().
   // Normalizing to short here is what makes the per-tab top bars appear:
   // the search/filter bar is only shown when _currentTabName is 'Storage'
@@ -920,7 +909,7 @@ class _HomeScreenState extends State<HomeScreen>
   // with long names the bars vanished (and POI fell back to Storage).
   static String _shortTabName(String name) {
     if (name == 'Storage Items' || name == 'Stored Items') return 'Storage';
-    if (name == 'Home Inventory' || name == 'Personal Inventory') return 'Inventory';
+    if (name == 'Home Inventory' || name == 'Personal Inventory' || name == 'Inventory Items') return 'Inventory';
     if (name == 'Places of Interest') return 'POI';
     return name;
   }
@@ -940,16 +929,16 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Tab _tabForName(String name) {
-    // Two-line labels as requested: Storage = Storage Items, Inventory = Personal Inventory, POI = Places of Interest
+    // Two-line labels as requested: Storage = Storage Items, Inventory = Inventory Items, POI = Places of Interest
     if (name == 'Storage' || name == 'Storage Items' || name == 'Stored Items') {
       return const Tab(
         child: Text('Storage\nItems',
             textAlign: TextAlign.center,
             style: TextStyle(height: 1.0)));
     }
-    if (name == 'Inventory' || name == 'Home Inventory' || name == 'Personal Inventory') {
+    if (name == 'Inventory' || name == 'Home Inventory' || name == 'Personal Inventory' || name == 'Inventory Items') {
       return const Tab(
-        child: Text('Personal\nInventory',
+        child: Text('Inventory\nItems',
             textAlign: TextAlign.center,
             style: TextStyle(height: 1.0)));
     }
@@ -1601,8 +1590,10 @@ class _HomeScreenState extends State<HomeScreen>
                 onPressed: () => _exitSelectMode(tabName),
                                     child: Text('CANCEL'),
                 style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 14)))),
-            SizedBox(width: 8),
-            Expanded(
+            // No MOVE on the Places tab (build 72): a place has GPS coordinates,
+            // not a General/Specific location to move to, so the tab shows only CANCEL and DELETE.
+            if (tabName != 'POI') SizedBox(width: 8),
+            if (tabName != 'POI') Expanded(
               child: ElevatedButton(
                 key: ValueKey('${tabName.toLowerCase()}_move'),
                 onPressed: selectedCount == 0 ? null : () => _moveSelectedItems(tabName),
@@ -1730,7 +1721,6 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _openFilterSheet() async {
     await _locationData.load();
     if (!mounted) return;
-    final bool isStorageTab = _currentTabName == 'Storage';
     String modalGeneral = _filterGeneralMap[_currentTabName] ?? 'All';
     String? modalSpecific = _filterSpecificMap[_currentTabName];
 
@@ -1750,7 +1740,6 @@ class _HomeScreenState extends State<HomeScreen>
             SizedBox(height: 16),
             LocationFilterSection(
               data: _locationData,
-              isStorage: isStorageTab,
               selectedGeneral: modalGeneral,
               selectedSpecific: modalSpecific,
               onGeneralChanged: (v) => setModal(() {
@@ -1885,7 +1874,7 @@ class _HomeScreenState extends State<HomeScreen>
         }
         int? specId;
         if (genId != null && selectedBin != null) {
-          for (final s in _sqlStorageSpecifics) {
+          for (final s in _sqlSpecifics) {
             if (s.generalId == genId && s.name == selectedBin) { specId = s.id; break; }
           }
         }
@@ -1904,7 +1893,7 @@ class _HomeScreenState extends State<HomeScreen>
         }
         int? specId;
         if (genId != null && selectedBin != null) {
-          for (final s in _sqlInventorySpecifics) {
+          for (final s in _sqlSpecifics) {
             if (s.generalId == genId && s.name == selectedBin) { specId = s.id; break; }
           }
         }
